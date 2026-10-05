@@ -80,10 +80,48 @@ git push -u origin main
 
 ---
 
-## 4. Tips Jika GitHub Meminta Autentikasi / Password
-Saat pertama kali melakukan `git push`, Windows biasanya akan memunculkan popup jendela kecil login GitHub:
-* Cukup pilih **"Sign in with your browser"** dan klik tombol hijau **Authorize**.
-* Sekali login, komputer akan mengingat kredensial kamu selamanya melalui Windows Credential Manager.
+## 4. Mengatasi Error "Authentication Failed / Password authentication is not supported"
+
+Jika saat menjalankan `git push -u origin main` kamu melihat pesan error seperti ini:
+```text
+remote: Invalid username or token. Password authentication is not supported for Git operations.
+fatal: Authentication failed for 'https://github.com/dlpnn11/Tokoku.git/'
+```
+
+Ini adalah hal yang **sangat wajar bagi pemula**. Sejak 2021, GitHub sudah melarang penggunaan password akun biasa di terminal demi keamanan. Ada 2 cara mudah mengatasinya:
+
+### Solusi 1: Menggunakan Personal Access Token (PAT) — Sangat Direkomendasikan (2 Menit)
+1. Buka browser dan buka link ini: **[https://github.com/settings/tokens](https://github.com/settings/tokens)**
+2. Klik tombol **"Generate new token"** (pojok kanan atas) -> pilih **"Generate new token (classic)"**.
+3. Di bagian **Note**, ketik: `TokoKu Token`.
+4. Di bagian **Expiration**, pilih `90 days` atau `No expiration`.
+5. Di bagian **Select scopes**, centang kotak paling atas:
+   - ✅ **`repo`** (Memberikan akses penuh untuk push/pull repository).
+6. Gulir ke bawah dan klik tombol hijau **"Generate token"**.
+7. **PENTING:** Salin deretan kode token yang muncul (formatnya diawali `ghp_...`). Token ini hanya muncul sekali!
+8. Buka Terminal di laptopmu dan jalankan perintah ini (ganti tulisan `ghp_TOKEN_KAMU_DISINI` dengan kode yang kamu salin):
+   ```bash
+   git remote set-url origin https://ghp_TOKEN_KAMU_DISINI@github.com/dlpnn11/Tokoku.git
+   ```
+9. Sekarang jalankan push kembali:
+   ```bash
+   git push -u origin main
+   ```
+   *Selesai! Push akan langsung sukses dan kamu tidak perlu login lagi untuk push-push berikutnya.*
+
+---
+
+### Solusi 2: Menggunakan GitHub CLI Resmi (Browser Login)
+1. Buka terminal dan jalankan:
+   ```powershell
+   winget install --id GitHub.cli
+   ```
+2. Setelah selesai, jalankan:
+   ```bash
+   gh auth login
+   ```
+3. Pilih `GitHub.com` -> `HTTPS` -> `Yes` -> `Login with a web browser`. Masukkan kode yang tertera di terminal ke browser.
+4. Lalu jalankan `git push -u origin main`.
 
 ---
 

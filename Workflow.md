@@ -18,7 +18,9 @@ graph TD
 ## 📚 DOKUMENTASI TERKAIT (INTERLINKED CONTEXT)
 - 🏗️ **Arsitektur Lengkap:** [RANCANGAN_ARSITEKTUR_TOKOKU.md](file:///c:/Users/dalvi/OneDrive/Desktop/Tugas%20Kuliah/Semester%203/Sistem%20Informasi/Tugas/TokoKu/docs/RANCANGAN_ARSITEKTUR_TOKOKU.md)
 - 📋 **Daftar Tugas & Testing (TDD):** [BREAKDOWN_TUGAS_DAN_TESTING.md](file:///c:/Users/dalvi/OneDrive/Desktop/Tugas%20Kuliah/Semester%203/Sistem%20Informasi/Tugas/TokoKu/docs/BREAKDOWN_TUGAS_DAN_TESTING.md)
-- 🐙 **Panduan Git & GitHub:** [PANDUAN_GIT_GITHUB.md](file:///c:/Users/dalvi/OneDrive/Desktop/Tugas%20Kuliah/Semester%203/Sistem%20Informasi/Tugas/TokoKu/docs/PANDUAN_GIT_GITHUB.md)
+- 🐙 **Panduan Git & GitHub:** [PANDUAN_GIT_GITHUB.md](file:///c:/Users/dalvi/OneDrive/Desktop/Tugas%20Kuliah/Semester%203/Sistem%20Informasi/Tugas/TokoKu/docs/guides/PANDUAN_GIT_GITHUB.md)
+- ⚡ **Panduan Setup Supabase:** [PANDUAN_SETUP_SUPABASE.md](file:///c:/Users/dalvi/OneDrive/Desktop/Tugas%20Kuliah/Semester%203/Sistem%20Informasi/Tugas/TokoKu/docs/guides/PANDUAN_SETUP_SUPABASE.md)
+- 👑 **Prinsip Pengembangan AI:** [PRINSIP_PENGEMBANGAN_AI.md](file:///c:/Users/dalvi/OneDrive/Desktop/Tugas%20Kuliah/Semester%203/Sistem%20Informasi/Tugas/TokoKu/docs/guides/PRINSIP_PENGEMBANGAN_AI.md)
 - 🎨 **Referensi Desain Visual:** [Design Reference Folder](file:///c:/Users/dalvi/OneDrive/Desktop/Tugas%20Kuliah/Semester%203/Sistem%20Informasi/Tugas/TokoKu/Design%20Reference)
 - 📜 **Konteks Master:** [MASTER_PROJECT_CONTEXT.md](file:///c:/Users/dalvi/OneDrive/Desktop/Tugas%20Kuliah/Semester%203/Sistem%20Informasi/Tugas/TokoKu/MASTER_PROJECT_CONTEXT.md)
 

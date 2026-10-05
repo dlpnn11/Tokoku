@@ -96,6 +96,21 @@ CREATE INDEX idx_transaction_details_tx ON transaction_details(transaction_id);
 ALTER PUBLICATION supabase_realtime ADD TABLE products;
 ALTER PUBLICATION supabase_realtime ADD TABLE transactions;
 
+-- 5B. ROW LEVEL SECURITY (RLS) POLICIES
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE suppliers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE transaction_details ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow all on users" ON users FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all on categories" ON categories FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all on suppliers" ON suppliers FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all on products" ON products FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all on transactions" ON transactions FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all on transaction_details" ON transaction_details FOR ALL USING (true) WITH CHECK (true);
+
 -- 6. ATOMIC TRANSACTION CHECKOUT RPC FUNCTION (ACID)
 CREATE OR REPLACE FUNCTION create_pos_transaction(
     p_invoice_number TEXT,

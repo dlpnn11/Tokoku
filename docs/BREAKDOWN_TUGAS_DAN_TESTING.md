@@ -6,15 +6,15 @@ Dokumen ini memecah seluruh proyek menjadi modul-modul kecil bertahap. Setiap tu
 
 ## DAFTAR MODUL & TUGAS KERJA
 
-### 🏁 FASE 0: Inisialisasi Proyek & Design System
-- [ ] **0.1 Setup Next.js TypeScript & Dependencies**
-  - Menginstal Next.js App Router, Tailwind CSS, Lucide React, Zustand, `@supabase/supabase-js`.
-  - Mengonfigurasi Tailwind CSS sesuai warna solid (Sage Green, Beige `#F4F4F0`, Charcoal `#2C2C2C`).
-  - *Testing/Verifikasi:* Menjalankan `npm run dev` dan `npm run build` untuk memastikan kompilasi 0 error.
-- [ ] **0.2 Setup Komponen Dasar (Shadcn UI)**
-  - Menyiapkan Button, Input, Modal/Dialog, Card, Select, Badge, Sheet (Drawer), Tabs.
+### 🏁 FASE 0: Inisialisasi Proyek & Design System (SELESAI ✅)
+- [x] **0.1 Setup Next.js TypeScript & Dependencies**
+  - Menginstal Next.js App Router, Tailwind CSS, Lucide React, Zustand, `@supabase/supabase-js`, `html5-qrcode`.
+  - Mengonfigurasi Tailwind CSS sesuai warna solid (Sage Green `#6FA084`, Beige `#F4F4F0`, Charcoal `#2C2C2C`).
+  - *Testing/Verifikasi:* Menjalankan `npm run dev` dan `npm run build` lolos kompilasi 0 error.
+- [x] **0.2 Setup Komponen Dasar & Token Flat Minimalist**
+  - Menyiapkan Button, Input, Modal/Dialog, Card, Badge, formatRupiah helper.
   - Memastikan seluruh komponen mengikuti aturan 100% flat tanpa gradien.
-  - *Testing/Verifikasi:* Render halaman komponen test, pastikan tidak ada styling bentrok.
+  - *Testing/Verifikasi:* Render halaman komponen test di `/` dengan verifikasi type safety TypeScript dan responsif.
 
 ---
 

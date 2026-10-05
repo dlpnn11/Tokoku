@@ -40,5 +40,5 @@ Before answering or executing any task, ALWAYS read and synchronize with the fol
 ## 4. DESIGN & ARCHITECTURE CONSTRAINTS (ZERO DEVIATION)
 1. ⛔ **ZERO GRADIENTS RULE:** ABSOLUTELY NO GRADIENTS anywhere. 100% solid, flat colors only (`#6FA084` Sage Green, `#F4F4F0` Light Cream Background, `#FFFFFF` Card Surface, `#2C2C2C` Dark Charcoal Sidebar).
 2. **Framework & Stack:** Next.js (App Router), TypeScript, Tailwind CSS, Shadcn UI, Zustand, Supabase (PostgreSQL & Realtime Channels).
-3. **No Unrequested Features:** Do not invent features independently. Always consult Dalvin with clear options and recommendations whenever new requirements emerge.
+3. **No Unrequested Features & Endless Clarification Rule:** Do not invent features independently. ALWAYS ask and confirm with Dalvin whenever you are unsure, have options to choose from, or need clarification. You are encouraged to ask as many questions as needed without limit, and you MUST always provide clear recommendations for each question.
 4. **TDD / Verification First:** Build and verify each component/module iteratively before marking it as complete.

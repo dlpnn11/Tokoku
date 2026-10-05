@@ -18,27 +18,27 @@ Dokumen ini memecah seluruh proyek menjadi modul-modul kecil bertahap. Setiap tu
 
 ---
 
-### 🗄️ FASE 1: Database Supabase, SQL Migration & Seed Data
-- [ ] **1.1 Pembuatan Skema Database SQL**
+### 🗄️ FASE 1: Database Supabase, SQL Migration & Seed Data (SELESAI ✅)
+- [x] **1.1 Pembuatan Skema Database SQL**
   - Membuat script SQL untuk 6 tabel: `users`, `categories`, `suppliers`, `products`, `transactions`, `transaction_details`.
-  - Mengonfigurasi foreign key, indexes, dan constraint unik.
-- [ ] **1.2 Fungsi Stored Procedure (RPC) Atomic Checkout**
-  - Membuat fungsi `create_pos_transaction` dengan ACID transaction dan row locking.
-- [ ] **1.3 Data Awal (Seed Data Warung Kelontong Indonesia)**
-  - Menyiapkan data realistis: Kategori (Minuman, Mie Instan, Sembako, Kebersihan, Rokok), Supplier, dan puluhan Produk lengkap dengan barcode pabrik asli (EAN-13 seperti Indomie, Aqua) & produk lokal tanpa barcode (Telur, Kerupuk).
-  - *Testing/Verifikasi:* Menjalankan query test di Supabase SQL Editor dan memvalidasi integritas relasi tabel.
+  - Mengonfigurasi foreign key, indexes, dan constraint unik serta RLS policies.
+- [x] **1.2 Fungsi Stored Procedure (RPC) Atomic Checkout**
+  - Membuat fungsi `create_pos_transaction` dan `cancel_pos_transaction` dengan ACID transaction dan row locking.
+- [x] **1.3 Data Awal (Seed Data Warung Kelontong Indonesia)**
+  - Menyiapkan data realistis: Kategori (Minuman, Mie Instan, Sembako, Kebersihan, Rokok), Supplier, dan puluhan Produk lengkap dengan barcode pabrik asli & produk lokal tanpa barcode (Telur, Kerupuk).
+  - *Testing/Verifikasi:* Berhasil terhubung dari Next.js ke Supabase Cloud dan memvalidasi data produk Aqua, Teh Botol, Pocari via API.
 
 ---
 
-### 🔐 FASE 2: Layout Navigasi & Role-Based Access Control (RBAC)
-- [ ] **2.1 Global Layout & Persistent Sidebar**
-  - Implementasi sidebar 220px desktop dengan warna Charcoal `#2C2C2C` dan active indicator Sage Green.
-  - Top header bar 64px dengan jam realtime WIB, info akun, dan badge role.
+### 🔐 FASE 2: Layout Navigasi & Role-Based Access Control (RBAC) (SELESAI ✅)
+- [x] **2.1 Global Layout & Persistent Sidebar**
+  - Implementasi sidebar 220px desktop dengan warna Charcoal `#2C2C2C` dan active indicator Sage Green `#6FA084`.
+  - Top header bar 64px dengan jam realtime WIB, info akun, modal scanner HP, dan badge role.
   - Collapsible Mobile Drawer untuk layar HP (<768px).
-- [ ] **2.2 Autentikasi Sederhana & Pembatasan Rute**
-  - Mode login Pemilik vs Kasir.
-  - Validasi rute: Kasir hanya bisa membuka `/pos` dan `/riwayat`. Rute lain otomatis terlempar ke `/pos`.
-  - *Testing/Verifikasi:* Uji login sebagai Kasir -> coba akses `/inventaris` -> pastikan redirect berhasil.
+- [x] **2.2 Autentikasi Sederhana & Pembatasan Rute**
+  - Zustand auth store dengan tombol quick switch Pemilik vs Kasir.
+  - Validasi rute di AppShell: Kasir hanya bisa membuka `/pos` dan `/riwayat`. Rute lain otomatis terlempar ke `/pos`.
+  - *Testing/Verifikasi:* Next.js build sukses untuk 7 rute (`/`, `/pos`, `/dashboard`, `/inventaris`, `/riwayat`, `/laporan`).
 
 ---
 

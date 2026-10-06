@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Menu, QrCode, ChevronDown, UserCheck, LogOut, ShieldCheck } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { cn } from "@/lib/utils";
@@ -16,7 +17,8 @@ export function Header({
   onOpenMobileMenu,
   onOpenScannerPairing,
 }: HeaderProps) {
-  const { currentUser } = useAuthStore();
+  const router = useRouter();
+  const { currentUser, switchRole, logout } = useAuthStore();
   const [currentDateTime, setCurrentDateTime] = React.useState<string>("");
 
   React.useEffect(() => {
@@ -104,7 +106,8 @@ export function Header({
 }
 
 function UserProfileDropdown() {
-  const { currentUser, switchRole } = useAuthStore();
+  const router = useRouter();
+  const { currentUser, switchRole, logout } = useAuthStore();
   const [isOpen, setIsOpen] = React.useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
 
@@ -139,10 +142,9 @@ function UserProfileDropdown() {
 
   const handleLogout = () => {
     if (confirm("Apakah Anda yakin ingin keluar dari sistem TokoKu?")) {
-      // In POS context, default to Kasir role or prompt
-      switchRole("kasir");
+      logout();
       setIsOpen(false);
-      alert("Anda telah keluar. Hak akses dialihkan ke Kasir.");
+      router.push("/login");
     }
   };
 

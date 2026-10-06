@@ -21,24 +21,29 @@ export function AppShell({
   title,
   onOpenScannerPairing,
 }: AppShellProps) {
-  const pathname = usePathname();
   const router = useRouter();
-  const { currentUser } = useAuthStore();
+  const pathname = usePathname();
+  const { currentUser, isAuthenticated } = useAuthStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isScannerModalOpen, setIsScannerModalOpen] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
 
-  // RBAC Enforcement: Kasir only allowed to access /pos and /riwayat
+  // Auth & RBAC Enforcement
   React.useEffect(() => {
+    if (!isAuthenticated) {
+      router.replace("/login");
+      return;
+    }
+
     const ownerOnlyRoutes = ["/dashboard", "/inventaris", "/laporan"];
     const isOwnerRoute = ownerOnlyRoutes.some((route) =>
       pathname.startsWith(route)
     );
 
-    if (currentUser.role === "kasir" && isOwnerRoute) {
+    if (currentUser?.role === "kasir" && isOwnerRoute) {
       router.replace("/pos");
     }
-  }, [currentUser.role, pathname, router]);
+  }, [isAuthenticated, currentUser?.role, pathname, router]);
 
   // Scanner pairing URL
   const scannerUrl =

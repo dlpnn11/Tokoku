@@ -61,33 +61,34 @@ export function Modal({
       {/* Modal Surface */}
       <div
         className={cn(
-          "relative z-10 w-full overflow-hidden rounded-2xl bg-white border border-[#E5E5E0] shadow-xl transition-all",
+          "relative z-10 w-full max-h-[92vh] flex flex-col rounded-2xl bg-white border border-[#E5E5E0] shadow-xl transition-all my-auto",
           maxWidthClass,
           className
         )}
       >
         {(title || description) && (
-          <div className="flex items-start justify-between border-b border-[#E5E5E0] p-5">
+          <div className="flex items-start justify-between border-b border-[#E5E5E0] p-4 sm:p-5 shrink-0 bg-white rounded-t-2xl">
             <div>
               {title && (
-                <h3 className="text-lg font-bold text-[#1A1A1A] leading-tight">
+                <h3 className="text-base sm:text-lg font-bold text-[#1A1A1A] leading-tight">
                   {title}
                 </h3>
               )}
               {description && (
-                <p className="mt-1 text-xs text-[#6B7280]">{description}</p>
+                <p className="mt-0.5 text-xs text-[#6B7280]">{description}</p>
               )}
             </div>
             <button
               onClick={onClose}
-              className="rounded-lg p-1.5 text-[#9E9E9E] hover:bg-[#F4F4F0] hover:text-[#1A1A1A] transition-colors cursor-pointer"
+              className="rounded-lg p-1.5 text-[#9E9E9E] hover:bg-[#F4F4F0] hover:text-[#1A1A1A] transition-colors cursor-pointer shrink-0 ml-2"
+              title="Tutup (Esc)"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
         )}
 
-        <div className="p-5">{children}</div>
+        <div className="p-4 sm:p-5 overflow-y-auto flex-1">{children}</div>
       </div>
     </div>
   );

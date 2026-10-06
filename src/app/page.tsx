@@ -9,15 +9,17 @@ import { useAuthStore } from "@/stores/authStore";
 
 export default function HomePage() {
   const router = useRouter();
-  const { currentUser, switchRole } = useAuthStore();
+  const { currentUser, isAuthenticated } = useAuthStore();
 
   React.useEffect(() => {
-    // Auto-direct to POS or Dashboard
-    const timer = setTimeout(() => {
-      router.push("/pos");
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, [router]);
+    if (!isAuthenticated) {
+      router.replace("/login");
+    } else if (currentUser?.role === "pemilik") {
+      router.replace("/dashboard");
+    } else {
+      router.replace("/pos");
+    }
+  }, [isAuthenticated, currentUser?.role, router]);
 
   return (
     <div className="min-h-screen bg-[#F4F4F0] flex flex-col items-center justify-center p-6 text-[#1A1A1A] select-none">

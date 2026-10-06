@@ -52,9 +52,25 @@ body {
   background: #6FA084;
 }
 
-/* Print thermal styling */
+/* Print thermal styling (58mm micro-retail standard) */
 @media print {
-  body {
+  body * {
+    visibility: hidden;
+  }
+  #receipt-print-area,
+  #receipt-print-area * {
+    visibility: visible;
+  }
+  #receipt-print-area {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 58mm !important;
+    max-width: 58mm !important;
+    padding: 2mm !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
     background: #FFFFFF !important;
     color: #000000 !important;
   }

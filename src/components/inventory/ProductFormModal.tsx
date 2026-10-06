@@ -5,7 +5,7 @@ import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Product, Category, Supplier } from "@/types/database";
-import { formatRupiah } from "@/lib/utils";
+import { formatRupiah, roundPrice500 } from "@/lib/utils";
 import { CustomSelect } from "@/components/ui/select";
 
 interface ProductFormModalProps {
@@ -96,7 +96,7 @@ export function ProductFormModal({
         category_id: categoryId,
         supplier_id: supplierId || null,
         buy_price: Number(buyPrice) || 0,
-        sell_price: Number(sellPrice) || 0,
+        sell_price: roundPrice500(Number(sellPrice) || 0),
         current_stock: Number(currentStock) || 0,
         minimum_stock: Number(minimumStock) || 5,
         unit,
@@ -226,14 +226,29 @@ export function ProductFormModal({
           </div>
 
           <div>
-            <label className="text-xs font-bold text-[#1A1A1A] block mb-1">
-              Harga Jual (Kasir) <span className="text-[#D64545]">*</span>
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-bold text-[#1A1A1A]">
+                Harga Jual (Kasir) <span className="text-[#D64545]">*</span>
+              </label>
+              {sellPrice > 0 && sellPrice % 500 !== 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSellPrice(roundPrice500(sellPrice))}
+                  className="text-[10px] font-bold text-[#6FA084] hover:text-[#58836B] underline"
+                >
+                  Bulatkan: {formatRupiah(roundPrice500(sellPrice))}
+                </button>
+              )}
+            </div>
             <Input
               type="number"
+              step="500"
               min="0"
               value={sellPrice}
               onChange={(e) => setSellPrice(Number(e.target.value))}
+              onBlur={() => {
+                if (sellPrice > 0) setSellPrice(roundPrice500(sellPrice));
+              }}
               required
             />
             {sellPrice > 0 && (

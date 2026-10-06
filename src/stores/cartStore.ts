@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { Product } from "@/types/database";
+import { roundPrice500 } from "@/lib/utils";
 
 export interface CartItem {
   product: Product;
@@ -53,6 +54,7 @@ export const useCartStore = create<CartState>((set, get) => ({
 
     const { items } = get();
     const existingIndex = items.findIndex((i) => i.product.id === product.id);
+    const unitPrice = roundPrice500(Number(product.sell_price));
 
     if (existingIndex > -1) {
       const existing = items[existingIndex];
@@ -65,7 +67,7 @@ export const useCartStore = create<CartState>((set, get) => ({
       updatedItems[existingIndex] = {
         ...existing,
         quantity: newQty,
-        subtotal: newQty * Number(product.sell_price),
+        subtotal: newQty * unitPrice,
       };
       set({ items: updatedItems });
     } else {
@@ -75,7 +77,7 @@ export const useCartStore = create<CartState>((set, get) => ({
           {
             product,
             quantity: 1,
-            subtotal: Number(product.sell_price),
+            subtotal: unitPrice,
           },
         ],
       });
@@ -94,10 +96,11 @@ export const useCartStore = create<CartState>((set, get) => ({
     const updated = items.map((item) => {
       if (item.product.id === productId) {
         const clampedQty = Math.min(quantity, item.product.current_stock);
+        const unitPrice = roundPrice500(Number(item.product.sell_price));
         return {
           ...item,
           quantity: clampedQty,
-          subtotal: clampedQty * Number(item.product.sell_price),
+          subtotal: clampedQty * unitPrice,
         };
       }
       return item;

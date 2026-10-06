@@ -14,8 +14,9 @@
 | 01 | [`01_PLAYBOOK_MEMBANGUN_APLIKASI_DENGAN_AI.md`](./01_PLAYBOOK_MEMBANGUN_APLIKASI_DENGAN_AI.md) | Panduan lengkap fase demi fase (Fase 0 – 17), lengkap dengan alasan, checklist, dan contoh nyata dari TokoKu | Saat merencanakan & menjalankan proyek |
 | 02 | [`02_TEMPLATE_PROMPT_DAN_FILE.md`](./02_TEMPLATE_PROMPT_DAN_FILE.md) | Kumpulan prompt siap copy-paste + template file (`AGENTS.md`, `MASTER_PROJECT_CONTEXT.md`, `WORKFLOW.md`, dll.) | Saat benar-benar mengetik prompt ke AI |
 | 03 | [`03_PELAJARAN_DARI_TOKOKU.md`](./03_PELAJARAN_DARI_TOKOKU.md) | Daftar bug/masalah nyata yang terjadi, penyebabnya, solusinya, dan aturan pencegahannya + retrospektif jujur | Sebelum memulai tahap coding & sebelum deploy |
+| 04 | [`04_PANDUAN_STEP_BY_STEP_PROYEK_BARU.md`](./04_PANDUAN_STEP_BY_STEP_PROYEK_BARU.md) | Panduan teknis langkah demi langkah memulai proyek baru dari menit ke-0 (apa yang disalin, apa yang dihapus, alur chat) | Saat membuka folder proyek baru pertama kali |
 
-**Urutan baca yang disarankan:** 00 → 01 (sekali baca penuh) → 03 (supaya tidak mengulang kesalahan) → 02 (dipakai sambil jalan).
+**Urutan baca yang disarankan:** 00 → 04 (agar tahu cara mulainya) → 01 (sekali baca penuh) → 03 (sebelum koding) → 02 (senjata copy-paste sambil jalan).
 
 ---
 

@@ -27,8 +27,10 @@
 - [Fase 16 — Kebersihan Repo & Dokumentasi Akhir](#fase-16--kebersihan-repo--dokumentasi-akhir)
 - [Fase 17 — Perawatan, Sesi Chat Baru & Proyek Berikutnya](#fase-17--perawatan-sesi-chat-baru--proyek-berikutnya)
 - [Lampiran A — Definition of Done (DoD) Universal](#lampiran-a--definition-of-done-dod-universal)
-- [Lampiran B — Matriks Verifikasi](#lampiran-b--matriks-verifikasi)
+- [Lampiran B — Matriks Verifikasi Masalah](#lampiran-b--matriks-verifikasi-masalah)
 - [Lampiran C — Standar Ukuran Font, Spasi & Responsif](#lampiran-c--standar-ukuran-font-spasi--responsif)
+- [Lampiran D — Cheatsheet Perintah CLI & Terminal Cepat](#lampiran-d--cheatsheet-perintah-cli--terminal-cepat)
+- [Lampiran E — Filosofi Pengembangan Kolaboratif Manusia & AI](#lampiran-e--filosofi-pengembangan-kolaboratif-manusia--ai)
 
 ---
 
@@ -559,87 +561,215 @@ Aplikasi kosong menyembunyikan bug: grafik, paginasi, filter tanggal, performa �
 
 ## Fase 16 — Kebersihan Repo & Dokumentasi Akhir
 
-- **README.md** profesional: deskripsi, fitur, stack, cara menjalankan, struktur folder.
-- **Root folder bersih:** dokumen ke `docs/`, aturan AI ke `.agents/`, panduan sementara ke `docs/guides/` (keputusanmu membuat folder "guide" sudah tepat).
-- **Konfigurasi editor tim** di `.vscode/settings.json` jika perlu.
-- **Hapus file sementara/eksperimen** dan skrip yang tidak dipakai.
-- **Perbarui semua tautan** setelah memindahkan file (cari tautan rusak).
-- **CHANGELOG** singkat per tahap (opsional tapi membantu laporan tugas).
+### Tujuan
+Menyusun repositori yang bersih, profesional, berstandar industri, dan siap dipamerkan di portofolio GitHub atau diserahkan ke dosen/klien tanpa jejak file sampah yang membingungkan.
+
+### Kenapa Penting
+Selama proses pengembangan yang intensif bersama AI, puluhan file sementara, script tes acak, dan dokumen panduan sering dibuat secara spontan di folder utama (root). Jika dibiarkan berantakan, siapa pun yang membuka repositori (rekruter, dosen, atau rekan satu tim) akan merasa proyek ini tidak terstruktur. Selain itu, meletakkan file internal AI seperti `agents.md` atau `gemini.md` langsung di root membuat proyek terlihat amatir. Dalvin secara cerdas menanyakan hal ini: *"kan gaenak kalo itu dilihat orang orang ketika membuka project ku di GitHub, apakah tidak bisa jika dimasukkan kedalam folder... tapi apakah kamu tetap bisa baca?"*. Keputusan ini sangat tepat dan wajib menjadi standar baku di setiap proyek.
+
+### Prinsip Sanitasi Repositori
+1. **Root Folder Minimalis & Bersih:**
+   - Root direktori HANYA boleh berisi: `README.md`, `LICENSE`, file konfigurasi proyek resmi (`package.json`, `tailwind.config.ts`, `next.config.ts`, `tsconfig.json`, `.gitignore`), dan folder kode inti (`src/`, `public/`).
+2. **Aturan AI Terpusat di `.agents/`:**
+   - Seluruh instruksi, persona, dan SOP AI disimpan di direktori tersembunyi `.agents/` (khususnya `.agents/AGENTS.md` dan `.agents/GEMINI.md`). Tooling AI modern seperti Antigravity membaca folder ini secara otomatis tanpa perlu mengotori root repo.
+3. **Dokumentasi Proyek di `docs/`:**
+   - Seluruh blueprint arsitektur, roadmap, breakdown, dan design system berada di `docs/`.
+   - Panduan operasional sementara (setup Git, panduan Supabase, prinsip AI) dikelompokkan ke `docs/guides/`.
+   - Playbook panduan pembuatan aplikasi jangka panjang disimpan di `docs/playbook/`.
+4. **Pembersihan File Sampah (Hygiene):**
+   - Hapus script scratch, log error lokal, dump JSON sementara, atau file uji coba sekali pakai sebelum rilis final.
+
+### Langkah Praktis
+1. Lakukan audit struktur folder dengan `git status` atau `Get-ChildItem`.
+2. Pastikan file `.agents/AGENTS.md` menjadi sumber aturan tunggal.
+3. Pindahkan dokumen panduan ke `docs/guides/` dan playbook ke `docs/playbook/`.
+4. Buat file `README.md` utama berstandar portofolio (gunakan Template I dari file `02_TEMPLATE_PROMPT_DAN_FILE.md`).
+5. Uji seluruh tautan relatif (`[link](file:///...)` atau `[link](./...)`) antar dokumen markdown agar tidak ada link rusak (broken links).
+6. Jalankan `npm run build` untuk memverifikasi bahwa pemindahan file tidak merusak impor modul apa pun.
+7. Lakukan final commit: `docs: organize directory structure, relocate AI configs to .agents, and update README`.
+
+### Checklist
+- [ ] Root folder bebas dari file markdown acak selain `README.md`.
+- [ ] File aturan AI tersimpan rapi di dalam direktori `.agents/`.
+- [ ] File kredensial rahasia (`.env.local`, file `.pem`, `recovery-codes.txt`) 100% aman dan tidak ter-commit ke Git.
+- [ ] `README.md` memuat deskripsi jelas, live demo URL, cuplikan screenshot antarmuka, tech stack, dan instruksi clone/install.
+- [ ] Semua hyperlink internal antar dokumen markdown berfungsi dengan benar.
+
+### Jebakan yang Perlu Dihindari
+- ❌ Memindahkan file tanpa memperbarui jalur relatif dokumen lain, menyebabkan broken links.
+- ❌ Membiarkan folder `node_modules` atau cache `.next` ter-commit karena lupa membuat `.gitignore` sejak menit pertama.
+- ❌ Menyisakan script sementara yang memuat kredensial API rahasia di direktori publik.
 
 ---
 
 ## Fase 17 — Perawatan, Sesi Chat Baru & Proyek Berikutnya
 
-### Saat Membuka Chat Baru
-1. Pastikan AI menyapa sesuai aturan (canary).
-2. Beri konteks singkat: *"Kita di Tahap X, terakhir mengerjakan Y, masalah yang tersisa Z."*
-3. Minta AI membaca `BACKLOG.md` dan breakdown sebelum mulai.
+### Tujuan
+Menjaga kelangsungan proyek saat berpindah ke sesi chat baru, mengantisipasi keterbatasan token/kuota obrolan, dan mereplikasi alur kerja sukses ini ke proyek-proyek berikutnya.
 
-### Saat Chat Sangat Panjang
-Chat panjang bisa diringkas otomatis oleh sistem dan detail kecil bisa hilang. Di TokoKu sempat terjadi respons tidak tampil dan error yang lolos karena konteks terpotong. Solusi:
-- Pecah pekerjaan besar ke beberapa chat per tahap.
-- Di akhir tiap tahap, minta AI menulis **ringkasan serah-terima** ke `docs/`.
+### Kenapa Penting
+Setiap model AI (Claude, Gemini, GPT-4o) memiliki batas jendela konteks (*context window*) dan kuota output per percakapan. Pada proyek TokoKu, sesi sempat terputus ketika kuota Claude habis atau ketika pesan respons terpotong. Tanpa sistem serah-terima (*handover*) berbasis file, membuka chat room baru akan membuat AI "amnesia" dan mengulangi pertanyaan atau kesalahan dari awal.
 
-### Untuk Proyek Berikutnya
-- Salin folder `docs/playbook/` dan template di file 02.
-- Mulai dari Fase 1 dengan Master Context.
-- Terapkan pelajaran di file 03 sejak Tahap 0 (test otomatis, auth di awal, satu sumber aturan).
+### Protokol Handover ke Chat Baru (Zero Context Loss)
+Saat membuka percakapan baru di AI:
+1. **Verifikasi Sapaan Indikator (Canary Check):**
+   - Pastikan AI langsung menyapa dengan namamu di respons pertamanya (misal: *"Dalvin, ..."*).
+   - Jika AI menyapa secara umum ("Halo! Ada yang bisa saya bantu?"), berarti file `.agents/AGENTS.md` belum terbaca otomatis. Segera sebutkan file aturan tersebut secara manual!
+2. **Kirim Prompt Handover Standar (Gunakan Prompt 14 dari File 02):**
+   - Instruksikan AI untuk membaca `.agents/AGENTS.md`, `docs/MASTER_PROJECT_CONTEXT.md`, `docs/WORKFLOW.md`, dan `docs/BREAKDOWN_TUGAS_DAN_TESTING.md`.
+   - Sebutkan secara spesifik: *"Terakhir kita sudah menyelesaikan Modul X, dan sekarang kita akan melanjutkan sub-tugas Y.Z."*
+3. **Gunakan Dokumen sebagai Memori Jangka Panjang:**
+   - Jangan menempelkan seluruh riwayat obrolan lama ke prompt baru. Cukup rujuk dokumen markdown yang relevan. File `.md` di repositori adalah memori permanen yang jauh lebih rapi, terstruktur, dan hemat token daripada riwayat chat panjang.
+
+### Strategi Mengatasi Sesi Chat Sangat Panjang
+Jika satu obrolan sudah melampaui puluhan prompt:
+- AI mulai mengalami *attention degradation* (kurang teliti membaca instruksi negatif seperti larangan gradien, atau lupa menjalankan commit).
+- Solusi: Pecah proyek menjadi sesi-sesi terfokus per modul (misal: Sesi 1 untuk Modul Kasir, Sesi 2 untuk Modul Laporan & Struk).
+- Setiap kali satu modul tuntas, pastikan AI melakukan auto-commit & push, centang checklist breakdown, lalu buka room chat baru untuk modul berikutnya.
+
+### Checklist
+- [ ] Sesi chat baru selalu diverifikasi dengan sapaan nama canary.
+- [ ] Status pekerjaan terakhir tercatat rapi di `docs/BREAKDOWN_TUGAS_DAN_TESTING.md` atau `docs/BACKLOG.md`.
+- [ ] Sesi chat lama telah di-commit dan di-push bersih ke repositori GitHub.
+- [ ] Tidak ada uncommitted changes atau kompilasi build yang sedang rusak saat menutup chat.
+
+### Jebakan yang Perlu Dihindari
+- ❌ Menggunakan satu ruang chat yang sama dari Fase 0 hingga Fase 17 sampai sistem melakukan auto-compaction ekstrem dan detail penting terhapus.
+- ❌ Menganggap AI di chat baru mengingat obrolan sesi kemarin tanpa membaca dokumen.
+- ❌ Berpindah sesi chat sebelum kode yang ada diuji kompilasinya dengan `npm run build`.
 
 ---
 
 ## Lampiran A — Definition of Done (DoD) Universal
 
-Sebuah tugas **baru boleh disebut selesai** jika semua ini benar:
+Sebuah tugas atau sub-fitur **HANYA BOLEH dinyatakan selesai** jika seluruh kriteria berikut terpenuhi 100%:
 
-- [ ] Perilaku sesuai kriteria di breakdown.
-- [ ] `npm run build` lolos tanpa error.
-- [ ] Lint tidak ada error baru.
-- [ ] Tes terkait hijau (jika ada).
-- [ ] Dicek visual di browser (minimal satu ukuran desktop + satu ukuran kecil).
-- [ ] Tidak ada error merah di console browser.
-- [ ] Mengikuti design system (token, komponen standar).
-- [ ] Dokumen terkait diperbarui.
-- [ ] Commit dengan pesan yang benar & ter-push.
-- [ ] Laporan menyebut hal yang belum diverifikasi.
+- [ ] **Kesesuaian Perilaku:** Fungsionalitas bekerja persis sesuai skenario yang didefinisikan di `docs/BREAKDOWN_TUGAS_DAN_TESTING.md`.
+- [ ] **Build Produksi Hijau:** Perintah `npm run build` keluar dengan exit code 0 tanpa error tipe TypeScript.
+- [ ] **Bebas Lint Error:** Tidak ada error lint baru yang merusak kualitas kode.
+- [ ] **Verifikasi Visual Browser:** Halaman diuji secara visual di browser lokal pada resolusi desktop standar (1920x1080) dan laptop scaling 125%-150%.
+- [ ] **Konsol Browser Bersih:** Tidak ada pesan error merah atau peringatan pelanggaran React Hook di Developer Tools console.
+- [ ] **Kepatuhan Desain:** Mengikuti design token baku (100% solid color, font minimal 11px, zero gradients).
+- [ ] **Sinkronisasi Dokumen:** Checkbox pada file breakdown dicentang, dan perubahan arsitektur dicatat.
+- [ ] **Auto-Commit & Push:** Perubahan telah di-commit dengan format Conventional Commits berbahasa Inggris dan ter-push ke branch `main`.
+- [ ] **Laporan Transparan:** Laporan AI menyebutkan secara jujur hal-hal yang belum teruji atau potensi edge case yang tersisa.
 
 ---
 
-## Lampiran B — Matriks Verifikasi
+## Lampiran B — Matriks Verifikasi Masalah
 
-| Jenis Masalah | Tertangkap oleh `build`? | Tertangkap oleh lint? | Tertangkap oleh test? | Tertangkap oleh cek visual? | Contoh di TokoKu |
-|---------------|:---:|:---:|:---:|:---:|------|
-| Variabel tidak didefinisikan | ✅ | ✅ | ✅ | — | `router` hilang di AppShell |
-| Salah urutan React Hook | ❌ | ✅ (react-hooks) | ✅ | ✅ (crash) | Error #310 di modal riwayat |
-| Hydration mismatch | ❌ | ❌ | sebagian | ✅ | Nomor invoice acak server vs client |
-| Layout/CSS rusak | ❌ | ❌ | ❌ (kecuali visual test) | ✅ | Batang grafik tinggi 0px; modal terpotong |
-| Gambar ekspor terpotong | ❌ | ❌ | ❌ | ✅ (buka file-nya) | Struk PNG terpotong kanan |
-| Celah keamanan | ❌ | ❌ | ✅ (jika ditulis) | ❌ | Default sudah login |
-| Aturan bisnis salah | ❌ | ❌ | ✅ | sebagian | Pembulatan harga |
+Tabel berikut menunjukkan jenis bug umum dan alat mana yang mampu menangkapnya:
 
-**Kesimpulan:** build saja menangkap sebagian kecil masalah. Kombinasikan keempatnya.
+| Jenis Masalah | Tertangkap oleh `build`? | Tertangkap oleh Lint? | Tertangkap oleh Test? | Tertangkap oleh Cek Visual Browser? | Contoh Kasus Nyata di TokoKu |
+|---------------|:---:|:---:|:---:|:---:|------------------------------|
+| Variabel atau modul tidak didefinisikan | ✅ Ya | ✅ Ya | ✅ Ya | — | `router` hilang di AppShell |
+| Pelanggaran urutan React Hook | ❌ Tidak | ✅ Ya (react-hooks) | ✅ Ya | ✅ Ya (React crash #310) | Error #310 di modal riwayat struk |
+| Hydration Mismatch (Server vs Client) | ❌ Tidak | ❌ Tidak | Sebagian | ✅ Ya (Peringatan console) | Generate invoice ID acak saat render |
+| Elemen UI / Tombol terpotong layar | ❌ Tidak | ❌ Tidak | ❌ Tidak | ✅ Ya | Modal terpotong pada laptop scaling 150% |
+| Ekspor gambar terpotong tepi kanan | ❌ Tidak | ❌ Tidak | ❌ Tidak | ✅ Ya (Buka file gambar) | Struk PNG terpotong saat diunduh |
+| Kontainer grafik tinggi 0 piksel | ❌ Tidak | ❌ Tidak | ❌ Tidak | ✅ Ya (Grafik kosong) | Recharts ResponsiveContainer di Flexbox |
+| Kebocoran hak akses pengguna | ❌ Tidak | ❌ Tidak | ✅ Ya (Integration) | ❌ Tidak | Kasir bisa akses endpoint owner |
+| Kesalahan logika bisnis / pembulatan | ❌ Tidak | ❌ Tidak | ✅ Ya (Unit test) | Sebagian | Pembulatan harga ke kelipatan 500 |
+
+**Kesimpulan:** `npm run build` saja hanya menangkap sebagian kecil masalah. Kombinasikan build check dengan inspeksi visual langsung di browser!
 
 ---
 
 ## Lampiran C — Standar Ukuran Font, Spasi & Responsif
 
 ### Skala Tipografi (Aplikasi Kasir, Jarak Pandang 50–70 cm)
-| Peran | Ukuran | Tailwind |
-|-------|--------|----------|
-| Angka total transaksi | 28–32px | `text-2xl`–`text-3xl font-extrabold` |
-| Judul halaman | 18–20px | `text-lg`–`text-xl font-bold` |
-| Judul kartu / modal | 16px | `text-base font-bold` |
-| Isi tabel, nama produk | 14px | `text-sm` |
-| Label form, keterangan | 12px | `text-xs` |
-| Badge kecil | 11–12px | `text-[11px]`–`text-xs` |
-| **Minimum mutlak** | **11px** | Jangan di bawah ini untuk info yang perlu dibaca (pelajaran "2 produk terlalu kecil") |
 
-### Target Sentuh & Spasi
-- Tombol yang sering diklik kasir: tinggi ≥ 40px (ideal 44–48px).
-- Spasi dasar kelipatan 4px; jarak antar kartu 16–24px.
+| Peran Elemen | Ukuran Font | Class Tailwind | Kegunaan |
+|--------------|-------------|----------------|----------|
+| Nilai Uang / Total Belanja | 28px – 32px | `text-2xl` – `text-3xl font-extrabold` | Angka total transaksi yang harus terbaca sekilas dari jauh |
+| Judul Halaman Utama | 20px | `text-xl font-bold` | Header navigasi halaman |
+| Judul Kartu / Modal Dialog | 16px | `text-base font-semibold` | Label kartu KPI dan dialog popup |
+| Isi Tabel & Nama Produk | 14px | `text-sm` | Daftar item belanja dan tabel master produk |
+| Label Form & Keterangan | 12px | `text-xs` | Label input, timestamp nota, subtitle |
+| Badge Status & Pill Kategori | 11px – 12px | `text-[11px]` – `text-xs font-medium` | Status stok aman/menipis, metode bayar |
+| **Batas Minimum Mutlak** | **11px** | `text-[11px]` | DILARANG memakai font di bawah 11px (tidak terbaca di laptop standar) |
 
-### Responsif & Skala Tampilan
-- Uji di: **1366×768**, **1920×1080 @ scaling 125% dan 150%**, tablet 768px, HP 375–414px.
-- Laptop 1920×1080 @150% setara ±1280×720 ruang efektif — sangat sempit secara vertikal.
-- **Modal:** `max-h-[90vh]` + header & footer tetap + isi yang bisa di-scroll.
-- **Tabel:** kolom panjang dipotong (`truncate`) + tombol aksi (lihat detail/edit) daripada memaksa semua teks tampil.
-- **Grafik:** gunakan tinggi piksel/viewport yang pasti, bukan persentase di dalam flex tanpa tinggi.
+### Target Sentuh & Spasi Antarmuka
+- **Tombol Kasir Utama:** Tinggi minimal `44px` hingga `48px` (`h-11` atau `h-12`) agar mudah ditekan cepat atau disentuh pada layar touchscreen.
+- **Sistem Grid Spasi:** Gunakan kelipatan 4px (`p-2`, `p-4`, `p-6`). Jarak antar kartu konten minimal `16px` (`gap-4`) hingga `24px` (`gap-6`).
+
+### Formula Responsivitas & Viewport Layar
+1. **Resolusi Sasaran:**
+   - Desktop Standar: `1920x1080` (100% scaling).
+   - Laptop 14 Inci: `1920x1080` @ 125% - 150% scaling (ruang vertikal efektif hanya ~600px).
+   - Tablet POS: `768px` - `1024px`.
+   - Smartphone Kasir/Scanner: `375px` - `414px`.
+2. **Formula Modal Anti-Bocor:**
+   - Pembungkus luar: `fixed inset-0 flex items-center justify-center p-4 bg-black/60`.
+   - Kotak modal: `flex flex-col max-h-[85vh] w-full max-w-lg overflow-hidden`.
+   - Header: `flex-shrink-0 sticky top-0`.
+   - Body konten: `flex-1 overflow-y-auto p-6`.
+   - Footer aksi: `flex-shrink-0 sticky bottom-0`.
+3. **Formula Tabel Responsif:**
+   - Terapkan `truncate` pada kolom teks panjang (nama produk/supplier) dan sediakan tombol aksi "Lihat Detail" daripada memaksa seluruh teks tampil melebar.
+4. **Formula Kontainer Grafik:**
+   - Selalu berikan pembungkus div dengan tinggi piksel pasti: `<div className="w-full h-[320px] min-h-[300px]">` sebelum memanggil `<ResponsiveContainer>`.
+
+---
+
+## Lampiran D — Cheatsheet Perintah CLI & Terminal Cepat
+
+Kumpulan perintah terminal Windows PowerShell yang sering digunakan dalam pengembangan:
+
+### Git & Repositori
+```powershell
+# Cek status perubahan file
+git status
+
+# Tambah semua file, commit konvensional, dan push ke GitHub
+git add . ; git commit -m "feat(scope): your descriptive message" ; git push
+
+# Lihat riwayat commit ringkas
+git log --oneline -n 10
+
+# Batalkan perubahan file lokal yang belum di-commit
+git restore <nama_file>
+```
+
+### Node.js & Next.js
+```powershell
+# Jalankan server development
+npm run dev
+
+# Jalankan kompilasi produksi & typecheck
+npm run build
+
+# Matikan proses node yang macet atau mengunci port 3000 di Windows
+Get-Process -Name node | Stop-Process -Force
+
+# Uji apakah port 3000 aktif merespons
+Test-NetConnection -ComputerName localhost -Port 3000
+```
+
+### Supabase CLI (Opsional)
+```powershell
+# Login ke akun Supabase
+npx supabase login
+
+# Tautkan proyek lokal ke proyek cloud Supabase
+npx supabase link --project-ref <project-id>
+
+# Buat file migrasi SQL baru
+npx supabase migration new <nama_migrasi>
+```
+
+---
+
+## Lampiran E — Filosofi Pengembangan Kolaboratif Manusia & AI
+
+> *"AI adalah mesin roket yang luar biasa cepat, namun kamulah kapten yang memegang kendali arah dan kompas tujuannya."*
+
+### 3 Pilar Sinergi Manusia dan AI:
+1. **Kejelasan di Atas Kecepatan (Clarity over Speed):**
+   - Menghabiskan 1 jam di awal untuk brainstorming, interview, dan menyusun aturan tertulis di `.agents/AGENTS.md` jauh lebih berharga daripada langsung koding dan menghabiskan 3 hari untuk merombak fitur yang salah arah.
+2. **File Markdown sebagai Memori Permanen (Docs as Ground Truth):**
+   - Chat AI bersifat fana dan mudah terhapus oleh batas token. File markdown di repositori bersifat abadi. Jadikan file dokumen sebagai sumber kebenaran tunggal yang selalu diperbarui.
+3. **Verifikasi Tanpa Kompromi (Trust but Verify):**
+   - AI bisa sangat percaya diri saat menghasilkan kode yang memiliki bug logika tersembunyi. Jangan pernah percaya klaim "sudah 100% selesai" tanpa bukti output kompilasi build dan inspeksi visual di browser nyata.
+
+Dengan memegang teguh playbook ini, setiap aplikasi yang kamu bangun di masa depan akan memiliki pondasi kokoh, arsitektur bersih, estetika visual kelas atas, dan kualitas kode berstandar industri!

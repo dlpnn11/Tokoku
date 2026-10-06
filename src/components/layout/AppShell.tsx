@@ -13,9 +13,14 @@ import { QrCode, Smartphone, ExternalLink, Copy, Check } from "lucide-react";
 interface AppShellProps {
   children: React.ReactNode;
   title?: string;
+  onOpenScannerPairing?: () => void;
 }
 
-export function AppShell({ children, title }: AppShellProps) {
+export function AppShell({
+  children,
+  title,
+  onOpenScannerPairing,
+}: AppShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { currentUser } = useAuthStore();
@@ -66,7 +71,9 @@ export function AppShell({ children, title }: AppShellProps) {
         <Header
           title={title}
           onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
-          onOpenScannerPairing={() => setIsScannerModalOpen(true)}
+          onOpenScannerPairing={
+            onOpenScannerPairing || (() => setIsScannerModalOpen(true))
+          }
         />
 
         {/* Scrollable Content Viewport */}

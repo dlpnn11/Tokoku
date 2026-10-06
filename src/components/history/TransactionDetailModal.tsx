@@ -144,13 +144,72 @@ export function TransactionDetailModal({
     window.open(url, "_blank");
   };
 
-  const handleDesktopWa = async () => {
-    // Auto-download receipt image
-    handleDownloadImage();
+  const handleNativeShare = async () => {
+    setDownloadingImage(true);
+    try {
+      if (!digitalReceiptRef.current) return;
+      const dataUrl = await toPng(digitalReceiptRef.current, {
+        quality: 1.0,
+        pixelRatio: 2,
+        backgroundColor: "#FFFFFF",
+        style: {
+          margin: "0",
+          transform: "none",
+        },
+      });
 
-    const text = encodeURIComponent(getWaTextMessage());
-    const url = `https://web.whatsapp.com/send?text=${text}`;
-    window.open(url, "_blank");
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const file = new File([blob], `Resi_TokoKu_${transaction.invoice_number}.png`, {
+        type: "image/png",
+      });
+
+      // 1. Try Native Web Share with file (Mobile / Windows Share Sheet)
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `Resi Pembayaran TokoKu ${transaction.invoice_number}`,
+          text: getWaTextMessage(),
+        });
+        return;
+      }
+
+      // 2. Try Native Web Share with text
+      if (navigator.share) {
+        const link = document.createElement("a");
+        link.download = `Resi_TokoKu_${transaction.invoice_number}.png`;
+        link.href = dataUrl;
+        link.click();
+
+        await navigator.share({
+          title: `Resi Pembayaran TokoKu ${transaction.invoice_number}`,
+          text: getWaTextMessage(),
+        });
+        return;
+      }
+
+      // 3. Fallback: Auto download PNG and launch WhatsApp protocol
+      const link = document.createElement("a");
+      link.download = `Resi_TokoKu_${transaction.invoice_number}.png`;
+      link.href = dataUrl;
+      link.click();
+
+      const text = encodeURIComponent(getWaTextMessage());
+      let clean = phoneInput.replace(/[^0-9]/g, "");
+      if (clean.startsWith("0")) clean = "62" + clean.slice(1);
+
+      if (clean) {
+        window.open(`https://wa.me/${clean}?text=${text}`, "_blank");
+      } else {
+        window.location.href = `whatsapp://send?text=${text}`;
+      }
+    } catch (err: any) {
+      if (err.name !== "AbortError") {
+        console.error("Gagal membagikan resi:", err);
+      }
+    } finally {
+      setDownloadingImage(false);
+    }
   };
 
   const handleConfirmCancel = async () => {
@@ -421,12 +480,12 @@ export function TransactionDetailModal({
           </div>
         )}
 
-        {/* WhatsApp Sharing Section */}
-        <div className="p-3 bg-[#F9F9F6] border border-[#E5E5E0] rounded-xl space-y-2.5">
+        {/* WhatsApp & Native Share Section */}
+        <div className="p-3.5 bg-[#F9F9F6] border border-[#E5E5E0] rounded-xl space-y-2.5">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-[#1A1A1A] flex items-center gap-1.5">
-              <MessageSquare className="w-3.5 h-3.5 text-[#25D366]" />
-              Kirim Bukti Pembayaran ke WhatsApp
+            <span className="text-xs font-bold text-[#1A1A1A] flex items-center gap-1.5">
+              <MessageSquare className="w-4 h-4 text-[#25D366]" />
+              Bagikan Resi ke WhatsApp
             </span>
             <span className="text-[10px] text-[#6B7280]">Foto PNG + Teks Ringkasan</span>
           </div>
@@ -434,39 +493,41 @@ export function TransactionDetailModal({
           <div className="flex flex-col sm:flex-row gap-2">
             <div className="flex-1">
               <Input
-                placeholder="Nomor WA Pelanggan (contoh: 081234567890)"
+                placeholder="Nomor WA (opsional untuk chat langsung)"
                 value={phoneInput}
                 onChange={(e) => setPhoneInput(e.target.value)}
                 className="h-9 text-xs bg-white border-[#E5E5E0]"
               />
             </div>
+
+            {phoneInput.trim() && (
+              <Button
+                type="button"
+                onClick={handleDirectWa}
+                disabled={downloadingImage}
+                className="h-9 px-3 text-xs font-bold bg-[#25D366] hover:bg-[#20ba5a] text-white shrink-0 cursor-pointer"
+                title="Kirim Langsung ke Nomor WA Ini"
+              >
+                <Send className="w-3.5 h-3.5 mr-1.5" />
+                Kirim ke No. Ini
+              </Button>
+            )}
+
             <Button
               type="button"
-              onClick={handleDirectWa}
+              onClick={handleNativeShare}
               disabled={downloadingImage}
-              className="h-9 px-3 text-xs font-bold bg-[#25D366] hover:bg-[#20ba5a] text-white shrink-0 cursor-pointer"
-              title="Buka Chat WhatsApp ke Nomor Ini"
+              className="h-9 px-3.5 text-xs font-bold bg-[#25D366] hover:bg-[#20ba5a] text-white shrink-0 cursor-pointer"
+              title="Buka menu Share untuk memilih WhatsApp / Kontak langsung tanpa scan web barcode"
             >
-              <Send className="w-3.5 h-3.5 mr-1.5" />
-              Kirim ke No. Ini
+              <Share2 className="w-3.5 h-3.5 mr-1.5" />
+              {downloadingImage ? "Menyiapkan..." : "Bagikan / Share WA"}
             </Button>
           </div>
 
-          <div className="flex items-center justify-between pt-1.5 border-t border-[#EAEAE5] text-[11px]">
-            <span className="text-[10px] text-[#6B7280]">
-              Sudah simpan kontak pelanggan?
-            </span>
-            <button
-              type="button"
-              onClick={handleDesktopWa}
-              disabled={downloadingImage}
-              className="text-[11px] font-bold text-[#6FA084] hover:text-[#58836B] hover:underline flex items-center gap-1 cursor-pointer"
-              title="Buka WhatsApp Web / Desktop lalu pilih kontak langsung"
-            >
-              <Laptop className="w-3.5 h-3.5" />
-              Buka WA Desktop (Pilih Kontak)
-            </button>
-          </div>
+          <p className="text-[10px] text-[#6B7280] leading-tight">
+            💡 Klik <strong>Bagikan / Share WA</strong> untuk langsung membuka menu share & kontak WhatsApp (tanpa perlu scan barcode browser). Foto resi PNG juga otomatis terunduh!
+          </p>
         </div>
 
         {/* Action Buttons */}

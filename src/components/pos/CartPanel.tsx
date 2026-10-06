@@ -267,10 +267,14 @@ export function CartPanel({ onCheckout, loading = false }: CartPanelProps) {
                   UANG DITERIMA (RP)
                 </label>
                 <Input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   placeholder="0"
-                  value={cashReceived || ""}
-                  onChange={(e) => setCashReceived(Number(e.target.value) || 0)}
+                  value={cashReceived ? new Intl.NumberFormat("id-ID").format(cashReceived) : ""}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/[^0-9]/g, "");
+                    setCashReceived(raw ? parseInt(raw, 10) : 0);
+                  }}
                   className="h-9 text-xs font-bold font-mono bg-white"
                 />
               </div>

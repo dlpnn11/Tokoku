@@ -12,7 +12,10 @@ import {
   Share2,
   FileText,
   Image as ImageIcon,
+  Send,
+  Laptop,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { formatRupiah, roundPrice500, cn } from "@/lib/utils";
 import { CartItem } from "@/stores/cartStore";
 import { toPng } from "html-to-image";
@@ -41,7 +44,17 @@ export function ReceiptModal({
 }: ReceiptModalProps) {
   const [viewMode, setViewMode] = React.useState<"thermal" | "digital">("digital");
   const [downloadingImage, setDownloadingImage] = React.useState(false);
+  const [phoneInput, setPhoneInput] = React.useState("");
   const digitalReceiptRef = React.useRef<HTMLDivElement>(null);
+
+  // Sync phone from transactionData
+  React.useEffect(() => {
+    if (transactionData?.customerPhone) {
+      setPhoneInput(transactionData.customerPhone);
+    } else {
+      setPhoneInput("");
+    }
+  }, [transactionData]);
 
   if (!transactionData) return null;
 
@@ -49,15 +62,25 @@ export function ReceiptModal({
     window.print();
   };
 
+  const getReceiptImage = async () => {
+    if (!digitalReceiptRef.current) return null;
+    return await toPng(digitalReceiptRef.current, {
+      quality: 1.0,
+      pixelRatio: 2,
+      backgroundColor: "#FFFFFF",
+      style: {
+        margin: "0",
+        transform: "none",
+      },
+    });
+  };
+
   const handleDownloadImage = async () => {
     if (!digitalReceiptRef.current) return;
     setDownloadingImage(true);
     try {
-      const dataUrl = await toPng(digitalReceiptRef.current, {
-        quality: 1.0,
-        pixelRatio: 2,
-        backgroundColor: "#FFFFFF",
-      });
+      const dataUrl = await getReceiptImage();
+      if (!dataUrl) return;
 
       const link = document.createElement("a");
       link.download = `Resi_TokoKu_${transactionData.invoiceNumber}.png`;
@@ -71,69 +94,63 @@ export function ReceiptModal({
     }
   };
 
-  const handleShareImage = async () => {
-    if (!digitalReceiptRef.current) return;
-    setDownloadingImage(true);
-    try {
-      const dataUrl = await toPng(digitalReceiptRef.current, {
-        quality: 1.0,
-        pixelRatio: 2,
-        backgroundColor: "#FFFFFF",
-      });
-
-      const res = await fetch(dataUrl);
-      const blob = await res.blob();
-      const file = new File([blob], `Resi_TokoKu_${transactionData.invoiceNumber}.png`, {
-        type: "image/png",
-      });
-
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: `Resi Pembayaran TokoKu ${transactionData.invoiceNumber}`,
-          text: `Bukti pembayaran TokoKu untuk faktur ${transactionData.invoiceNumber}`,
-        });
-      } else {
-        // Fallback: download image and open WhatsApp web
-        const link = document.createElement("a");
-        link.download = `Resi_TokoKu_${transactionData.invoiceNumber}.png`;
-        link.href = dataUrl;
-        link.click();
-
-        const phone = transactionData.customerPhone
-          ? transactionData.customerPhone.replace(/[^0-9]/g, "").replace(/^0/, "62")
-          : "";
-        const waUrl = phone
-          ? `https://wa.me/${phone}?text=${encodeURIComponent(
-              `Halo! Berikut kami lampirkan gambar bukti pembayaran TokoKu untuk invoice ${transactionData.invoiceNumber}. Total: ${formatRupiah(
-                transactionData.totalAmount
-              )}.`
-            )}`
-          : `https://api.whatsapp.com/send?text=${encodeURIComponent(
-              `Bukti pembayaran TokoKu invoice ${transactionData.invoiceNumber}. Total: ${formatRupiah(
-                transactionData.totalAmount
-              )}.`
-            )}`;
-        window.open(waUrl, "_blank");
-      }
-    } catch (err) {
-      console.error("Gagal membagikan resi gambar:", err);
-    } finally {
-      setDownloadingImage(false);
-    }
+  const getWaTextMessage = () => {
+    return (
+      `*BUKTI PEMBAYARAN TOKOKU*\n` +
+      `Toko Grosir Sumber Rejeki\n` +
+      `No. Invoice: ${transactionData.invoiceNumber}\n` +
+      `Waktu: ${transactionData.date}\n` +
+      `Kasir: ${transactionData.cashierName}\n` +
+      `--------------------------------\n` +
+      transactionData.items
+        .map(
+          (i) =>
+            `• ${i.product.name} (${i.quantity}x) = ${formatRupiah(i.subtotal)}`
+        )
+        .join("\n") +
+      `\n--------------------------------\n` +
+      `*Total: ${formatRupiah(transactionData.totalAmount)}*\n` +
+      `Metode: ${transactionData.paymentMethod}\n\n` +
+      `Terima kasih telah berbelanja di TokoKu!`
+    );
   };
 
-  const cleanPhone = transactionData.customerPhone
-    ? transactionData.customerPhone.replace(/[^0-9]/g, "").replace(/^0/, "62")
-    : "";
+  // Direct WA to specific number (New Customer)
+  const handleDirectWa = async () => {
+    let clean = phoneInput.replace(/[^0-9]/g, "");
+    if (!clean) {
+      alert("Silakan masukkan nomor WhatsApp tujuan terlebih dahulu.");
+      return;
+    }
+    if (clean.startsWith("0")) {
+      clean = "62" + clean.slice(1);
+    }
+
+    // Auto-download receipt image so cashier can easily attach it
+    handleDownloadImage();
+
+    const text = encodeURIComponent(getWaTextMessage());
+    const url = `https://wa.me/${clean}?text=${text}`;
+    window.open(url, "_blank");
+  };
+
+  // Open WhatsApp Desktop / Web for saved contacts
+  const handleDesktopWa = async () => {
+    // Auto-download receipt image
+    handleDownloadImage();
+
+    const text = encodeURIComponent(getWaTextMessage());
+    const url = `https://web.whatsapp.com/send?text=${text}`;
+    window.open(url, "_blank");
+  };
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       title="Transaksi Berhasil"
-      description={`Invoice ${transactionData.invoiceNumber} berhasil dicatat secara atomik.`}
-      maxWidth="md"
+      description={`Invoice ${transactionData.invoiceNumber} berhasil dicatat.`}
+      maxWidth="lg"
     >
       <div className="space-y-4">
         {/* Success Banner */}
@@ -266,9 +283,57 @@ export function ReceiptModal({
           </div>
         )}
 
+        {/* WhatsApp Sharing Section */}
+        <div className="p-3 bg-[#F9F9F6] border border-[#E5E5E0] rounded-xl space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-[#1A1A1A] flex items-center gap-1.5">
+              <MessageSquare className="w-3.5 h-3.5 text-[#25D366]" />
+              Kirim Struk ke WhatsApp
+            </span>
+            <span className="text-[10px] text-[#6B7280]">Foto PNG + Teks Ringkasan</span>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex-1">
+              <Input
+                placeholder="Nomor WA Pelanggan (contoh: 081234567890)"
+                value={phoneInput}
+                onChange={(e) => setPhoneInput(e.target.value)}
+                className="h-9 text-xs bg-white border-[#E5E5E0]"
+              />
+            </div>
+            <Button
+              type="button"
+              onClick={handleDirectWa}
+              disabled={downloadingImage}
+              className="h-9 px-3 text-xs font-bold bg-[#25D366] hover:bg-[#20ba5a] text-white shrink-0 cursor-pointer"
+              title="Buka Chat WhatsApp ke Nomor Ini"
+            >
+              <Send className="w-3.5 h-3.5 mr-1.5" />
+              Kirim ke No. Ini
+            </Button>
+          </div>
+
+          <div className="flex items-center justify-between pt-1.5 border-t border-[#EAEAE5] text-[11px]">
+            <span className="text-[10px] text-[#6B7280]">
+              Sudah simpan kontak pelanggan?
+            </span>
+            <button
+              type="button"
+              onClick={handleDesktopWa}
+              disabled={downloadingImage}
+              className="text-[11px] font-bold text-[#6FA084] hover:text-[#58836B] hover:underline flex items-center gap-1 cursor-pointer"
+              title="Buka WhatsApp Web / Desktop lalu pilih kontak langsung"
+            >
+              <Laptop className="w-3.5 h-3.5" />
+              Buka WA Desktop (Pilih Kontak)
+            </button>
+          </div>
+        </div>
+
         {/* Action Buttons */}
         <div className="space-y-2 pt-2 border-t border-[#E5E5E0]">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <Button
               type="button"
               variant="outline"
@@ -276,7 +341,7 @@ export function ReceiptModal({
               className="gap-1.5 h-10 text-xs font-bold"
             >
               <Printer className="w-3.5 h-3.5 text-[#6FA084]" />
-              Cetak 58mm
+              Cetak Nota Kertas (58mm)
             </Button>
 
             <Button
@@ -287,17 +352,7 @@ export function ReceiptModal({
               className="gap-1.5 h-10 text-xs font-bold border-[#6FA084] text-[#6FA084] hover:bg-[#F4F8F5]"
             >
               <Download className="w-3.5 h-3.5" />
-              Unduh Foto Resi
-            </Button>
-
-            <Button
-              type="button"
-              disabled={downloadingImage}
-              onClick={handleShareImage}
-              className="gap-1.5 h-10 text-xs font-bold bg-[#25D366] hover:bg-[#20ba5a] text-white"
-            >
-              <Share2 className="w-3.5 h-3.5" />
-              Kirim ke WA
+              {downloadingImage ? "Memproses..." : "Unduh Foto Resi (PNG)"}
             </Button>
           </div>
 

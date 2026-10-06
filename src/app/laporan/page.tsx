@@ -27,6 +27,7 @@ import {
 import { DailyRevenueChart } from "@/components/report/DailyRevenueChart";
 import { BestSellersList } from "@/components/report/BestSellersList";
 import { CategoryBreakdown } from "@/components/report/CategoryBreakdown";
+import { MonthlyTrendChart } from "@/components/report/MonthlyTrendChart";
 
 type PeriodFilter = "today" | "week" | "month" | "custom";
 
@@ -39,6 +40,7 @@ export default function LaporanPage() {
   const [customEndDate, setCustomEndDate] = React.useState("");
   const [loading, setLoading] = React.useState(true);
   const [report, setReport] = React.useState<FinancialReportSummary | null>(null);
+  const [monthlyHistory, setMonthlyHistory] = React.useState<any[]>([]);
 
   // Compute dates based on period
   const getDateRange = React.useCallback((): { start?: string; end?: string; label: string } => {
@@ -83,8 +85,12 @@ export default function LaporanPage() {
     setLoading(true);
     try {
       const { start, end } = getDateRange();
-      const res = await reportService.getFinancialReport(start, end);
+      const [res, historyRes] = await Promise.all([
+        reportService.getFinancialReport(start, end),
+        reportService.getMonthlyHistoricalTrend(),
+      ]);
       setReport(res);
+      setMonthlyHistory(historyRes);
     } catch (err) {
       console.error("Gagal memuat laporan:", err);
     } finally {
@@ -362,6 +368,32 @@ export default function LaporanPage() {
                 </div>
               ) : (
                 <DailyRevenueChart data={report?.dailyTrend || []} />
+              )}
+            </div>
+
+            {/* Chart Card 2: Grafik Tren Bulanan Historis (2025 - 2026) */}
+            <div className="bg-white border border-[#E5E5E0] rounded-xl p-5 shadow-2xs space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-sm text-[#1A1A1A]">
+                    Grafik Tren Bulanan (Historis 2025 – 2026)
+                  </h3>
+                  <p className="text-[11px] text-[#6B7280]">
+                    Akumulasi omzet per bulan dari akhir 2025 hingga sekarang
+                  </p>
+                </div>
+                <span className="text-xs font-bold text-[#6B7280] bg-[#FAFBF9] border border-[#E5E5E0] px-2.5 py-1 rounded-md">
+                  Historis Lengkap
+                </span>
+              </div>
+
+              {loading ? (
+                <div className="h-64 flex items-center justify-center text-xs text-[#6B7280]">
+                  <RefreshCw className="w-5 h-5 animate-spin mr-2 text-[#6FA084]" />
+                  Memuat data tren bulanan...
+                </div>
+              ) : (
+                <MonthlyTrendChart data={monthlyHistory} />
               )}
             </div>
 

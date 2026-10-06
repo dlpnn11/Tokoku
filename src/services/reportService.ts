@@ -230,6 +230,53 @@ export const reportService = {
   },
 
   /**
+   * Get all-time monthly historical trend spanning 2025 - 2026
+   */
+  async getMonthlyHistoricalTrend() {
+    const { data: rawTx, error } = await supabase
+      .from("transactions")
+      .select("total_amount, created_at")
+      .eq("status", "Selesai")
+      .order("created_at", { ascending: true });
+
+    if (error) throw error;
+
+    const monthlyMap = new Map<
+      string,
+      { year: number; month: number; label: string; revenue: number; txCount: number }
+    >();
+
+    (rawTx || []).forEach((tx) => {
+      const d = new Date(tx.created_at);
+      const year = d.getFullYear();
+      const month = d.getMonth();
+      const key = `${year}-${String(month + 1).padStart(2, "0")}`;
+      const label = d.toLocaleDateString("id-ID", { month: "short", year: "numeric" });
+
+      const existing = monthlyMap.get(key) || {
+        year,
+        month,
+        label,
+        revenue: 0,
+        txCount: 0,
+      };
+      existing.revenue += Number(tx.total_amount);
+      existing.txCount += 1;
+      monthlyMap.set(key, existing);
+    });
+
+    return Array.from(monthlyMap.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([key, val]) => ({
+        key,
+        year: val.year,
+        label: val.label,
+        revenue: val.revenue,
+        txCount: val.txCount,
+      }));
+  },
+
+  /**
    * Generate CSV format and trigger instant browser download
    */
   exportToCsv(report: FinancialReportSummary, periodLabel: string) {

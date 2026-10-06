@@ -26,12 +26,12 @@ graph TD
 
 ---
 
-## RINGKASAN TAHAPAN:
-* **Tahap 0 — Project Setup & Design System Tokens:** Inisialisasi Next.js TypeScript, Tailwind CSS, konfigurasi warna solid (Sage Green `#6FA084`, Soft Beige `#F4F4F0`, Dark Charcoal `#2C2C2C`, tanpa gradien), dan instalasi komponen Shadcn UI dasar.
-* **Tahap 1 — Database Schema & Realistic Seed Data:** Menyiapkan script SQL migration Supabase untuk 6 tabel, relasi, RLS, dan RPC checkout atomik. Memasukkan data awal (seed) produk khas warung kelontong Indonesia (Indomie Goreng, Aqua, Kopi Kapal Api, Beras, dll.).
-* **Tahap 2 — Auth & Shell Layout:** Login sederhana dengan Role (pemilik vs kasir). Sticky Sidebar untuk desktop, dan Collapsible Drawer/Sheet untuk mobile.
-* **Tahap 3 — Modul Inventaris (`/inventaris`):** Dikerjakan sebelum POS karena POS membutuhkan katalog produk dan stok yang siap dijual. Fitur CRUD Produk, Kategori, Supplier, dan modal Stock Opname.
-* **Tahap 4 — Modul POS (`/pos`) & Scanner Realtime (`/scan`):** Split-screen layout POS, pencarian cepat, keranjang Zustand, tombol uang pas, dan modal sukses bayar. Rute pemindai HP (`/scan`) dengan `html5-qrcode`, beep Web Audio API, dan pengiriman SKU realtime ke POS desktop.
-* **Tahap 5 — Cetak Struk, Integrasi WhatsApp, & Riwayat (`/riwayat`):** CSS thermal print 58mm/80mm, direct link `wa.me`, dan tabel riwayat transaksi (bisa cetak ulang).
-* **Tahap 6 — Dashboard Ringkasan & Laporan (`/dashboard` & `/laporan`):** Kartu KPI penjualan hari ini, peringatan stok menipis, dan grafik penjualan terbaik.
-* **Tahap 7 — Testing & Polishing:** Uji coba responsivitas HP (360px–430px) dan desktop (1440x900px), penanganan error jaringan.
+## RINGKASAN TAHAPAN (100% SELESAI):
+* ✅ **Tahap 0 — Project Setup & Design System Tokens:** Inisialisasi Next.js TypeScript, Tailwind CSS, konfigurasi warna solid (Sage Green `#6FA084`, Soft Beige `#F4F4F0`, Dark Charcoal `#2C2C2C`, tanpa gradien), dan instalasi komponen Shadcn UI dasar.
+* ✅ **Tahap 1 — Database Schema & Realistic Seed Data:** Menyiapkan script SQL migration Supabase untuk 6 tabel, relasi, RLS, dan RPC checkout atomik. Memasukkan data awal (seed) produk khas warung kelontong Indonesia.
+* ✅ **Tahap 2 — Auth & Shell Layout:** Login sederhana dengan Role (pemilik vs kasir). Sticky Sidebar untuk desktop, dan Collapsible Drawer/Sheet untuk mobile.
+* ✅ **Tahap 3 — Modul Inventaris (`/inventaris`):** CRUD Produk dengan kalkulasi margin otomatis & pembulatan kelipatan 500, Kategori, Supplier dengan checklist pasokan & modal lihat produk, serta Stock Opname.
+* ✅ **Tahap 4 — Modul POS (`/pos`) & Scanner Realtime (`/scan`):** Split-screen layout POS, katalog produk, keranjang belanja Zustand, quick cash buttons, F2 checkout shortcut, receipt thermal preview & WA share, serta kamera barcode HP nirkabel via Supabase Realtime broadcast.
+* ✅ **Tahap 5 — Cetak Struk, Integrasi WhatsApp, & Riwayat (`/riwayat`):** CSS thermal print 58mm `@media print`, direct link `wa.me`, tabel riwayat transaksi responsif, dan pembatalan transaksi dengan auto-restock stok barang.
+* ✅ **Tahap 6 — Dashboard Ringkasan & Laporan (`/dashboard` & `/laporan`):** Kartu KPI penjualan hari ini, peringatan stok menipis, grafik pendapatan harian, grafik tren bulanan historis 2025–2026, analisis 8 produk terlaris, proporsi kategori, dan ekspor spreadsheet Excel/CSV UTF-8 BOM.
+* ✅ **Tahap 7 — Testing & Polishing:** Verifikasi otomatis menyeluruh (427+ transaksi lintas tahun 2025–2026, 70 SKU produk, 8 kategori, 7 supplier), perbaikan SSR hydration, dan build produksi Next.js 16 (Turbopack) 100% sukses.

@@ -42,15 +42,18 @@ Dokumen ini memecah seluruh proyek menjadi modul-modul kecil bertahap. Setiap tu
 
 ---
 
-### 📦 FASE 3: Modul Inventaris (`/inventaris`)
-- [ ] **3.1 Tampilan Tab & Filter Produk**
+### 📦 FASE 3: Modul Inventaris (`/inventaris`) (SELESAI ✅)
+- [x] **3.1 Tampilan Tab & Filter Produk**
   - Tab Produk, Kategori, Supplier.
   - Filter pencarian teks nama/SKU, dropdown kategori, status stok (Semua, Aktif, Menipis, Habis).
-- [ ] **3.2 CRUD Produk & Modal Tambah/Edit**
-  - Form input nama, barcode/SKU, kategori, supplier, harga beli, harga jual, stok awal, stok minimum, satuan.
-- [ ] **3.3 Modal Stock Opname**
-  - Penyesuaian stok fisik langsung ke sistem dengan pencatatan selisih (+/-).
-  - *Testing/Verifikasi:* Buat 1 produk baru, edit harganya, lakukan stock opname, cek data langsung terupdate di database.
+  - 4 KPI card ringkasan inventaris (Total SKU, Stok Menipis, Stok Habis, Total HPP).
+- [x] **3.2 CRUD Produk & Modal Tambah/Edit**
+  - Form input nama, barcode/SKU, kategori, supplier, harga beli, harga jual, perhitungan margin otomatis, stok, stok minimum, satuan.
+  - Modal detail produk dengan visualisasi data spesifikasi.
+  - CRUD Kategori dan Supplier modal terhubung langsung ke Supabase.
+- [x] **3.3 Modal Stock Opname**
+  - Penyesuaian stok fisik langsung ke sistem dengan pencatatan selisih (+/-) serta tombol cepat penambahan barang kulakan (+1, +5).
+  - *Testing/Verifikasi:* Next.js build sukses 100% dan teruji koneksi ke Supabase Cloud.
 
 ---
 

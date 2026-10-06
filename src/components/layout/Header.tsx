@@ -29,7 +29,6 @@ export function Header({
         year: "numeric",
         hour: "2-digit",
         minute: "2-digit",
-        second: "2-digit",
         timeZoneName: "short",
       };
       // Format: Senin, 28 September 2026 | 16:02 WIB
@@ -38,7 +37,7 @@ export function Header({
     };
 
     updateTime();
-    const interval = setInterval(updateTime, 1000);
+    const interval = setInterval(updateTime, 60000);
     return () => clearInterval(interval);
   }, []);
 

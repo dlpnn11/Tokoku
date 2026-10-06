@@ -44,3 +44,13 @@ Before answering or executing any task, ALWAYS read and synchronize with the fol
 2. **Framework & Stack:** Next.js (App Router), TypeScript, Tailwind CSS, Shadcn UI, Zustand, Supabase (PostgreSQL & Realtime Channels).
 3. **No Unrequested Features & Endless Clarification Rule:** Do not invent features independently. ALWAYS ask and confirm with Dalvin whenever you are unsure, have options to choose from, or need clarification. You are encouraged to ask as many questions as needed without limit, and you MUST always provide clear recommendations for each question.
 4. **TDD / Verification First:** Build and verify each component/module iteratively before marking it as complete.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

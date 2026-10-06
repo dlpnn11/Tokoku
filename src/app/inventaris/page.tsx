@@ -296,10 +296,10 @@ export default function InventarisPage() {
           {activeTab === "produk" && (
             <div className="space-y-4">
               {/* Action Toolbar */}
-              <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
-                <div className="flex flex-1 flex-col sm:flex-row items-center gap-3">
+              <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3">
+                <div className="flex flex-1 flex-wrap items-center gap-2.5">
                   {/* Search */}
-                  <div className="relative w-full sm:w-72">
+                  <div className="relative w-full sm:w-64">
                     <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#9E9E9E]" />
                     <Input
                       placeholder="Cari produk atau SKU..."
@@ -313,7 +313,7 @@ export default function InventarisPage() {
                   <select
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="h-10 w-full sm:w-44 rounded-lg border border-[#E5E5E0] bg-white px-3 text-xs text-[#1A1A1A] focus:outline-none focus:border-[#6FA084]"
+                    className="h-10 w-full sm:w-40 rounded-lg border border-[#E5E5E0] bg-white px-3 text-xs text-[#1A1A1A] focus:outline-none focus:border-[#6FA084]"
                   >
                     <option value="all">Semua Kategori</option>
                     {categories.map((c) => (
@@ -327,7 +327,7 @@ export default function InventarisPage() {
                   <select
                     value={selectedStatus}
                     onChange={(e) => setSelectedStatus(e.target.value)}
-                    className="h-10 w-full sm:w-40 rounded-lg border border-[#E5E5E0] bg-white px-3 text-xs text-[#1A1A1A] focus:outline-none focus:border-[#6FA084]"
+                    className="h-10 w-full sm:w-36 rounded-lg border border-[#E5E5E0] bg-white px-3 text-xs text-[#1A1A1A] focus:outline-none focus:border-[#6FA084]"
                   >
                     <option value="all">Semua Status</option>
                     <option value="aktif">Aktif di POS</option>
@@ -338,17 +338,17 @@ export default function InventarisPage() {
                 </div>
 
                 {/* Right Buttons */}
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2 shrink-0">
                   <Button
                     variant="outline"
-                    className="gap-2 h-10 text-xs"
+                    className="gap-2 h-10 text-xs shrink-0"
                     onClick={() => setIsStockOpnameOpen(true)}
                   >
                     <ClipboardList className="w-4 h-4 text-[#6FA084]" />
                     Stock Opname
                   </Button>
                   <Button
-                    className="gap-2 h-10 text-xs"
+                    className="gap-2 h-10 text-xs shrink-0"
                     onClick={() => {
                       setProductToEdit(null);
                       setIsProductFormOpen(true);

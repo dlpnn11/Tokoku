@@ -42,6 +42,12 @@ export function CartPanel({ onCheckout, loading = false }: CartPanelProps) {
     getChangeAmount,
   } = useCartStore();
 
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const totalAmount = getTotalAmount();
   const totalItems = getTotalItems();
   const changeAmount = getChangeAmount();
@@ -93,8 +99,11 @@ export function CartPanel({ onCheckout, loading = false }: CartPanelProps) {
             <h3 className="font-bold text-xs text-[#1A1A1A] uppercase tracking-wider">
               Keranjang Kasir
             </h3>
-            <span className="text-[10px] text-[#6B7280] font-mono block">
-              {invoiceNumber} • {totalItems} item
+            <span
+              className="text-[10px] text-[#6B7280] font-mono block"
+              suppressHydrationWarning
+            >
+              {mounted ? invoiceNumber : "TK-..."} • {totalItems} item
             </span>
           </div>
         </div>

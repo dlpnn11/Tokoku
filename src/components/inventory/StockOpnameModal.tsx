@@ -111,14 +111,14 @@ export function StockOpnameModal({
             className="h-9 text-xs"
           />
           {changes.length > 0 && (
-            <span className="text-xs font-bold text-[#6FA084] shrink-0">
+            <span className="text-xs font-bold text-tokoku-primary shrink-0">
               {changes.length} produk diubah
             </span>
           )}
         </div>
 
         {/* Product Items Table */}
-        <div className="max-h-[340px] overflow-y-auto border border-[#E5E5E0] rounded-xl divide-y divide-[#E5E5E0]">
+        <div className="max-h-[340px] overflow-y-auto border border-tokoku-border rounded-xl divide-y divide-tokoku-border">
           {filteredProducts.map((p) => {
             const currentSystem = p.current_stock;
             const currentPhysical = stockMap[p.id] ?? currentSystem;
@@ -127,13 +127,13 @@ export function StockOpnameModal({
             return (
               <div
                 key={p.id}
-                className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#F9F9F7] transition-colors"
+                className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-tokoku-row-hover transition-colors"
               >
                 <div className="flex-1 min-w-0">
-                  <span className="font-bold text-xs text-[#1A1A1A] block truncate">
+                  <span className="font-bold text-xs text-tokoku-text-primary block truncate">
                     {p.name}
                   </span>
-                  <span className="text-[11px] text-[#6B7280]">
+                  <span className="text-[11px] text-tokoku-text-secondary">
                     SKU: {p.sku} • Stok Sistem: <strong>{currentSystem} {p.unit}</strong>
                   </span>
                 </div>
@@ -144,7 +144,7 @@ export function StockOpnameModal({
                     <button
                       type="button"
                       onClick={() => handleQuickAdd(p.id, 1)}
-                      className="px-2 py-1 text-[11px] bg-[#F4F4F0] hover:bg-[#E5E5E0] rounded font-bold cursor-pointer transition-colors"
+                      className="px-2 py-1 text-[11px] bg-tokoku-bg hover:bg-tokoku-border rounded font-bold cursor-pointer transition-colors"
                       title="Tambah 1 barang datang"
                     >
                       +1
@@ -152,7 +152,7 @@ export function StockOpnameModal({
                     <button
                       type="button"
                       onClick={() => handleQuickAdd(p.id, 5)}
-                      className="px-2 py-1 text-[11px] bg-[#F4F4F0] hover:bg-[#E5E5E0] rounded font-bold cursor-pointer transition-colors"
+                      className="px-2 py-1 text-[11px] bg-tokoku-bg hover:bg-tokoku-border rounded font-bold cursor-pointer transition-colors"
                       title="Tambah 5 barang datang"
                     >
                       +5
@@ -177,11 +177,11 @@ export function StockOpnameModal({
                     {diff === 0 ? (
                       <span className="text-xs text-[#9E9E9E] font-medium">0</span>
                     ) : diff > 0 ? (
-                      <span className="text-xs text-[#6FA084] font-bold">
+                      <span className="text-xs text-tokoku-primary font-bold">
                         +{diff}
                       </span>
                     ) : (
-                      <span className="text-xs text-[#D64545] font-bold">
+                      <span className="text-xs text-tokoku-danger font-bold">
                         {diff}
                       </span>
                     )}
@@ -194,7 +194,7 @@ export function StockOpnameModal({
 
         {/* Note input */}
         <div>
-          <label className="text-xs font-semibold text-[#1A1A1A] block mb-1">
+          <label className="text-xs font-semibold text-tokoku-text-primary block mb-1">
             Catatan Penyesuaian (Opsional)
           </label>
           <Input
@@ -205,7 +205,7 @@ export function StockOpnameModal({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-2.5 pt-3 border-t border-[#E5E5E0]">
+        <div className="flex justify-end gap-2.5 pt-3 border-t border-tokoku-border">
           <Button type="button" variant="ghost" onClick={onClose} disabled={loading}>
             Batal
           </Button>

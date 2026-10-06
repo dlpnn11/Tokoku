@@ -80,6 +80,10 @@ export default function InventarisPage() {
   const [isCategoryProductsOpen, setIsCategoryProductsOpen] = React.useState(false);
   const [selectedCategoryForDetail, setSelectedCategoryForDetail] = React.useState<(Category & { product_count?: number }) | null>(null);
 
+  // Category & Supplier Edit States
+  const [categoryToEdit, setCategoryToEdit] = React.useState<Category | null>(null);
+  const [supplierToEdit, setSupplierToEdit] = React.useState<(Supplier & { product_count?: number }) | null>(null);
+
   // Initial load
   const loadData = React.useCallback(async () => {
     try {
@@ -139,9 +143,14 @@ export default function InventarisPage() {
     await loadData();
   };
 
-  // Category & Supplier Handlers
-  const handleSaveCategory = async (name: string) => {
-    await inventoryService.createCategory(name);
+  // Category Handlers
+  const handleSaveCategory = async (name: string, id?: string) => {
+    if (id) {
+      await inventoryService.updateCategory(id, name);
+    } else {
+      await inventoryService.createCategory(name);
+    }
+    setCategoryToEdit(null);
     await loadData();
   };
 
@@ -156,24 +165,37 @@ export default function InventarisPage() {
     }
   };
 
-  const handleSaveSupplier = async (data: {
-    name: string;
-    phone?: string;
-    address?: string;
-    productIds?: string[];
-  }) => {
-    if (data.productIds && data.productIds.length > 0) {
-      await inventoryService.createSupplierWithProducts(
+  // Supplier Handlers
+  const handleSaveSupplier = async (
+    data: {
+      name: string;
+      phone?: string;
+      address?: string;
+      productIds?: string[];
+    },
+    id?: string
+  ) => {
+    if (id) {
+      await inventoryService.updateSupplierWithProducts(
+        id,
         { name: data.name, phone: data.phone, address: data.address },
-        data.productIds
+        data.productIds || []
       );
     } else {
-      await inventoryService.createSupplier({
-        name: data.name,
-        phone: data.phone,
-        address: data.address,
-      });
+      if (data.productIds && data.productIds.length > 0) {
+        await inventoryService.createSupplierWithProducts(
+          { name: data.name, phone: data.phone, address: data.address },
+          data.productIds
+        );
+      } else {
+        await inventoryService.createSupplier({
+          name: data.name,
+          phone: data.phone,
+          address: data.address,
+        });
+      }
     }
+    setSupplierToEdit(null);
     await loadData();
   };
 
@@ -202,65 +224,73 @@ export default function InventarisPage() {
         {activeTab === "produk" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
-              <CardContent className="p-5 sm:p-6 flex items-center justify-between">
-                <div className="space-y-1">
-                  <span className="text-xs text-[#6B7280] font-semibold tracking-wider block">
+              <CardContent className="p-5 flex flex-col justify-between h-full space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[#6B7280] font-semibold tracking-wider uppercase">
                     TOTAL SKU AKTIF
                   </span>
-                  <div className="text-2xl font-black text-[#1A1A1A]">
+                  <div className="w-8 h-8 rounded-lg bg-[#F4F4F0] border border-[#E5E5E0] flex items-center justify-center text-[#6FA084] shrink-0">
+                    <Box className="w-4 h-4" />
+                  </div>
+                </div>
+                <div>
+                  <div className="text-2xl font-black text-[#1A1A1A] tracking-tight whitespace-nowrap">
                     {stats.totalSku} Produk
                   </div>
                 </div>
-                <div className="w-12 h-12 rounded-xl bg-[#F4F4F0] border border-[#E5E5E0] flex items-center justify-center text-[#6FA084] shrink-0">
-                  <Box className="w-6 h-6" />
-                </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardContent className="p-5 sm:p-6 flex items-center justify-between">
-                <div className="space-y-1">
-                  <span className="text-xs text-[#6B7280] font-semibold tracking-wider block">
+              <CardContent className="p-5 flex flex-col justify-between h-full space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[#6B7280] font-semibold tracking-wider uppercase">
                     STOK MENIPIS (≤5)
                   </span>
-                  <div className="text-2xl font-black text-[#E8A838]">
+                  <div className="w-8 h-8 rounded-lg bg-[#FDF9F0] border border-[#F5D8A5] flex items-center justify-center text-[#E8A838] shrink-0">
+                    <AlertTriangle className="w-4 h-4" />
+                  </div>
+                </div>
+                <div>
+                  <div className="text-2xl font-black text-[#E8A838] tracking-tight whitespace-nowrap">
                     {stats.lowStockCount} Produk
                   </div>
                 </div>
-                <div className="w-12 h-12 rounded-xl bg-[#FDF9F0] border border-[#F5D8A5] flex items-center justify-center text-[#E8A838] shrink-0">
-                  <AlertTriangle className="w-6 h-6" />
-                </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardContent className="p-5 sm:p-6 flex items-center justify-between">
-                <div className="space-y-1">
-                  <span className="text-xs text-[#6B7280] font-semibold tracking-wider block">
+              <CardContent className="p-5 flex flex-col justify-between h-full space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[#6B7280] font-semibold tracking-wider uppercase">
                     STOK HABIS (0)
                   </span>
-                  <div className="text-2xl font-black text-[#D64545]">
+                  <div className="w-8 h-8 rounded-lg bg-[#FDEAEA] border border-[#F8BEBE] flex items-center justify-center text-[#D64545] shrink-0">
+                    <RotateCcw className="w-4 h-4" />
+                  </div>
+                </div>
+                <div>
+                  <div className="text-2xl font-black text-[#D64545] tracking-tight whitespace-nowrap">
                     {stats.outOfStockCount} Produk
                   </div>
                 </div>
-                <div className="w-12 h-12 rounded-xl bg-[#FDEAEA] border border-[#F8BEBE] flex items-center justify-center text-[#D64545] shrink-0">
-                  <RotateCcw className="w-6 h-6" />
-                </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardContent className="p-5 sm:p-6 flex items-center justify-between">
-                <div className="space-y-1">
-                  <span className="text-xs text-[#6B7280] font-semibold tracking-wider block">
+              <CardContent className="p-5 flex flex-col justify-between h-full space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[#6B7280] font-semibold tracking-wider uppercase">
                     NILAI INVENTARIS (HPP)
                   </span>
-                  <div className="text-2xl font-black text-[#1A1A1A]">
-                    {formatRupiah(stats.totalValuation)}
+                  <div className="w-8 h-8 rounded-lg bg-[#F4F4F0] border border-[#E5E5E0] flex items-center justify-center text-[#6FA084] shrink-0">
+                    <Wallet className="w-4 h-4" />
                   </div>
                 </div>
-                <div className="w-12 h-12 rounded-xl bg-[#F4F4F0] border border-[#E5E5E0] flex items-center justify-center text-[#6FA084] shrink-0">
-                  <Wallet className="w-6 h-6" />
+                <div>
+                  <div className="text-2xl font-black text-[#1A1A1A] tracking-tight whitespace-nowrap">
+                    {formatRupiah(stats.totalValuation)}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -561,16 +591,16 @@ export default function InventarisPage() {
                 <table className="w-full text-left text-xs divide-y divide-[#E5E5E0]">
                   <thead className="bg-[#F9F9F7] text-[#6B7280] font-bold uppercase">
                     <tr>
-                      <th className="py-3 px-4">NO.</th>
+                      <th className="py-3 px-4 w-12 text-center">NO.</th>
                       <th className="py-3 px-4">NAMA KATEGORI</th>
-                      <th className="py-3 px-4 text-center">JUMLAH PRODUK</th>
-                      <th className="py-3 px-4 text-right">AKSI</th>
+                      <th className="py-3 px-4 text-center w-40">JUMLAH PRODUK</th>
+                      <th className="py-3 px-4 text-right w-28">AKSI</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#E5E5E0] bg-white">
                     {categories.map((c, idx) => (
                       <tr key={c.id} className="hover:bg-[#F9F9F7] transition-colors">
-                        <td className="py-3.5 px-4 font-mono text-[#6B7280]">
+                        <td className="py-3.5 px-4 font-mono text-[#6B7280] text-center">
                           {idx + 1}
                         </td>
                         <td className="py-3.5 px-4 font-bold text-[#1A1A1A]">
@@ -591,13 +621,25 @@ export default function InventarisPage() {
                           </button>
                         </td>
                         <td className="py-3.5 px-4 text-right">
-                          <button
-                            onClick={() => handleDeleteCategory(c.id, c.name)}
-                            className="p-1.5 hover:bg-[#FDEAEA] rounded text-[#6B7280] hover:text-[#D64545] transition-colors cursor-pointer"
-                            title="Hapus Kategori"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => {
+                                setCategoryToEdit(c);
+                                setIsCategoryModalOpen(true);
+                              }}
+                              className="p-1.5 hover:bg-[#F4F8F5] rounded text-[#6B7280] hover:text-[#6FA084] transition-colors cursor-pointer"
+                              title="Edit Kategori"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCategory(c.id, c.name)}
+                              className="p-1.5 hover:bg-[#FDEAEA] rounded text-[#6B7280] hover:text-[#D64545] transition-colors cursor-pointer"
+                              title="Hapus Kategori"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -618,7 +660,10 @@ export default function InventarisPage() {
                 </p>
                 <Button
                   className="gap-2 h-9 text-xs"
-                  onClick={() => setIsSupplierModalOpen(true)}
+                  onClick={() => {
+                    setSupplierToEdit(null);
+                    setIsSupplierModalOpen(true);
+                  }}
                 >
                   <Plus className="w-4 h-4" />
                   Tambah Supplier
@@ -626,31 +671,46 @@ export default function InventarisPage() {
               </div>
 
               <div className="overflow-x-auto border border-[#E5E5E0] rounded-xl">
-                <table className="w-full text-left text-xs divide-y divide-[#E5E5E0]">
+                <table className="w-full table-fixed text-left text-xs divide-y divide-[#E5E5E0]">
                   <thead className="bg-[#F9F9F7] text-[#6B7280] font-bold uppercase">
                     <tr>
-                      <th className="py-3 px-4">NO.</th>
-                      <th className="py-3 px-4">NAMA SUPPLIER</th>
-                      <th className="py-3 px-4">NO. KONTAK / WA</th>
+                      <th className="py-3 px-4 w-12 text-center">NO.</th>
+                      <th className="py-3 px-4 w-48">NAMA SUPPLIER</th>
+                      <th className="py-3 px-4 w-36">NO. KONTAK / WA</th>
                       <th className="py-3 px-4">ALAMAT</th>
-                      <th className="py-3 px-4 text-center">PRODUK DIPASOK</th>
-                      <th className="py-3 px-4 text-right">AKSI</th>
+                      <th className="py-3 px-4 w-36 text-center">PRODUK DIPASOK</th>
+                      <th className="py-3 px-4 w-28 text-right">AKSI</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#E5E5E0] bg-white">
                     {suppliers.map((s, idx) => (
                       <tr key={s.id} className="hover:bg-[#F9F9F7] transition-colors">
-                        <td className="py-3.5 px-4 font-mono text-[#6B7280]">
+                        <td className="py-3.5 px-4 font-mono text-[#6B7280] text-center">
                           {idx + 1}
                         </td>
-                        <td className="py-3.5 px-4 font-bold text-[#1A1A1A]">
-                          {s.name}
+                        <td className="py-3.5 px-4">
+                          <div
+                            className="font-bold text-[#1A1A1A] truncate"
+                            title={s.name}
+                          >
+                            {s.name}
+                          </div>
                         </td>
-                        <td className="py-3.5 px-4 text-[#6B7280] font-mono">
-                          {s.phone || "-"}
+                        <td className="py-3.5 px-4">
+                          <div
+                            className="text-[#6B7280] font-mono truncate"
+                            title={s.phone || "-"}
+                          >
+                            {s.phone || "-"}
+                          </div>
                         </td>
-                        <td className="py-3.5 px-4 text-[#6B7280]">
-                          {s.address || "-"}
+                        <td className="py-3.5 px-4">
+                          <div
+                            className="text-[#6B7280] truncate"
+                            title={s.address || "-"}
+                          >
+                            {s.address || "-"}
+                          </div>
                         </td>
                         <td className="py-3.5 px-4 text-center">
                           <button
@@ -659,21 +719,43 @@ export default function InventarisPage() {
                               setSelectedSupplierForDetail(s);
                               setIsSupplierProductsOpen(true);
                             }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#F4F8F5] text-[#6FA084] border border-[#D5E5DC] hover:bg-[#6FA084] hover:text-white transition-colors cursor-pointer shadow-xs"
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#F4F8F5] text-[#6FA084] border border-[#D5E5DC] hover:bg-[#6FA084] hover:text-white transition-colors cursor-pointer shadow-xs truncate"
                             title="Klik untuk melihat dan kelola produk yang dipasok"
                           >
-                            <Truck className="w-3.5 h-3.5" />
+                            <Truck className="w-3.5 h-3.5 shrink-0" />
                             <span>{s.product_count} Produk</span>
                           </button>
                         </td>
                         <td className="py-3.5 px-4 text-right">
-                          <button
-                            onClick={() => handleDeleteSupplier(s.id, s.name)}
-                            className="p-1.5 hover:bg-[#FDEAEA] rounded text-[#6B7280] hover:text-[#D64545] transition-colors cursor-pointer"
-                            title="Hapus Supplier"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => {
+                                setSelectedSupplierForDetail(s);
+                                setIsSupplierProductsOpen(true);
+                              }}
+                              className="p-1.5 hover:bg-[#F4F8F5] rounded text-[#6B7280] hover:text-[#6FA084] transition-colors cursor-pointer"
+                              title="Lihat Detail Produk"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSupplierToEdit(s);
+                                setIsSupplierModalOpen(true);
+                              }}
+                              className="p-1.5 hover:bg-[#F4F8F5] rounded text-[#6B7280] hover:text-[#6FA084] transition-colors cursor-pointer"
+                              title="Edit Supplier"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteSupplier(s.id, s.name)}
+                              className="p-1.5 hover:bg-[#FDEAEA] rounded text-[#6B7280] hover:text-[#D64545] transition-colors cursor-pointer"
+                              title="Hapus Supplier"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -714,15 +796,23 @@ export default function InventarisPage() {
 
       <CategoryModal
         isOpen={isCategoryModalOpen}
-        onClose={() => setIsCategoryModalOpen(false)}
+        onClose={() => {
+          setIsCategoryModalOpen(false);
+          setCategoryToEdit(null);
+        }}
         onSubmit={handleSaveCategory}
+        categoryToEdit={categoryToEdit}
       />
 
       <SupplierModal
         isOpen={isSupplierModalOpen}
-        onClose={() => setIsSupplierModalOpen(false)}
+        onClose={() => {
+          setIsSupplierModalOpen(false);
+          setSupplierToEdit(null);
+        }}
         onSubmit={handleSaveSupplier}
         availableProducts={products}
+        supplierToEdit={supplierToEdit}
       />
 
       {/* Detail Modals for Supplier and Category */}

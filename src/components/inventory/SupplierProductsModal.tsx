@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Supplier, Product } from "@/types/database";
 import { inventoryService } from "@/services/inventoryService";
 import { formatRupiah } from "@/lib/utils";
+import { CustomSelect } from "@/components/ui/select";
 import {
   MessageSquare,
   MapPin,
@@ -156,18 +157,17 @@ export function SupplierProductsModal({
           <div className="text-xs font-bold text-[#1A1A1A] shrink-0">
             Tautkan Produk Lain:
           </div>
-          <select
-            value={selectedAddProductId}
-            onChange={(e) => setSelectedAddProductId(e.target.value)}
-            className="flex-1 h-9 rounded-lg border border-[#E5E5E0] px-3 text-xs bg-white text-[#1A1A1A] focus:outline-none focus:border-[#6FA084]"
-          >
-            <option value="">-- Pilih produk yang ingin ditautkan --</option>
-            {unassignedProducts.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} ({p.sku}) - Stok: {p.current_stock}
-              </option>
-            ))}
-          </select>
+          <div className="flex-1">
+            <CustomSelect
+              value={selectedAddProductId}
+              onChange={setSelectedAddProductId}
+              placeholder="-- Pilih produk yang ingin ditautkan --"
+              options={unassignedProducts.map((p) => ({
+                value: p.id,
+                label: `${p.name} (${p.sku}) - Stok: ${p.current_stock}`,
+              }))}
+            />
+          </div>
           <Button
             size="sm"
             onClick={handleAddProduct}

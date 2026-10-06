@@ -4,20 +4,24 @@ import * as React from "react";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Product } from "@/types/database";
+import { Product, Supplier } from "@/types/database";
 import { Search, Check, PackagePlus } from "lucide-react";
 import { cn, formatRupiah } from "@/lib/utils";
 
 interface SupplierModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: {
-    name: string;
-    phone?: string;
-    address?: string;
-    productIds: string[];
-  }) => Promise<void>;
+  onSubmit: (
+    data: {
+      name: string;
+      phone?: string;
+      address?: string;
+      productIds: string[];
+    },
+    id?: string
+  ) => Promise<void>;
   availableProducts?: Product[];
+  supplierToEdit?: (Supplier & { product_count?: number }) | null;
 }
 
 export function SupplierModal({
@@ -25,6 +29,7 @@ export function SupplierModal({
   onClose,
   onSubmit,
   availableProducts = [],
+  supplierToEdit,
 }: SupplierModalProps) {
   const [name, setName] = React.useState("");
   const [phone, setPhone] = React.useState("");
@@ -33,16 +38,26 @@ export function SupplierModal({
   const [productSearch, setProductSearch] = React.useState("");
   const [loading, setLoading] = React.useState(false);
 
-  // Reset form when modal closes/opens
+  // Sync form when modal opens or supplierToEdit changes
   React.useEffect(() => {
-    if (!isOpen) {
-      setName("");
-      setPhone("");
-      setAddress("");
-      setSelectedProductIds([]);
+    if (isOpen) {
+      if (supplierToEdit) {
+        setName(supplierToEdit.name || "");
+        setPhone(supplierToEdit.phone || "");
+        setAddress(supplierToEdit.address || "");
+        const alreadyLinked = availableProducts
+          .filter((p) => p.supplier_id === supplierToEdit.id)
+          .map((p) => p.id);
+        setSelectedProductIds(alreadyLinked);
+      } else {
+        setName("");
+        setPhone("");
+        setAddress("");
+        setSelectedProductIds([]);
+      }
       setProductSearch("");
     }
-  }, [isOpen]);
+  }, [isOpen, supplierToEdit, availableProducts]);
 
   const filteredProducts = React.useMemo(() => {
     if (!productSearch.trim()) return availableProducts;
@@ -74,26 +89,35 @@ export function SupplierModal({
     if (!name.trim()) return;
     setLoading(true);
     try {
-      await onSubmit({
-        name: name.trim(),
-        phone: phone.trim() || undefined,
-        address: address.trim() || undefined,
-        productIds: selectedProductIds,
-      });
+      await onSubmit(
+        {
+          name: name.trim(),
+          phone: phone.trim() || undefined,
+          address: address.trim() || undefined,
+          productIds: selectedProductIds,
+        },
+        supplierToEdit ? supplierToEdit.id : undefined
+      );
       onClose();
     } catch (err: any) {
-      alert("Gagal menambah supplier: " + (err.message || "Error"));
+      alert("Gagal menyimpan supplier: " + (err.message || "Error"));
     } finally {
       setLoading(false);
     }
   };
 
+  const isEditing = !!supplierToEdit;
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Tambah Supplier Baru"
-      description="Catat kontak distributor mitra dan pilih produk yang dipasok oleh supplier ini."
+      title={isEditing ? "Edit Data Supplier" : "Tambah Supplier Baru"}
+      description={
+        isEditing
+          ? "Perbarui kontak distributor mitra dan kelola produk yang dipasok."
+          : "Catat kontak distributor mitra dan pilih produk yang dipasok oleh supplier ini."
+      }
       className="max-w-xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -140,10 +164,10 @@ export function SupplierModal({
             <div>
               <label className="text-xs font-bold text-[#1A1A1A] flex items-center gap-1.5">
                 <PackagePlus className="w-3.5 h-3.5 text-[#6FA084]" />
-                Pilih Produk yang Dipasok (Opsional)
+                Produk yang Dipasok oleh Supplier Ini
               </label>
               <p className="text-[11px] text-[#6B7280]">
-                Tandai barang dagangan yang biasa dikulak dari supplier ini.
+                Tandai barang dagangan yang biasa dikulak dari distributor ini.
               </p>
             </div>
             <div className="text-[11px] font-bold text-[#6FA084] bg-[#F4F8F5] px-2 py-0.5 rounded-full border border-[#D5E5DC]">
@@ -242,7 +266,11 @@ export function SupplierModal({
             Batal
           </Button>
           <Button type="submit" disabled={loading || !name.trim()}>
-            {loading ? "Menyimpan..." : "Tambah Supplier"}
+            {loading
+              ? "Menyimpan..."
+              : isEditing
+              ? "Perbarui Supplier"
+              : "Tambah Supplier"}
           </Button>
         </div>
       </form>

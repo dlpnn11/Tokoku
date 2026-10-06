@@ -151,6 +151,19 @@ export const inventoryService = {
     return data as Category;
   },
 
+  // 8B. Update Category
+  async updateCategory(id: string, name: string) {
+    const { data, error } = await supabase
+      .from("categories")
+      .update({ name })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as Category;
+  },
+
   // 9. Delete Category
   async deleteCategory(id: string) {
     const { error } = await supabase.from("categories").delete().eq("id", id);
@@ -177,6 +190,39 @@ export const inventoryService = {
     const supplier = await this.createSupplier(supplierData);
     if (productIds.length > 0) {
       await this.assignProductsToSupplier(supplier.id, productIds);
+    }
+    return supplier;
+  },
+
+  // 10B. Update Supplier
+  async updateSupplier(
+    id: string,
+    supplierData: { name: string; phone?: string; address?: string }
+  ) {
+    const { data, error } = await supabase
+      .from("suppliers")
+      .update(supplierData)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as Supplier;
+  },
+
+  async updateSupplierWithProducts(
+    id: string,
+    supplierData: { name: string; phone?: string; address?: string },
+    productIds: string[]
+  ) {
+    const supplier = await this.updateSupplier(id, supplierData);
+    const currentProducts = await this.getProductsBySupplier(id);
+    const toUnlink = currentProducts.filter((p) => !productIds.includes(p.id));
+    for (const p of toUnlink) {
+      await this.removeProductFromSupplier(p.id);
+    }
+    if (productIds.length > 0) {
+      await this.assignProductsToSupplier(id, productIds);
     }
     return supplier;
   },

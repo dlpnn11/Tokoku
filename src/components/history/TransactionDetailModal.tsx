@@ -45,7 +45,16 @@ export function TransactionDetailModal({
   const [showConfirmCancel, setShowConfirmCancel] = React.useState(false);
   const [copiedInvoice, setCopiedInvoice] = React.useState(false);
   const [downloadingImage, setDownloadingImage] = React.useState(false);
+  const [phoneInput, setPhoneInput] = React.useState("");
   const digitalReceiptRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (transaction?.customer_phone) {
+      setPhoneInput(transaction.customer_phone);
+    } else {
+      setPhoneInput("");
+    }
+  }, [transaction?.customer_phone]);
 
   if (!transaction) return null;
 
@@ -69,12 +78,6 @@ export function TransactionDetailModal({
     hour: "2-digit",
     minute: "2-digit",
   });
-
-  const [phoneInput, setPhoneInput] = React.useState(transaction.customer_phone || "");
-
-  React.useEffect(() => {
-    setPhoneInput(transaction.customer_phone || "");
-  }, [transaction.customer_phone]);
 
   const handleDownloadImage = async () => {
     if (!digitalReceiptRef.current) return;

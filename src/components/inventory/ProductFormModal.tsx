@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Product, Category, Supplier } from "@/types/database";
 import { formatRupiah } from "@/lib/utils";
+import { CustomSelect } from "@/components/ui/select";
 
 interface ProductFormModalProps {
   isOpen: boolean;
@@ -155,21 +156,21 @@ export function ProductFormModal({
             <label className="text-xs font-bold text-[#1A1A1A] block mb-1">
               Satuan
             </label>
-            <select
+            <CustomSelect
               value={unit}
-              onChange={(e) => setUnit(e.target.value)}
-              className="flex h-11 w-full rounded-lg border border-[#E5E5E0] bg-white px-3 text-sm text-[#1A1A1A] focus:outline-none focus:border-[#6FA084]"
-            >
-              <option value="pcs">pcs (buah / biji)</option>
-              <option value="botol">botol</option>
-              <option value="bungkus">bungkus</option>
-              <option value="renteng">renteng</option>
-              <option value="kotak">kotak</option>
-              <option value="kg">kg (kilogram)</option>
-              <option value="liter">liter</option>
-              <option value="dus">dus / karton</option>
-              <option value="kaleng">kaleng</option>
-            </select>
+              onChange={setUnit}
+              options={[
+                { value: "pcs", label: "pcs (buah / biji)" },
+                { value: "botol", label: "botol" },
+                { value: "bungkus", label: "bungkus" },
+                { value: "renteng", label: "renteng" },
+                { value: "kotak", label: "kotak" },
+                { value: "kg", label: "kg (kilogram)" },
+                { value: "liter", label: "liter" },
+                { value: "dus", label: "dus / karton" },
+                { value: "kaleng", label: "kaleng" },
+              ]}
+            />
           </div>
         </div>
 
@@ -179,37 +180,33 @@ export function ProductFormModal({
             <label className="text-xs font-bold text-[#1A1A1A] block mb-1">
               Kategori <span className="text-[#D64545]">*</span>
             </label>
-            <select
+            <CustomSelect
               value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              className="flex h-11 w-full rounded-lg border border-[#E5E5E0] bg-white px-3 text-sm text-[#1A1A1A] focus:outline-none focus:border-[#6FA084]"
-              required
-            >
-              <option value="" disabled>Pilih Kategori</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
+              onChange={setCategoryId}
+              placeholder="Pilih Kategori"
+              options={categories.map((cat) => ({
+                value: cat.id,
+                label: cat.name,
+              }))}
+            />
           </div>
 
           <div>
             <label className="text-xs font-bold text-[#1A1A1A] block mb-1">
               Supplier (Pemasok)
             </label>
-            <select
+            <CustomSelect
               value={supplierId}
-              onChange={(e) => setSupplierId(e.target.value)}
-              className="flex h-11 w-full rounded-lg border border-[#E5E5E0] bg-white px-3 text-sm text-[#1A1A1A] focus:outline-none focus:border-[#6FA084]"
-            >
-              <option value="">Tidak Ada / Beli Eceran</option>
-              {suppliers.map((sup) => (
-                <option key={sup.id} value={sup.id}>
-                  {sup.name}
-                </option>
-              ))}
-            </select>
+              onChange={setSupplierId}
+              placeholder="Pilih Supplier"
+              options={[
+                { value: "", label: "Tidak Ada / Beli Eceran" },
+                ...suppliers.map((sup) => ({
+                  value: sup.id,
+                  label: sup.name,
+                })),
+              ]}
+            />
           </div>
         </div>
 

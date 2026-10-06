@@ -32,6 +32,9 @@ import { ProductDetailModal } from "@/components/inventory/ProductDetailModal";
 import { StockOpnameModal } from "@/components/inventory/StockOpnameModal";
 import { CategoryModal } from "@/components/inventory/CategoryModal";
 import { SupplierModal } from "@/components/inventory/SupplierModal";
+import { SupplierProductsModal } from "@/components/inventory/SupplierProductsModal";
+import { CategoryProductsModal } from "@/components/inventory/CategoryProductsModal";
+import { CustomSelect } from "@/components/ui/select";
 
 type ActiveTab = "produk" | "kategori" | "supplier";
 
@@ -69,6 +72,13 @@ export default function InventarisPage() {
   const [isStockOpnameOpen, setIsStockOpnameOpen] = React.useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = React.useState(false);
   const [isSupplierModalOpen, setIsSupplierModalOpen] = React.useState(false);
+
+  // Supplier & Category Products Detail Modals
+  const [isSupplierProductsOpen, setIsSupplierProductsOpen] = React.useState(false);
+  const [selectedSupplierForDetail, setSelectedSupplierForDetail] = React.useState<(Supplier & { product_count?: number }) | null>(null);
+
+  const [isCategoryProductsOpen, setIsCategoryProductsOpen] = React.useState(false);
+  const [selectedCategoryForDetail, setSelectedCategoryForDetail] = React.useState<(Category & { product_count?: number }) | null>(null);
 
   // Initial load
   const loadData = React.useCallback(async () => {
@@ -146,8 +156,24 @@ export default function InventarisPage() {
     }
   };
 
-  const handleSaveSupplier = async (data: any) => {
-    await inventoryService.createSupplier(data);
+  const handleSaveSupplier = async (data: {
+    name: string;
+    phone?: string;
+    address?: string;
+    productIds?: string[];
+  }) => {
+    if (data.productIds && data.productIds.length > 0) {
+      await inventoryService.createSupplierWithProducts(
+        { name: data.name, phone: data.phone, address: data.address },
+        data.productIds
+      );
+    } else {
+      await inventoryService.createSupplier({
+        name: data.name,
+        phone: data.phone,
+        address: data.address,
+      });
+    }
     await loadData();
   };
 
@@ -176,65 +202,65 @@ export default function InventarisPage() {
         {activeTab === "produk" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
-              <CardContent className="p-5 flex items-center justify-between">
-                <div>
-                  <span className="text-xs text-[#6B7280] font-medium block">
+              <CardContent className="p-5 sm:p-6 flex items-center justify-between">
+                <div className="space-y-1">
+                  <span className="text-xs text-[#6B7280] font-semibold tracking-wider block">
                     TOTAL SKU AKTIF
                   </span>
-                  <div className="text-2xl font-black text-[#1A1A1A] mt-1">
+                  <div className="text-2xl font-black text-[#1A1A1A]">
                     {stats.totalSku} Produk
                   </div>
                 </div>
-                <div className="w-11 h-11 rounded-xl bg-[#F4F4F0] border border-[#E5E5E0] flex items-center justify-center text-[#6FA084]">
-                  <Box className="w-5 h-5" />
+                <div className="w-12 h-12 rounded-xl bg-[#F4F4F0] border border-[#E5E5E0] flex items-center justify-center text-[#6FA084] shrink-0">
+                  <Box className="w-6 h-6" />
                 </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardContent className="p-5 flex items-center justify-between">
-                <div>
-                  <span className="text-xs text-[#6B7280] font-medium block">
+              <CardContent className="p-5 sm:p-6 flex items-center justify-between">
+                <div className="space-y-1">
+                  <span className="text-xs text-[#6B7280] font-semibold tracking-wider block">
                     STOK MENIPIS (≤5)
                   </span>
-                  <div className="text-2xl font-black text-[#E8A838] mt-1">
+                  <div className="text-2xl font-black text-[#E8A838]">
                     {stats.lowStockCount} Produk
                   </div>
                 </div>
-                <div className="w-11 h-11 rounded-xl bg-[#FDF9F0] border border-[#F5D8A5] flex items-center justify-center text-[#E8A838]">
-                  <AlertTriangle className="w-5 h-5" />
+                <div className="w-12 h-12 rounded-xl bg-[#FDF9F0] border border-[#F5D8A5] flex items-center justify-center text-[#E8A838] shrink-0">
+                  <AlertTriangle className="w-6 h-6" />
                 </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardContent className="p-5 flex items-center justify-between">
-                <div>
-                  <span className="text-xs text-[#6B7280] font-medium block">
+              <CardContent className="p-5 sm:p-6 flex items-center justify-between">
+                <div className="space-y-1">
+                  <span className="text-xs text-[#6B7280] font-semibold tracking-wider block">
                     STOK HABIS (0)
                   </span>
-                  <div className="text-2xl font-black text-[#D64545] mt-1">
+                  <div className="text-2xl font-black text-[#D64545]">
                     {stats.outOfStockCount} Produk
                   </div>
                 </div>
-                <div className="w-11 h-11 rounded-xl bg-[#FDEAEA] border border-[#F8BEBE] flex items-center justify-center text-[#D64545]">
-                  <RotateCcw className="w-5 h-5" />
+                <div className="w-12 h-12 rounded-xl bg-[#FDEAEA] border border-[#F8BEBE] flex items-center justify-center text-[#D64545] shrink-0">
+                  <RotateCcw className="w-6 h-6" />
                 </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardContent className="p-5 flex items-center justify-between">
-                <div>
-                  <span className="text-xs text-[#6B7280] font-medium block">
+              <CardContent className="p-5 sm:p-6 flex items-center justify-between">
+                <div className="space-y-1">
+                  <span className="text-xs text-[#6B7280] font-semibold tracking-wider block">
                     NILAI INVENTARIS (HPP)
                   </span>
-                  <div className="text-2xl font-black text-[#1A1A1A] mt-1">
+                  <div className="text-2xl font-black text-[#1A1A1A]">
                     {formatRupiah(stats.totalValuation)}
                   </div>
                 </div>
-                <div className="w-11 h-11 rounded-xl bg-[#F4F4F0] border border-[#E5E5E0] flex items-center justify-center text-[#6FA084]">
-                  <Wallet className="w-5 h-5" />
+                <div className="w-12 h-12 rounded-xl bg-[#F4F4F0] border border-[#E5E5E0] flex items-center justify-center text-[#6FA084] shrink-0">
+                  <Wallet className="w-6 h-6" />
                 </div>
               </CardContent>
             </Card>
@@ -310,31 +336,36 @@ export default function InventarisPage() {
                   </div>
 
                   {/* Category Filter */}
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="h-10 w-full sm:w-40 rounded-lg border border-[#E5E5E0] bg-white px-3 text-xs text-[#1A1A1A] focus:outline-none focus:border-[#6FA084]"
-                  >
-                    <option value="all">Semua Kategori</option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="w-full sm:w-48">
+                    <CustomSelect
+                      value={selectedCategory}
+                      onChange={setSelectedCategory}
+                      placeholder="Semua Kategori"
+                      options={[
+                        { value: "all", label: "Semua Kategori" },
+                        ...categories.map((c) => ({
+                          value: c.id,
+                          label: c.name,
+                        })),
+                      ]}
+                    />
+                  </div>
 
                   {/* Status Filter */}
-                  <select
-                    value={selectedStatus}
-                    onChange={(e) => setSelectedStatus(e.target.value)}
-                    className="h-10 w-full sm:w-36 rounded-lg border border-[#E5E5E0] bg-white px-3 text-xs text-[#1A1A1A] focus:outline-none focus:border-[#6FA084]"
-                  >
-                    <option value="all">Semua Status</option>
-                    <option value="aktif">Aktif di POS</option>
-                    <option value="menipis">Stok Menipis (≤5)</option>
-                    <option value="habis">Stok Habis (0)</option>
-                    <option value="non-aktif">Non-aktif</option>
-                  </select>
+                  <div className="w-full sm:w-44">
+                    <CustomSelect
+                      value={selectedStatus}
+                      onChange={setSelectedStatus}
+                      placeholder="Semua Status"
+                      options={[
+                        { value: "all", label: "Semua Status" },
+                        { value: "aktif", label: "Aktif di POS" },
+                        { value: "menipis", label: "Stok Menipis (≤5)" },
+                        { value: "habis", label: "Stok Habis (0)" },
+                        { value: "non-aktif", label: "Non-aktif" },
+                      ]}
+                    />
+                  </div>
                 </div>
 
                 {/* Right Buttons */}
@@ -546,9 +577,18 @@ export default function InventarisPage() {
                           {c.name}
                         </td>
                         <td className="py-3.5 px-4 text-center">
-                          <Badge variant="outline" className="text-[10px]">
-                            {c.product_count} produk
-                          </Badge>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedCategoryForDetail(c);
+                              setIsCategoryProductsOpen(true);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#F4F8F5] text-[#6FA084] border border-[#D5E5DC] hover:bg-[#6FA084] hover:text-white transition-colors cursor-pointer shadow-xs"
+                            title="Klik untuk melihat daftar produk kategori ini"
+                          >
+                            <Box className="w-3.5 h-3.5" />
+                            <span>{c.product_count} Produk</span>
+                          </button>
                         </td>
                         <td className="py-3.5 px-4 text-right">
                           <button
@@ -613,9 +653,18 @@ export default function InventarisPage() {
                           {s.address || "-"}
                         </td>
                         <td className="py-3.5 px-4 text-center">
-                          <Badge variant="outline" className="text-[10px]">
-                            {s.product_count} produk
-                          </Badge>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedSupplierForDetail(s);
+                              setIsSupplierProductsOpen(true);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#F4F8F5] text-[#6FA084] border border-[#D5E5DC] hover:bg-[#6FA084] hover:text-white transition-colors cursor-pointer shadow-xs"
+                            title="Klik untuk melihat dan kelola produk yang dipasok"
+                          >
+                            <Truck className="w-3.5 h-3.5" />
+                            <span>{s.product_count} Produk</span>
+                          </button>
                         </td>
                         <td className="py-3.5 px-4 text-right">
                           <button
@@ -673,6 +722,32 @@ export default function InventarisPage() {
         isOpen={isSupplierModalOpen}
         onClose={() => setIsSupplierModalOpen(false)}
         onSubmit={handleSaveSupplier}
+        availableProducts={products}
+      />
+
+      {/* Detail Modals for Supplier and Category */}
+      <SupplierProductsModal
+        isOpen={isSupplierProductsOpen}
+        onClose={() => {
+          setIsSupplierProductsOpen(false);
+          setSelectedSupplierForDetail(null);
+        }}
+        supplier={selectedSupplierForDetail}
+        allProducts={products}
+        onRefresh={loadData}
+      />
+
+      <CategoryProductsModal
+        isOpen={isCategoryProductsOpen}
+        onClose={() => {
+          setIsCategoryProductsOpen(false);
+          setSelectedCategoryForDetail(null);
+        }}
+        category={selectedCategoryForDetail}
+        onFilterCategory={(catId) => {
+          setActiveTab("produk");
+          setSelectedCategory(catId);
+        }}
       />
     </AppShell>
   );

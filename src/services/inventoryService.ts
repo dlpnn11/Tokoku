@@ -158,7 +158,7 @@ export const inventoryService = {
     return true;
   },
 
-  // 10. Create Supplier
+  // 10. Create Supplier (with optional product assignment)
   async createSupplier(supplierData: { name: string; phone?: string; address?: string }) {
     const { data, error } = await supabase
       .from("suppliers")
@@ -170,6 +170,17 @@ export const inventoryService = {
     return data as Supplier;
   },
 
+  async createSupplierWithProducts(
+    supplierData: { name: string; phone?: string; address?: string },
+    productIds: string[]
+  ) {
+    const supplier = await this.createSupplier(supplierData);
+    if (productIds.length > 0) {
+      await this.assignProductsToSupplier(supplier.id, productIds);
+    }
+    return supplier;
+  },
+
   // 11. Delete Supplier
   async deleteSupplier(id: string) {
     const { error } = await supabase.from("suppliers").delete().eq("id", id);
@@ -177,7 +188,50 @@ export const inventoryService = {
     return true;
   },
 
-  // 12. Stock Opname / Direct Stock Adjustment
+  // 12. Supplier Product Relationship Helpers
+  async getProductsBySupplier(supplierId: string) {
+    const { data, error } = await supabase
+      .from("products")
+      .select("*, category:categories(*)")
+      .eq("supplier_id", supplierId)
+      .order("name", { ascending: true });
+
+    if (error) throw error;
+    return (data || []) as Product[];
+  },
+
+  async assignProductsToSupplier(supplierId: string, productIds: string[]) {
+    if (productIds.length === 0) return;
+    const { error } = await supabase
+      .from("products")
+      .update({ supplier_id: supplierId })
+      .in("id", productIds);
+
+    if (error) throw error;
+  },
+
+  async removeProductFromSupplier(productId: string) {
+    const { error } = await supabase
+      .from("products")
+      .update({ supplier_id: null })
+      .eq("id", productId);
+
+    if (error) throw error;
+  },
+
+  // 13. Category Products Helper
+  async getProductsByCategory(categoryId: string) {
+    const { data, error } = await supabase
+      .from("products")
+      .select("*, category:categories(*), supplier:suppliers(*)")
+      .eq("category_id", categoryId)
+      .order("name", { ascending: true });
+
+    if (error) throw error;
+    return (data || []) as Product[];
+  },
+
+  // 14. Stock Opname / Direct Stock Adjustment
   async adjustStock(productId: string, newStock: number) {
     const { data, error } = await supabase
       .from("products")

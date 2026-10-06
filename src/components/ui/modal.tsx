@@ -10,7 +10,8 @@ interface ModalProps {
   title?: string;
   description?: string;
   children: React.ReactNode;
-  maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl";
+  maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl";
+  className?: string;
 }
 
 export function Modal({
@@ -20,6 +21,7 @@ export function Modal({
   description,
   children,
   maxWidth = "md",
+  className,
 }: ModalProps) {
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -45,6 +47,7 @@ export function Modal({
     lg: "max-w-lg",
     xl: "max-w-xl",
     "2xl": "max-w-2xl",
+    "3xl": "max-w-3xl",
   }[maxWidth];
 
   return (
@@ -59,7 +62,8 @@ export function Modal({
       <div
         className={cn(
           "relative z-10 w-full overflow-hidden rounded-2xl bg-white border border-[#E5E5E0] shadow-xl transition-all",
-          maxWidthClass
+          maxWidthClass,
+          className
         )}
       >
         {(title || description) && (

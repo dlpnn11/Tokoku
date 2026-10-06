@@ -31,6 +31,7 @@
 - **Sidebar Background:** `#2C2C2C` (Dark Charcoal).
 - **Text Hierarchy:** Primary `#1A1A1A` (Near Black), Secondary `#6B7280` (Cool Grey).
 - **Status Colors:** Low Stock `#E8A838` (Amber), Out of Stock / Danger `#D64545` (Red), In Stock `#6FA084` (Green).
+- **Comprehensive Guidelines:** For exhaustive specifications, see [docs/PANDUAN_DESIGN_SYSTEM_TOKOKU.md](./docs/PANDUAN_DESIGN_SYSTEM_TOKOKU.md).
 
 ### RESPONSIBILITY & VIEWPORT CONSTRAINTS
 - **Desktop Viewport (Primary):** Layar kasir dioptimalkan untuk monitor lanskap di atas meja kasir (1440×900px atau 1920×1080px) dengan tata letak bilah samping tetap (*sticky sidebar*) dan panel terbelah (*split-screen*).

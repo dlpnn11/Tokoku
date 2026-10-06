@@ -18,8 +18,9 @@ Before answering or executing any task, ALWAYS read and synchronize with the fol
 - 📋 **Task Breakdown & TDD Verification:** [docs/BREAKDOWN_TUGAS_DAN_TESTING.md](./docs/BREAKDOWN_TUGAS_DAN_TESTING.md)
 - 🐙 **Git & GitHub Guide:** [docs/guides/PANDUAN_GIT_GITHUB.md](./docs/guides/PANDUAN_GIT_GITHUB.md)
 - ⚡ **Supabase Setup Guide:** [docs/guides/PANDUAN_SETUP_SUPABASE.md](./docs/guides/PANDUAN_SETUP_SUPABASE.md)
+- 🎨 **Design System & UI/UX Guidelines:** [docs/PANDUAN_DESIGN_SYSTEM_TOKOKU.md](./docs/PANDUAN_DESIGN_SYSTEM_TOKOKU.md)
 - 👑 **AI Engineering Principles:** [docs/guides/PRINSIP_PENGEMBANGAN_AI.md](./docs/guides/PRINSIP_PENGEMBANGAN_AI.md)
-- 🎨 **Visual Design References:** [Design Reference/](./Design%20Reference/) (Images & StitchAI prompts)
+- 🖼️ **Visual Design References:** [Design Reference/](./Design%20Reference/) (Images & StitchAI prompts)
 
 ---
 

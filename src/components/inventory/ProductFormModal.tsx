@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Product, Category, Supplier } from "@/types/database";
 import { formatRupiah, roundPrice500 } from "@/lib/utils";
 import { CustomSelect } from "@/components/ui/select";
+import { Barcode } from "lucide-react";
 
 interface ProductFormModalProps {
   isOpen: boolean;
@@ -27,6 +28,7 @@ export function ProductFormModal({
 }: ProductFormModalProps) {
   const [name, setName] = React.useState("");
   const [sku, setSku] = React.useState("");
+  const [barcode, setBarcode] = React.useState("");
   const [categoryId, setCategoryId] = React.useState("");
   const [supplierId, setSupplierId] = React.useState("");
   const [buyPrice, setBuyPrice] = React.useState<number>(0);
@@ -42,6 +44,7 @@ export function ProductFormModal({
     if (productToEdit) {
       setName(productToEdit.name || "");
       setSku(productToEdit.sku || "");
+      setBarcode(productToEdit.barcode || "");
       setCategoryId(productToEdit.category_id || "");
       setSupplierId(productToEdit.supplier_id || "");
       setBuyPrice(Number(productToEdit.buy_price) || 0);
@@ -54,6 +57,7 @@ export function ProductFormModal({
       setName("");
       // Generate unique default SKU if empty
       setSku(`PRD-${Math.floor(100 + Math.random() * 900)}`);
+      setBarcode("");
       setCategoryId(categories[0]?.id || "");
       setSupplierId(suppliers[0]?.id || "");
       setBuyPrice(0);
@@ -78,7 +82,7 @@ export function ProductFormModal({
       return;
     }
     if (!sku.trim()) {
-      setErrorMsg("Kode SKU / Barcode wajib diisi");
+      setErrorMsg("Kode SKU internal wajib diisi");
       return;
     }
     if (!categoryId) {
@@ -93,6 +97,7 @@ export function ProductFormModal({
       await onSubmit({
         name: name.trim(),
         sku: sku.trim(),
+        barcode: barcode.trim() ? barcode.trim() : null,
         category_id: categoryId,
         supplier_id: supplierId || null,
         buy_price: Number(buyPrice) || 0,
@@ -104,7 +109,19 @@ export function ProductFormModal({
       });
       onClose();
     } catch (err: any) {
-      setErrorMsg(err.message || "Gagal menyimpan produk");
+      if (
+        err.message?.includes("idx_products_barcode_unique") ||
+        err.message?.toLowerCase().includes("barcode")
+      ) {
+        setErrorMsg("Nomor barcode ini sudah digunakan oleh produk lain!");
+      } else if (
+        err.message?.includes("products_sku_key") ||
+        err.message?.toLowerCase().includes("sku")
+      ) {
+        setErrorMsg("Kode SKU ini sudah digunakan oleh produk lain!");
+      } else {
+        setErrorMsg(err.message || "Gagal menyimpan produk");
+      }
     } finally {
       setLoading(false);
     }
@@ -138,17 +155,58 @@ export function ProductFormModal({
           />
         </div>
 
-        {/* Kode SKU / Barcode & Satuan */}
+        {/* Kode SKU (Wajib) & Nomor Barcode (Opsional) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="text-xs font-bold text-[#1A1A1A] block mb-1">
-              Kode Barcode / SKU <span className="text-[#D64545]">*</span>
+              Kode SKU (Internal) <span className="text-[#D64545]">*</span>
             </label>
             <Input
-              placeholder="Barcode atau kode internal"
+              placeholder="Contoh: PRD-001"
               value={sku}
               onChange={(e) => setSku(e.target.value)}
               required
+            />
+            <p className="text-[10px] text-[#6B7280] mt-0.5">
+              Kode unik toko untuk pencatatan internal & opname.
+            </p>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-bold text-[#1A1A1A] flex items-center gap-1.5">
+                <Barcode className="w-3.5 h-3.5 text-[#6FA084]" />
+                Nomor Barcode Fisik
+              </label>
+              <span className="text-[10px] font-semibold text-[#6B7280] bg-[#F4F4F0] px-2 py-0.5 rounded-md">
+                Opsional
+              </span>
+            </div>
+            <Input
+              placeholder="Contoh: 8999999500245 (scan/ketik)"
+              value={barcode}
+              onChange={(e) => setBarcode(e.target.value)}
+            />
+            <p className="text-[10px] text-[#6B7280] mt-0.5">
+              Scan barcode kemasan fisik untuk scanner kasir. Kosongkan jika tidak ada.
+            </p>
+          </div>
+        </div>
+
+        {/* Kategori & Satuan */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs font-bold text-[#1A1A1A] block mb-1">
+              Kategori <span className="text-[#D64545]">*</span>
+            </label>
+            <CustomSelect
+              value={categoryId}
+              onChange={setCategoryId}
+              placeholder="Pilih Kategori"
+              options={categories.map((cat) => ({
+                value: cat.id,
+                label: cat.name,
+              }))}
             />
           </div>
 
@@ -174,40 +232,23 @@ export function ProductFormModal({
           </div>
         </div>
 
-        {/* Kategori & Supplier */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs font-bold text-[#1A1A1A] block mb-1">
-              Kategori <span className="text-[#D64545]">*</span>
-            </label>
-            <CustomSelect
-              value={categoryId}
-              onChange={setCategoryId}
-              placeholder="Pilih Kategori"
-              options={categories.map((cat) => ({
-                value: cat.id,
-                label: cat.name,
-              }))}
-            />
-          </div>
-
-          <div>
-            <label className="text-xs font-bold text-[#1A1A1A] block mb-1">
-              Supplier (Pemasok)
-            </label>
-            <CustomSelect
-              value={supplierId}
-              onChange={setSupplierId}
-              placeholder="Pilih Supplier"
-              options={[
-                { value: "", label: "Tidak Ada / Beli Eceran" },
-                ...suppliers.map((sup) => ({
-                  value: sup.id,
-                  label: sup.name,
-                })),
-              ]}
-            />
-          </div>
+        {/* Supplier (Pemasok) */}
+        <div>
+          <label className="text-xs font-bold text-[#1A1A1A] block mb-1">
+            Supplier (Pemasok)
+          </label>
+          <CustomSelect
+            value={supplierId}
+            onChange={setSupplierId}
+            placeholder="Pilih Supplier"
+            options={[
+              { value: "", label: "Tidak Ada / Beli Eceran" },
+              ...suppliers.map((sup) => ({
+                value: sup.id,
+                label: sup.name,
+              })),
+            ]}
+          />
         </div>
 
         {/* Harga Beli & Harga Jual */}

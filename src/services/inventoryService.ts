@@ -22,7 +22,7 @@ export const inventoryService = {
 
     if (filter?.search) {
       query = query.or(
-        `name.ilike.%${filter.search}%,sku.ilike.%${filter.search}%`
+        `name.ilike.%${filter.search}%,sku.ilike.%${filter.search}%,barcode.ilike.%${filter.search}%`
       );
     }
 

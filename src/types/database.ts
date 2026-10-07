@@ -27,6 +27,7 @@ export interface Supplier {
 export interface Product {
   id: string;
   sku: string;
+  barcode?: string | null;
   name: string;
   category_id: string;
   supplier_id?: string | null;

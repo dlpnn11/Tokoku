@@ -66,17 +66,28 @@ export const transactionService = {
   },
 
   /**
-   * Find product by exact SKU / barcode for scanner
+   * Find product by exact barcode or SKU for scanner
    */
-  async getProductBySku(sku: string) {
-    const { data, error } = await supabase
+  async getProductBySku(code: string) {
+    const trimmed = code.trim();
+    // 1. Try matching physical barcode first
+    const { data: barcodeMatch } = await supabase
       .from("products")
       .select("*, category:categories(*)")
-      .eq("sku", sku.trim())
+      .eq("barcode", trimmed)
+      .single();
+
+    if (barcodeMatch) return barcodeMatch;
+
+    // 2. Fallback to SKU match
+    const { data: skuMatch, error } = await supabase
+      .from("products")
+      .select("*, category:categories(*)")
+      .eq("sku", trimmed)
       .single();
 
     if (error) return null;
-    return data;
+    return skuMatch;
   },
 
   /**

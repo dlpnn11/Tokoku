@@ -47,6 +47,7 @@ CREATE TABLE suppliers (
 CREATE TABLE products (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     sku TEXT UNIQUE NOT NULL,
+    barcode TEXT,
     name TEXT NOT NULL,
     category_id UUID NOT NULL REFERENCES categories(id) ON DELETE RESTRICT,
     supplier_id UUID REFERENCES suppliers(id) ON DELETE SET NULL,
@@ -59,6 +60,8 @@ CREATE TABLE products (
     is_active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_products_barcode_unique ON products(barcode) WHERE barcode IS NOT NULL AND barcode != '';
 
 -- Table: transactions
 CREATE TABLE transactions (

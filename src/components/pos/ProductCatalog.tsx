@@ -132,6 +132,24 @@ export function ProductCatalog({
             placeholder="Cari nama barang atau scan barcode... (Tekan F1)"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && search.trim()) {
+                e.preventDefault();
+                const query = search.trim().toLowerCase();
+                const exactMatch = products.find(
+                  (p) =>
+                    (p.barcode && p.barcode.toLowerCase() === query) ||
+                    p.sku.toLowerCase() === query
+                );
+                if (exactMatch) {
+                  handleCardClick(exactMatch);
+                  setSearch("");
+                } else if (products.length === 1) {
+                  handleCardClick(products[0]);
+                  setSearch("");
+                }
+              }
+            }}
             className="pl-10 pr-9 h-11 text-xs md:text-sm rounded-xl bg-white border-[#E5E5E0] focus:border-[#6FA084]"
             autoFocus
           />
@@ -260,15 +278,15 @@ export function ProductCatalog({
                     )}
                   </div>
 
-                  {/* Name & SKU */}
-                  <div className="space-y-0.5 mb-2">
-                    <span className="font-bold text-xs text-[#1A1A1A] line-clamp-2 leading-tight">
-                      {product.name}
-                    </span>
-                    <span className="text-[10px] text-[#6B7280] font-mono block">
-                      {product.sku}
-                    </span>
-                  </div>
+                    {/* Name & SKU / Barcode */}
+                    <div className="space-y-0.5 mb-2">
+                      <span className="font-bold text-xs text-[#1A1A1A] line-clamp-2 leading-tight">
+                        {product.name}
+                      </span>
+                      <span className="text-[10px] text-[#6B7280] font-mono block truncate">
+                        {product.barcode ? `${product.sku} • ${product.barcode}` : product.sku}
+                      </span>
+                    </div>
 
                   {/* Price & Stock Pill */}
                   <div className="pt-2 border-t border-[#F0F0EB] flex items-center justify-between gap-1">

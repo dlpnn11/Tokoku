@@ -67,7 +67,7 @@ function MobileScannerContent() {
         await channelRef.current.send({
           type: "broadcast",
           event: "BARCODE_SCANNED",
-          payload: { sku: sku.trim() },
+          payload: { barcode: sku.trim(), sku: sku.trim() },
         });
       } catch (err) {
         console.error("Gagal broadcast barcode:", err);

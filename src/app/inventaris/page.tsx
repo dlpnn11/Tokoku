@@ -19,6 +19,7 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Barcode,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -426,7 +427,7 @@ export default function InventarisPage() {
                 <table className="w-full text-left text-xs divide-y divide-[#E5E5E0]">
                   <thead className="bg-[#F9F9F7] text-[#6B7280] font-bold uppercase tracking-wider">
                     <tr>
-                      <th className="py-3 px-4">KODE SKU</th>
+                      <th className="py-3 px-4">KODE / BARCODE</th>
                       <th className="py-3 px-4">NAMA PRODUK</th>
                       <th className="py-3 px-4">KATEGORI</th>
                       <th className="py-3 px-4 text-center">STOK</th>
@@ -460,7 +461,17 @@ export default function InventarisPage() {
                             className="hover:bg-[#F9F9F7] transition-colors"
                           >
                             <td className="py-3.5 px-4 font-mono font-semibold text-[#1A1A1A]">
-                              {p.sku}
+                              <div>{p.sku}</div>
+                              {p.barcode ? (
+                                <div className="text-[10px] text-[#6FA084] font-medium flex items-center gap-1 mt-0.5">
+                                  <Barcode className="w-3 h-3 inline shrink-0" />
+                                  <span>{p.barcode}</span>
+                                </div>
+                              ) : (
+                                <span className="text-[10px] text-[#9E9E9E] font-normal italic">
+                                  Tanpa barcode
+                                </span>
+                              )}
                             </td>
                             <td className="py-3.5 px-4 font-bold text-[#1A1A1A]">
                               {p.name}

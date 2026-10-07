@@ -37,7 +37,11 @@ export function ProductDetailModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Detail Produk"
-      description={`Kode SKU: ${product.sku}`}
+      description={
+        product.barcode
+          ? `Kode SKU: ${product.sku} • Barcode: ${product.barcode}`
+          : `Kode SKU: ${product.sku}`
+      }
       maxWidth="lg"
     >
       <div className="space-y-5">
@@ -62,8 +66,24 @@ export function ProductDetailModal({
 
           {/* Right Column (8 cols): Specifications Table */}
           <div className="md:col-span-8 space-y-3">
-            {/* Box 1: Info Dasar */}
+            {/* Box 1: Info Dasar & Barcode */}
             <div className="p-3.5 bg-white border border-[#E5E5E0] rounded-xl grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <span className="text-[11px] text-[#6B7280] block">Kode SKU (Internal)</span>
+                <span className="font-bold text-[#1A1A1A] font-mono">
+                  {product.sku}
+                </span>
+              </div>
+              <div>
+                <span className="text-[11px] text-[#6B7280] block">Nomor Barcode Fisik</span>
+                <span className="font-bold text-[#1A1A1A] font-mono">
+                  {product.barcode || (
+                    <span className="text-[#9E9E9E] font-normal italic">
+                      Tidak ada barcode
+                    </span>
+                  )}
+                </span>
+              </div>
               <div>
                 <span className="text-[11px] text-[#6B7280] block">Kategori</span>
                 <span className="font-bold text-[#1A1A1A]">

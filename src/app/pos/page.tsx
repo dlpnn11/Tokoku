@@ -86,16 +86,18 @@ export default function PosPage() {
 
     channel
       .on("broadcast", { event: "BARCODE_SCANNED" }, async ({ payload }) => {
-        const scannedSku = payload?.sku;
-        if (!scannedSku) return;
+        const scannedCode = (payload?.barcode || payload?.sku || "").trim();
+        if (!scannedCode) return;
 
-        // Look up product in current catalog or fetch from database
+        // Look up product in current catalog (by physical barcode first, then by SKU) or fetch from database
         let matched = products.find(
-          (p) => p.sku.toLowerCase() === scannedSku.toLowerCase()
+          (p) =>
+            (p.barcode && p.barcode.toLowerCase() === scannedCode.toLowerCase()) ||
+            p.sku.toLowerCase() === scannedCode.toLowerCase()
         );
 
         if (!matched) {
-          matched = await transactionService.getProductBySku(scannedSku);
+          matched = await transactionService.getProductBySku(scannedCode);
         }
 
         if (matched) {
@@ -117,7 +119,7 @@ export default function PosPage() {
           }
         } else {
           playErrorSound();
-          showToast(`Barcode ${scannedSku} tidak terdaftar!`, "error");
+          showToast(`Barcode / SKU "${scannedCode}" tidak terdaftar!`, "error");
         }
       })
       .subscribe();

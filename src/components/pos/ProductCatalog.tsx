@@ -30,6 +30,75 @@ export function ProductCatalog({
   setSelectedCategory,
 }: ProductCatalogProps) {
   const searchInputRef = React.useRef<HTMLInputElement>(null);
+  const pillsContainerRef = React.useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = React.useState(false);
+
+  const isDownRef = React.useRef(false);
+  const startXRef = React.useRef(0);
+  const scrollLeftRef = React.useRef(0);
+  const hasMovedRef = React.useRef(false);
+
+  // Mouse drag-to-scroll handlers for category pills
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return; // Primary click only
+    const container = pillsContainerRef.current;
+    if (!container) return;
+
+    isDownRef.current = true;
+    setIsDragging(true);
+    startXRef.current = e.pageX - container.offsetLeft;
+    scrollLeftRef.current = container.scrollLeft;
+    hasMovedRef.current = false;
+  };
+
+  React.useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDownRef.current || !pillsContainerRef.current) return;
+      const x = e.pageX - pillsContainerRef.current.offsetLeft;
+      const walk = (x - startXRef.current) * 1.25;
+
+      if (Math.abs(x - startXRef.current) > 4) {
+        hasMovedRef.current = true;
+      }
+
+      pillsContainerRef.current.scrollLeft = scrollLeftRef.current - walk;
+    };
+
+    const handleMouseUp = () => {
+      if (!isDownRef.current) return;
+      isDownRef.current = false;
+      setIsDragging(false);
+      // Delay reset so onClickCapture blocks accidental pill selection when drag finishes
+      setTimeout(() => {
+        hasMovedRef.current = false;
+      }, 80);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, []);
+
+  // Direct wheel scroll horizontally without needing Shift key
+  React.useEffect(() => {
+    const container = pillsContainerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        container.scrollLeft += e.deltaY;
+      }
+    };
+
+    container.addEventListener("wheel", handleWheel, { passive: false });
+    return () => {
+      container.removeEventListener("wheel", handleWheel);
+    };
+  }, []);
 
   // Keyboard shortcut F1 to focus search
   React.useEffect(() => {
@@ -92,13 +161,28 @@ export function ProductCatalog({
         </Button>
       </div>
 
-      {/* Category Filter Chips Bar */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+      {/* Category Filter Chips Bar with Drag-to-Scroll */}
+      <div
+        ref={pillsContainerRef}
+        onMouseDown={handleMouseDown}
+        onDragStart={(e) => e.preventDefault()}
+        onClickCapture={(e) => {
+          if (hasMovedRef.current) {
+            e.stopPropagation();
+            e.preventDefault();
+          }
+        }}
+        className={cn(
+          "flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none select-none touch-pan-x transition-colors",
+          isDragging ? "cursor-grabbing" : "cursor-grab"
+        )}
+      >
         <button
           type="button"
           onClick={() => setSelectedCategory("all")}
           className={cn(
-            "px-3.5 py-1.5 rounded-full text-xs font-bold shrink-0 transition-all cursor-pointer",
+            "px-3.5 py-1.5 rounded-full text-xs font-bold shrink-0 transition-all",
+            isDragging ? "cursor-grabbing" : "cursor-pointer",
             selectedCategory === "all"
               ? "bg-[#6FA084] text-white shadow-xs"
               : "bg-white border border-[#E5E5E0] text-[#1A1A1A] hover:bg-[#F4F8F5]"
@@ -112,7 +196,8 @@ export function ProductCatalog({
             type="button"
             onClick={() => setSelectedCategory(cat.id)}
             className={cn(
-              "px-3.5 py-1.5 rounded-full text-xs font-bold shrink-0 transition-all cursor-pointer",
+              "px-3.5 py-1.5 rounded-full text-xs font-bold shrink-0 transition-all",
+              isDragging ? "cursor-grabbing" : "cursor-pointer",
               selectedCategory === cat.id
                 ? "bg-[#6FA084] text-white shadow-xs"
                 : "bg-white border border-[#E5E5E0] text-[#1A1A1A] hover:bg-[#F4F8F5]"

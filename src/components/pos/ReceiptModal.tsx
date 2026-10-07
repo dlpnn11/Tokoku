@@ -56,10 +56,22 @@ export function ReceiptModal({
     }
   }, [transactionData]);
 
+  React.useEffect(() => {
+    const handleAfterPrint = () => {
+      document.body.classList.remove("printing-thermal");
+    };
+    window.addEventListener("afterprint", handleAfterPrint);
+    return () => window.removeEventListener("afterprint", handleAfterPrint);
+  }, []);
+
   if (!transactionData) return null;
 
   const handlePrint = () => {
-    window.print();
+    setViewMode("thermal");
+    document.body.classList.add("printing-thermal");
+    setTimeout(() => {
+      window.print();
+    }, 80);
   };
 
   const getReceiptImage = async () => {

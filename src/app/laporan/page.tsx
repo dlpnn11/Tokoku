@@ -138,9 +138,37 @@ export default function LaporanPage() {
 
   return (
     <AppShell title="LAPORAN KEUANGAN">
-      <div className="space-y-6">
-        {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="space-y-6 print:space-y-4">
+        {/* OFFICIAL PRINT HEADER (Only visible when printing to paper/PDF) */}
+        <div className="hidden print:block border-b-2 border-[#2C2C2C] pb-4 mb-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="w-3.5 h-3.5 rounded-xs bg-[#6FA084] inline-block" />
+                <h1 className="text-xl font-black text-[#1A1A1A] tracking-wider uppercase">
+                  TOKOKU — LAPORAN KEUANGAN & ANALITIK
+                </h1>
+              </div>
+              <p className="text-xs text-[#6B7280] font-medium mt-1">
+                Toko Grosir Sumber Rejeki • Pasar Induk Kramat Jati Blok A5
+              </p>
+            </div>
+            <div className="text-right text-xs space-y-0.5">
+              <div className="font-bold text-[#1A1A1A] bg-[#F4F8F5] px-2.5 py-1 rounded border border-[#D5E5DC] inline-block">
+                Periode: {getDateRange().label}
+              </div>
+              <p className="text-[#6B7280] pt-1">
+                Dicetak: {new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+              </p>
+              <p className="text-[#6B7280]">
+                Oleh: <strong className="text-[#1A1A1A]">{currentUser.full_name}</strong> ({currentUser.role === "pemilik" ? "Pemilik Toko" : "Kasir"})
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Page Header (Screen only) */}
+        <div className="print:hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-xl font-bold text-[#1A1A1A]">
               Laporan Keuangan & Analitik Penjualan
@@ -161,8 +189,8 @@ export default function LaporanPage() {
           </Button>
         </div>
 
-        {/* PERIOD FILTER BAR & EXPORT ACTIONS */}
-        <div className="bg-white border border-[#E5E5E0] rounded-xl p-4 shadow-2xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        {/* PERIOD FILTER BAR & EXPORT ACTIONS (Screen only) */}
+        <div className="print:hidden bg-white border border-[#E5E5E0] rounded-xl p-4 shadow-2xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           {/* Period Toggle Pills */}
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-bold text-[#6B7280] mr-1">Periode:</span>
@@ -263,9 +291,9 @@ export default function LaporanPage() {
         </div>
 
         {/* 4 FINANCIAL KPI CARDS ROW */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 print:grid-cols-4 gap-4 print:gap-3">
           {/* Card 1: Total Pendapatan / Omzet */}
-          <div className="bg-white border border-[#E5E5E0] rounded-xl p-5 shadow-2xs space-y-2">
+          <div className="bg-white border border-[#E5E5E0] rounded-xl p-5 print:p-3.5 shadow-2xs print:shadow-none space-y-2 print:break-inside-avoid">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-[#6B7280]">
                 Total Pendapatan (Omzet)
@@ -283,7 +311,7 @@ export default function LaporanPage() {
           </div>
 
           {/* Card 2: Laba Bersih (Estimasi Keuntungan) */}
-          <div className="bg-white border border-[#E5E5E0] rounded-xl p-5 shadow-2xs space-y-2">
+          <div className="bg-white border border-[#E5E5E0] rounded-xl p-5 print:p-3.5 shadow-2xs print:shadow-none space-y-2 print:break-inside-avoid">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-[#6B7280]">
                 Laba Bersih (Untung)
@@ -304,7 +332,7 @@ export default function LaporanPage() {
           </div>
 
           {/* Card 3: Rata-rata per Transaksi */}
-          <div className="bg-white border border-[#E5E5E0] rounded-xl p-5 shadow-2xs space-y-2">
+          <div className="bg-white border border-[#E5E5E0] rounded-xl p-5 print:p-3.5 shadow-2xs print:shadow-none space-y-2 print:break-inside-avoid">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-[#6B7280]">
                 Rata-rata per Transaksi
@@ -322,7 +350,7 @@ export default function LaporanPage() {
           </div>
 
           {/* Card 4: Total Produk Terjual */}
-          <div className="bg-white border border-[#E5E5E0] rounded-xl p-5 shadow-2xs space-y-2">
+          <div className="bg-white border border-[#E5E5E0] rounded-xl p-5 print:p-3.5 shadow-2xs print:shadow-none space-y-2 print:break-inside-avoid">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-[#6B7280]">
                 Total Produk Terjual
@@ -342,11 +370,11 @@ export default function LaporanPage() {
         </div>
 
         {/* TWO-COLUMN ANALYTICS LAYOUT (65% / 35%) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-12 print:grid-cols-12 gap-5 print:gap-4">
           {/* LEFT COLUMN (65% -> 8 cols on 12-grid) */}
-          <div className="lg:col-span-8 space-y-5">
+          <div className="lg:col-span-8 print:col-span-8 space-y-5 print:space-y-4">
             {/* Chart Card: Grafik Pendapatan Harian */}
-            <div className="bg-white border border-[#E5E5E0] rounded-xl p-5 shadow-2xs space-y-4">
+            <div className="bg-white border border-[#E5E5E0] rounded-xl p-5 print:p-4 shadow-2xs print:shadow-none space-y-4 print:break-inside-avoid">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-bold text-sm text-[#1A1A1A]">
@@ -372,7 +400,7 @@ export default function LaporanPage() {
             </div>
 
             {/* Chart Card 2: Grafik Tren Bulanan Historis (2025 - 2026) */}
-            <div className="bg-white border border-[#E5E5E0] rounded-xl p-5 shadow-2xs space-y-4">
+            <div className="bg-white border border-[#E5E5E0] rounded-xl p-5 print:p-4 shadow-2xs print:shadow-none space-y-4 print:break-inside-avoid">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-bold text-sm text-[#1A1A1A]">
@@ -398,7 +426,7 @@ export default function LaporanPage() {
             </div>
 
             {/* Arus Kas & Rincian Margin Toko */}
-            <div className="bg-white border border-[#E5E5E0] rounded-xl p-5 shadow-2xs space-y-3">
+            <div className="bg-white border border-[#E5E5E0] rounded-xl p-5 print:p-4 shadow-2xs print:shadow-none space-y-3 print:break-inside-avoid">
               <h3 className="font-bold text-sm text-[#1A1A1A]">
                 Rincian Arus Pendapatan & Beban Pokok (HPP)
               </h3>
@@ -426,9 +454,9 @@ export default function LaporanPage() {
           </div>
 
           {/* RIGHT COLUMN (35% -> 4 cols on 12-grid) */}
-          <div className="lg:col-span-4 space-y-5">
+          <div className="lg:col-span-4 print:col-span-4 space-y-5 print:space-y-4">
             {/* Best Sellers Card */}
-            <div className="bg-white border border-[#E5E5E0] rounded-xl p-5 shadow-2xs space-y-4">
+            <div className="bg-white border border-[#E5E5E0] rounded-xl p-5 print:p-4 shadow-2xs print:shadow-none space-y-4 print:break-inside-avoid">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-lg bg-[#FAFBF9] border border-[#E5E5E0] flex items-center justify-center text-[#E8A838]">
                   <Trophy className="w-4 h-4" />
@@ -453,7 +481,7 @@ export default function LaporanPage() {
             </div>
 
             {/* Category Breakdown Card */}
-            <div className="bg-white border border-[#E5E5E0] rounded-xl p-5 shadow-2xs space-y-4">
+            <div className="bg-white border border-[#E5E5E0] rounded-xl p-5 print:p-4 shadow-2xs print:shadow-none space-y-4 print:break-inside-avoid">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-lg bg-[#FAFBF9] border border-[#E5E5E0] flex items-center justify-center text-[#6FA084]">
                   <Layers className="w-4 h-4" />
@@ -476,6 +504,17 @@ export default function LaporanPage() {
                 <CategoryBreakdown categories={report?.categoryBreakdown || []} />
               )}
             </div>
+          </div>
+        </div>
+
+        {/* OFFICIAL PRINT FOOTER (Paper only) */}
+        <div className="hidden print:flex items-center justify-between border-t border-[#E5E5E0] pt-4 mt-6 text-[10px] text-[#6B7280]">
+          <div>
+            <p className="font-semibold text-[#1A1A1A]">TokoKu Cloud POS & Inventory</p>
+            <p>Dokumen rekapan transaksi & analitik laba rugi resmi.</p>
+          </div>
+          <div className="text-right">
+            <p className="italic">Status: Terverifikasi oleh Sistem TokoKu</p>
           </div>
         </div>
       </div>

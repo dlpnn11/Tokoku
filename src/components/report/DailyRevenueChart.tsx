@@ -45,7 +45,7 @@ export function DailyRevenueChart({ data }: DailyRevenueChartProps) {
               {data[hoveredIndex].transactionsCount} transaksi)
             </div>
           ) : (
-            <span className="text-[11px] text-[#9E9E9E] italic hidden sm:inline whitespace-nowrap">
+            <span className="text-[11px] text-[#9E9E9E] italic hidden sm:inline print:hidden whitespace-nowrap">
               Sorot batang untuk rincian
             </span>
           )}
@@ -53,8 +53,8 @@ export function DailyRevenueChart({ data }: DailyRevenueChartProps) {
       </div>
 
       {/* Pure Flat Bar Chart Area */}
-      <div className="select-none overflow-x-auto pt-4 pb-2 scrollbar-none">
-        <div className="min-w-[440px]">
+      <div className="select-none overflow-x-auto pt-4 pb-2 scrollbar-none print:overflow-visible">
+        <div className="min-w-[440px] print:min-w-0">
           {/* Main Chart Graphic (Height: 190px) */}
           <div className="relative" style={{ height: "190px" }}>
             {/* Horizontal grid lines with rounded clean intervals */}

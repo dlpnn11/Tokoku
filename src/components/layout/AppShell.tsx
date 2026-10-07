@@ -43,41 +43,47 @@ export function AppShell({
   }, [isAuthenticated, currentUser?.role, pathname, router]);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#F4F4F0] text-[#1A1A1A]">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#F4F4F0] text-[#1A1A1A] print:h-auto print:w-auto print:overflow-visible print:bg-white print:block">
       {/* Desktop Sticky Sidebar (Visible on md and up) */}
-      <div className="hidden md:block shrink-0">
+      <div className="hidden md:block shrink-0 print:hidden">
         <Sidebar />
       </div>
 
       {/* Mobile Drawer (Collapsible) */}
-      <MobileDrawer
-        isOpen={isMobileMenuOpen}
-        onClose={() => setIsMobileMenuOpen(false)}
-      />
+      <div className="print:hidden">
+        <MobileDrawer
+          isOpen={isMobileMenuOpen}
+          onClose={() => setIsMobileMenuOpen(false)}
+        />
+      </div>
 
       {/* Main Workspace Area */}
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden print:h-auto print:overflow-visible print:block">
         {/* Persistent Top Header Bar */}
-        <Header
-          title={title}
-          onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
-          onOpenScannerPairing={
-            onOpenScannerPairing || (() => setIsScannerModalOpen(true))
-          }
-        />
+        <div className="print:hidden">
+          <Header
+            title={title}
+            onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
+            onOpenScannerPairing={
+              onOpenScannerPairing || (() => setIsScannerModalOpen(true))
+            }
+          />
+        </div>
 
         {/* Scrollable Content Viewport */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-7">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-7 print:h-auto print:overflow-visible print:p-0 print:m-0">
           {children}
         </main>
       </div>
 
       {/* Real Barcode / QR Scanner Pairing Modal */}
-      <ScannerPairingModal
-        isOpen={isScannerModalOpen}
-        onClose={() => setIsScannerModalOpen(false)}
-        roomId="tokoku-main-pos"
-      />
+      <div className="print:hidden">
+        <ScannerPairingModal
+          isOpen={isScannerModalOpen}
+          onClose={() => setIsScannerModalOpen(false)}
+          roomId="tokoku-main-pos"
+        />
+      </div>
     </div>
   );
 }

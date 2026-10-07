@@ -24,24 +24,50 @@ Before answering or executing any task, ALWAYS read and synchronize with the fol
 
 ---
 
-## 3. AUTOMATED GITHUB WORKFLOW & PORTFOLIO POLICY (INDUSTRY STANDARD)
-* **Automated Multi-Metric GitHub Flow:** Whenever completing a feature, bug fix, or significant task, the assistant executes the automated workflow via `scripts/github-workflow.mjs` or direct GitHub REST API:
-  1. **Issue Creation:** Automatically open a GitHub Issue describing the task.
-  2. **Feature Branching:** Create a dedicated branch (e.g., `feat/...` or `fix/...`).
-  3. **Conventional Commit:** Commit changes referencing the issue (e.g., `closes #X`).
-  4. **Pull Request (PR):** Push branch, open PR with clear overview, and merge into `main`.
-  5. **Auto-Close & Sync:** Issue automatically closes, branch is cleaned up, and `main` is updated.
-  6. **GitHub Actions CI:** All pushes and PRs trigger `.github/workflows/ci.yml` (automated build & verification) ensuring green checks (`✓`) on GitHub.
-* **Direct Commit Fallback:** For small documentation or quick polish tweaks, direct `git add .`, `git commit -m "..."`, and `git push` remains active.
-* **Commit Message Format (Conventional Commits in English):**
-  - `feat(<scope>)`: New feature implementation
-  - `fix(<scope>)`: Bug fix
-  - `docs(<scope>)`: Documentation updates
-  - `style(<scope>)`: UI styling, layouts, color tokens
-  - `refactor(<scope>)`: Code refactoring without changing functionality
-  - `test(<scope>)`: Adding or updating test suites
-  - `chore(<scope>)`: Dependencies, build scripts, configuration files
-  - `ci(<scope>)`: GitHub Actions workflows, CI/CD pipelines
+## 3. AUTOMATED 4-METRIC GITHUB WORKFLOW & PORTFOLIO ENGINE (MASTER BLUEPRINT)
+This section serves as the **master operational blueprint** across this repository and can be copied directly to any future project to achieve an industry-standard, balanced GitHub contribution profile (100% automated across Commits, Issues, Pull Requests, and Code Reviews).
+
+### A. The 4-Metric Synchronized Pipeline
+Whenever completing a feature, bug fix, refactor, or significant milestone, the assistant MUST execute the automated flow via `scripts/github-workflow.mjs`:
+1. **Issue Creation (`Issues` Metric):** Automatically opens a descriptive GitHub Issue via REST API with technical context and labels.
+2. **Dedicated Feature Branch:** Creates an isolated branch (e.g., `feat/...`, `fix/...`, `perf/...`).
+3. **Conventional Commit (`Commits` Metric):** Commits code changes referencing the issue (e.g., `feat(auth): add jwt middleware (closes #X)`).
+4. **Branch Push:** Pushes the dedicated branch to `origin`.
+5. **Pull Request Opening (`Pull Requests` Metric):** Submits a formal Pull Request targeting `main` with summary, changelog, and issue linkage.
+6. **Automated Code Review (`Code Review` Metric):** Submits an automated peer code review (`POST /repos/:owner/:repo/pulls/:id/reviews`) with status, audit summary, and approval.
+7. **Squash & Merge:** Merges the PR into `main` using squash merge.
+8. **Auto-Cleanup & Sync:** Closes the linked Issue, deletes the remote & local feature branch, and syncs `main` via `git pull`.
+9. **GitHub Actions CI Pipeline:** Automatically triggers `.github/workflows/ci.yml` in the cloud to run Next.js build verification with cached dependencies, ensuring a green checkmark (`✓`) on every commit.
+
+### B. Command Execution Reference
+* **Standard Automated Flow Command:**
+  ```bash
+  node scripts/github-workflow.mjs auto-flow "<Title>" "<Description>" "<CommitMessage>" "<BranchName>"
+  ```
+* **Direct Commit Fallback (Quick Tweaks/Typo Polish Only):**
+  ```bash
+  git add .
+  git commit -m "<type>(<scope>): <subject in English>"
+  git push
+  ```
+
+### C. Commit Message Format (Conventional Commits in English)
+* `feat(<scope>)`: New feature implementation
+* `fix(<scope>)`: Bug fix
+* `docs(<scope>)`: Documentation updates
+* `style(<scope>)`: UI styling, layouts, color tokens
+* `refactor(<scope>)`: Code refactoring without changing functionality
+* `perf(<scope>)`: Performance optimization (caching, asset loading)
+* `test(<scope>)`: Adding or updating test suites
+* `chore(<scope>)`: Dependencies, build scripts, configuration files
+* `ci(<scope>)`: GitHub Actions workflows, CI/CD pipelines
+
+### D. Blueprint Setup Guide for Future Projects (Copy-Paste Checklist)
+When starting a brand new project, follow these 3 steps to replicate this exact setup:
+1. **Personal Access Token (PAT):** Already configured globally in `~/.gemini/config/mcp_config.json` with `repo` and `workflow` scopes. No new token needed!
+2. **Copy Automation Engine:** Copy `scripts/github-workflow.mjs` to the new project and simply change `REPO_NAME` to the new repo name.
+3. **Copy CI Pipeline:** Copy `.github/workflows/ci.yml` to the new project.
+4. **Copy this AGENTS.md:** Place in `.agents/AGENTS.md` and the AI assistant will automatically run the 4-metric pipeline from day 1.
 
 ---
 

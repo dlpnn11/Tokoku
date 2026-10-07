@@ -8,6 +8,7 @@ import {
   Receipt,
   Package,
   FileSpreadsheet,
+  FileDown,
   Printer,
   Calendar,
   RefreshCw,
@@ -39,6 +40,7 @@ export default function LaporanPage() {
   const [customStartDate, setCustomStartDate] = React.useState("");
   const [customEndDate, setCustomEndDate] = React.useState("");
   const [loading, setLoading] = React.useState(true);
+  const [exportingExcel, setExportingExcel] = React.useState(false);
   const [report, setReport] = React.useState<FinancialReportSummary | null>(null);
   const [monthlyHistory, setMonthlyHistory] = React.useState<any[]>([]);
 
@@ -106,6 +108,20 @@ export default function LaporanPage() {
     if (!report) return;
     const { label } = getDateRange();
     reportService.exportToCsv(report, label);
+  };
+
+  const handleExportExcel = async () => {
+    if (!report) return;
+    try {
+      setExportingExcel(true);
+      const { label } = getDateRange();
+      await reportService.exportToExcel(report, label);
+    } catch (err) {
+      console.error("Gagal mengekspor file Excel:", err);
+      alert("Terjadi kesalahan saat memproses file Excel.");
+    } finally {
+      setExportingExcel(false);
+    }
   };
 
   const handlePrint = () => {
@@ -266,25 +282,42 @@ export default function LaporanPage() {
           )}
 
           {/* Export Actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* 1. Ekspor Excel (.xlsx) dengan tabel berformat biru */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportExcel}
+              disabled={exportingExcel || !report}
+              className="gap-1.5 text-xs border-[#2F5597] text-[#2F5597] hover:bg-[#F2F4F8] font-bold h-9 shadow-2xs cursor-pointer"
+              title="Unduh workbook resmi Microsoft Excel (.xlsx) dengan tabel berformat biru rapi"
+            >
+              <FileSpreadsheet className={cn("w-4 h-4", exportingExcel && "animate-spin")} />
+              {exportingExcel ? "Menyiapkan Excel..." : "Ekspor Excel (.xlsx)"}
+            </Button>
+
+            {/* 2. Ekspor CSV (.csv) data teks mentah */}
             <Button
               variant="outline"
               size="sm"
               onClick={handleExportCsv}
-              className="gap-1.5 text-xs border-[#6FA084] text-[#6FA084] hover:bg-[#F4F8F5] font-bold h-9"
-              title="Unduh format spreadsheet untuk Microsoft Excel"
+              disabled={!report}
+              className="gap-1.5 text-xs border-[#E5E5E0] text-[#6B7280] hover:bg-[#FAFBF9] hover:text-[#1A1A1A] font-semibold h-9 cursor-pointer"
+              title="Unduh data teks polos CSV (.csv) untuk olah data spreadsheet cepat"
             >
-              <FileSpreadsheet className="w-4 h-4" />
-              Ekspor Excel (.csv)
+              <FileDown className="w-4 h-4 text-[#6B7280]" />
+              Ekspor CSV (.csv)
             </Button>
 
+            {/* 3. Cetak Dokumen Resmi */}
             <Button
               variant="outline"
               size="sm"
               onClick={handlePrint}
-              className="gap-1.5 text-xs font-bold h-9 border-[#E5E5E0]"
+              className="gap-1.5 text-xs font-bold h-9 border-[#E5E5E0] hover:bg-[#FAFBF9] cursor-pointer"
+              title="Cetak atau Simpan sebagai PDF"
             >
-              <Printer className="w-4 h-4" />
+              <Printer className="w-4 h-4 text-[#1A1A1A]" />
               Cetak
             </Button>
           </div>

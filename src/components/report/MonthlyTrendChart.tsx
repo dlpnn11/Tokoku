@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { formatRupiah } from "@/lib/utils";
+import { formatRupiah, calculateNiceScale } from "@/lib/utils";
 
 interface MonthlyDataPoint {
   key: string;
@@ -27,9 +27,8 @@ export function MonthlyTrendChart({ data }: MonthlyTrendChartProps) {
     );
   }
 
-  const maxRevenue = Math.max(...data.map((d) => d.revenue), 1000000);
-  const chartHeight = 220;
-  const gridSteps = [1, 0.75, 0.5, 0.25, 0];
+  const rawMax = Math.max(...data.map((d) => d.revenue), 0);
+  const { niceMax, ticks } = calculateNiceScale(rawMax);
 
   return (
     <div className="space-y-4">
@@ -56,26 +55,26 @@ export function MonthlyTrendChart({ data }: MonthlyTrendChartProps) {
 
       {/* Pure Flat Bar Chart Area */}
       <div className="select-none overflow-x-auto pt-4 pb-2">
-        <div className="min-w-[580px]">
+        <div className="min-w-[600px]">
           {/* Main Chart Graphic (Height: 190px) */}
           <div className="relative" style={{ height: "190px" }}>
-            {/* Horizontal grid lines */}
+            {/* Horizontal grid lines with rounded clean intervals */}
             <div className="absolute inset-0 pointer-events-none flex flex-col justify-between">
-              {gridSteps.map((step, idx) => (
+              {ticks.map((tickVal, idx) => (
                 <div key={idx} className="border-b border-[#F0F0EB] w-full flex items-center justify-start h-0">
-                  <span className="text-[10px] font-mono text-[#9E9E9E] -translate-y-2 pr-2 select-none w-18 text-right shrink-0">
-                    {step === 0 ? "Rp 0" : formatRupiah(maxRevenue * step)}
+                  <span className="text-[10px] font-mono text-[#9E9E9E] -translate-y-2 pr-2.5 select-none w-26 text-right shrink-0 whitespace-nowrap">
+                    {formatRupiah(tickVal)}
                   </span>
                 </div>
               ))}
             </div>
 
             {/* Bars Container — Placed exactly above grid lines */}
-            <div className="absolute inset-0 flex items-end justify-between gap-2.5 pl-22 pr-3">
+            <div className="absolute inset-0 flex items-end justify-between gap-2.5 pl-30 pr-3">
               {data.map((item, idx) => {
                 const isHovered = hoveredIndex === idx;
                 const barHeightPx = Math.max(
-                  Math.round((item.revenue / maxRevenue) * 190),
+                  Math.round((item.revenue / niceMax) * 190),
                   item.revenue > 0 ? 6 : 2
                 );
                 const is2025 = item.year === 2025;
@@ -115,7 +114,7 @@ export function MonthlyTrendChart({ data }: MonthlyTrendChartProps) {
           </div>
 
           {/* X-axis Baseline & Month Labels */}
-          <div className="flex justify-between gap-2.5 pl-22 pr-3 pt-2 border-t border-[#E5E5E0]">
+          <div className="flex justify-between gap-2.5 pl-30 pr-3 pt-2 border-t border-[#E5E5E0]">
             {data.map((item, idx) => {
               const isHovered = hoveredIndex === idx;
               return (

@@ -52,18 +52,23 @@ export function ScannerPairingModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Hubungkan Pemindai Barcode HP"
-      description="Gunakan kamera smartphone kasir sebagai scanner barcode nirkabel tanpa alat eksternal."
+      description="Gunakan kamera ponsel untuk memindai barcode barang secara nirkabel ke terminal kasir ini."
       maxWidth="md"
     >
       <div className="space-y-4 text-center">
-        {/* QR Code Container */}
-        <div className="bg-[#FAFBF9] border border-[#E5E5E0] rounded-2xl p-4 inline-block mx-auto shadow-sm">
+        {/* Real QR Code Container */}
+        <div className="p-4 bg-white border border-[#E5E5E0] rounded-2xl inline-block mx-auto shadow-sm">
           {qrDataUrl ? (
-            <img
-              src={qrDataUrl}
-              alt="QR Code Pairing Scanner"
-              className="w-52 h-52 mx-auto rounded-xl"
-            />
+            <div className="space-y-2">
+              <img
+                src={qrDataUrl}
+                alt="QR Code Pairing Scanner"
+                className="w-52 h-52 mx-auto rounded-xl"
+              />
+              <span className="inline-block text-[11px] font-semibold text-[#6FA084] font-mono bg-[#F4F8F5] px-3 py-1 rounded-full border border-[#D5E5DC]">
+                ROOM: {roomId}
+              </span>
+            </div>
           ) : (
             <div className="w-52 h-52 flex items-center justify-center text-xs text-[#6B7280]">
               Membuat QR Code...
@@ -72,44 +77,62 @@ export function ScannerPairingModal({
         </div>
 
         {/* Pairing Instructions */}
-        <div className="text-xs text-[#6B7280] space-y-1.5 max-w-sm mx-auto text-left bg-white border border-[#E5E5E0] rounded-xl p-3.5">
-          <div className="flex items-start gap-2 text-[#1A1A1A] font-semibold">
+        <div className="text-xs text-[#6B7280] space-y-1.5 max-w-sm mx-auto text-left bg-[#FAFBF9] border border-[#E5E5E0] rounded-xl p-3.5">
+          <div className="flex items-start gap-2 text-[#1A1A1A] font-semibold text-xs">
             <Smartphone className="w-4 h-4 text-[#6FA084] shrink-0 mt-0.5" />
-            <span>Cara Menghubungkan:</span>
+            <span>Cara Penggunaan:</span>
           </div>
           <ol className="list-decimal list-inside space-y-1 pl-1 text-[11px] text-[#6B7280]">
-            <li>Buka kamera atau Google Lens di HP kasir.</li>
-            <li>Scan QR Code di atas, lalu buka tautan peramban.</li>
-            <li>Izinkan akses kamera dan mulai scan barcode fisik produk!</li>
+            <li>Buka kamera di HP kamu atau browser HP.</li>
+            <li>Scan QR Code di atas atau akses tautan di bawah.</li>
+            <li>Arahkan kamera HP ke barcode kemasan barang (misal: Indomie / Aqua).</li>
+            <li>HP akan berbunyi "Beep" dan barang langsung masuk ke kasir!</li>
           </ol>
         </div>
 
-        {/* Action Link & Copy */}
-        <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#E5E5E0]">
+        {/* Direct URL copy field */}
+        <div className="flex items-center gap-2 p-2 bg-[#F4F4F0] rounded-xl border border-[#E5E5E0]">
+          <input
+            type="text"
+            readOnly
+            value={scanUrl}
+            className="bg-transparent text-xs text-[#1A1A1A] font-mono flex-1 outline-none px-2 select-all truncate"
+          />
           <Button
             type="button"
-            variant="outline"
             size="sm"
+            variant="outline"
+            className="shrink-0 h-8 text-xs gap-1.5"
             onClick={handleCopy}
-            className="gap-1.5 text-xs h-9"
           >
             {copied ? (
-              <Check className="w-3.5 h-3.5 text-[#6FA084]" />
+              <>
+                <Check className="w-3.5 h-3.5 text-[#6FA084]" />
+                Tersalin
+              </>
             ) : (
-              <Copy className="w-3.5 h-3.5 text-[#6B7280]" />
+              <>
+                <Copy className="w-3.5 h-3.5 text-[#6B7280]" />
+                Salin
+              </>
             )}
-            {copied ? "Tautan Tersalin" : "Salin Link"}
           </Button>
+        </div>
 
+        {/* Footer Actions */}
+        <div className="flex justify-between items-center pt-2 border-t border-[#E5E5E0]">
           <a
             href={scanUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl bg-[#6FA084] text-white text-xs font-bold hover:bg-[#58836B] transition-colors"
+            className="text-xs text-[#6FA084] hover:underline flex items-center gap-1 font-semibold"
           >
             <ExternalLink className="w-3.5 h-3.5" />
-            Buka Scanner HP
+            Buka di Tab Baru untuk Test
           </a>
+          <Button size="sm" onClick={onClose}>
+            Selesai
+          </Button>
         </div>
       </div>
     </Modal>

@@ -319,11 +319,11 @@ export default function RiwayatPage() {
                   <th className="py-3 px-4">No. Faktur</th>
                   <th className="py-3 px-4">Tanggal & Waktu</th>
                   <th className="py-3 px-4">Kasir</th>
-                  <th className="py-3 px-4 text-center">Jml Item</th>
-                  <th className="py-3 px-4 text-right">Total</th>
-                  <th className="py-3 px-4 text-center">Metode</th>
-                  <th className="py-3 px-4 text-center">Status</th>
-                  <th className="py-3 px-4 text-center">Aksi</th>
+                  <th className="py-3 px-4 text-left">Jml Item</th>
+                  <th className="py-3 px-4 text-left">Total</th>
+                  <th className="py-3 px-4 text-left">Metode</th>
+                  <th className="py-3 px-4 text-left">Status</th>
+                  <th className="py-3 px-4 text-right pr-6">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E5E5E0]">
@@ -374,13 +374,16 @@ export default function RiwayatPage() {
                         <td className="py-3 px-4 font-medium text-[#1A1A1A]">
                           {tx.user?.full_name || "Kasir Toko"}
                         </td>
-                        <td className="py-3 px-4 text-center font-bold text-[#1A1A1A]">
-                          {totalItems}
+                        <td className="py-3 px-4 text-left">
+                          <div className="flex items-baseline gap-1 font-bold text-[#1A1A1A]">
+                            <span>{totalItems}</span>
+                            <span className="text-[10px] text-[#6B7280] font-normal">item</span>
+                          </div>
                         </td>
-                        <td className="py-3 px-4 text-right font-black text-[#1A1A1A] whitespace-nowrap">
+                        <td className="py-3 px-4 text-left font-black text-[#1A1A1A] whitespace-nowrap">
                           {formatRupiah(Number(tx.total_amount))}
                         </td>
-                        <td className="py-3 px-4 text-center">
+                        <td className="py-3 px-4 text-left">
                           <span
                             className={cn(
                               "px-2.5 py-1 rounded-full text-[10px] font-black inline-block",
@@ -392,7 +395,7 @@ export default function RiwayatPage() {
                             {tx.payment_method}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-center">
+                        <td className="py-3 px-4 text-left">
                           <span
                             className={cn(
                               "px-2.5 py-1 rounded-full text-[10px] font-black inline-block",
@@ -404,8 +407,8 @@ export default function RiwayatPage() {
                             {tx.status}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-center">
-                          <div className="flex items-center justify-center gap-1.5">
+                        <td className="py-3 px-4 text-right pr-6">
+                          <div className="flex items-center justify-end gap-1.5">
                             <button
                               onClick={() => handleViewDetail(tx)}
                               className="p-1.5 rounded-lg border border-[#E5E5E0] bg-[#FAFBF9] hover:bg-[#F4F8F5] hover:border-[#6FA084] text-[#1A1A1A] transition-colors"

@@ -187,9 +187,9 @@ export function SupplierProductsModal({
                 <tr>
                   <th className="py-2.5 px-3 w-10 text-center">NO</th>
                   <th className="py-2.5 px-3">PRODUK & SKU</th>
-                  <th className="py-2.5 px-3 text-right">STOK</th>
-                  <th className="py-2.5 px-3 text-right">HPP (KULAK)</th>
-                  <th className="py-2.5 px-3 text-right">HARGA JUAL</th>
+                  <th className="py-2.5 px-3 text-left">STOK</th>
+                  <th className="py-2.5 px-3 text-left">HPP (KULAK)</th>
+                  <th className="py-2.5 px-3 text-left">HARGA JUAL</th>
                   <th className="py-2.5 px-3 text-center w-14">AKSI</th>
                 </tr>
               </thead>
@@ -221,7 +221,7 @@ export function SupplierProductsModal({
                           {p.sku} • {p.category?.name || "-"}
                         </span>
                       </td>
-                      <td className="py-2.5 px-3 text-right font-medium">
+                      <td className="py-2.5 px-3 text-left font-medium">
                         {p.current_stock === 0 ? (
                           <Badge variant="danger" className="text-[10px]">
                             Habis
@@ -231,15 +231,20 @@ export function SupplierProductsModal({
                             {p.current_stock} {p.unit}
                           </Badge>
                         ) : (
-                          <span className="text-[#1A1A1A] font-bold">
-                            {p.current_stock} {p.unit}
-                          </span>
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-[#1A1A1A] font-bold">
+                              {p.current_stock}
+                            </span>
+                            <span className="text-[10px] text-[#6B7280]">
+                              {p.unit}
+                            </span>
+                          </div>
                         )}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-medium text-[#1A1A1A]">
+                      <td className="py-2.5 px-3 text-left font-medium text-[#1A1A1A]">
                         {formatRupiah(p.buy_price)}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-bold text-[#1A1A1A]">
+                      <td className="py-2.5 px-3 text-left font-bold text-[#1A1A1A]">
                         {formatRupiah(p.sell_price)}
                       </td>
                       <td className="py-2.5 px-3 text-center">

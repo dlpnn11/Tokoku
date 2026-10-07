@@ -430,10 +430,10 @@ export default function InventarisPage() {
                       <th className="py-3 px-4">KODE / BARCODE</th>
                       <th className="py-3 px-4">NAMA PRODUK</th>
                       <th className="py-3 px-4">KATEGORI</th>
-                      <th className="py-3 px-4 text-center">STOK</th>
+                      <th className="py-3 px-4 text-left">STOK</th>
                       <th className="py-3 px-4">HARGA BELI</th>
                       <th className="py-3 px-4">HARGA JUAL</th>
-                      <th className="py-3 px-4 text-center">STATUS</th>
+                      <th className="py-3 px-4 text-left">STATUS</th>
                       <th className="py-3 px-4 text-right">AKSI</th>
                     </tr>
                   </thead>
@@ -479,21 +479,23 @@ export default function InventarisPage() {
                             <td className="py-3.5 px-4 text-[#6B7280]">
                               {p.category?.name || "-"}
                             </td>
-                            <td className="py-3.5 px-4 text-center">
-                              <span
-                                className={`font-black text-sm ${
-                                  isOut
-                                    ? "text-[#D64545]"
-                                    : isLow
-                                    ? "text-[#E8A838]"
-                                    : "text-[#6FA084]"
-                                }`}
-                              >
-                                {p.current_stock}
-                              </span>
-                              <span className="text-[10px] text-[#6B7280] ml-1">
-                                {p.unit}
-                              </span>
+                            <td className="py-3.5 px-4 text-left">
+                              <div className="flex items-baseline gap-1.5">
+                                <span
+                                  className={`font-black text-sm ${
+                                    isOut
+                                      ? "text-[#D64545]"
+                                      : isLow
+                                      ? "text-[#E8A838]"
+                                      : "text-[#6FA084]"
+                                  }`}
+                                >
+                                  {p.current_stock}
+                                </span>
+                                <span className="text-[10px] text-[#6B7280]">
+                                  {p.unit}
+                                </span>
+                              </div>
                             </td>
                             <td className="py-3.5 px-4 text-[#6B7280]">
                               {formatRupiah(Number(p.buy_price))}
@@ -501,7 +503,7 @@ export default function InventarisPage() {
                             <td className="py-3.5 px-4 font-bold text-[#1A1A1A]">
                               {formatRupiah(Number(p.sell_price))}
                             </td>
-                            <td className="py-3.5 px-4 text-center">
+                            <td className="py-3.5 px-4 text-left">
                               <Badge
                                 variant={p.is_active ? "success" : "kasir"}
                                 className="text-[10px]"
@@ -604,7 +606,7 @@ export default function InventarisPage() {
                     <tr>
                       <th className="py-3 px-4 w-12 text-center">NO.</th>
                       <th className="py-3 px-4">NAMA KATEGORI</th>
-                      <th className="py-3 px-4 text-center w-40">JUMLAH PRODUK</th>
+                      <th className="py-3 px-4 text-left w-40">JUMLAH PRODUK</th>
                       <th className="py-3 px-4 text-right w-28">AKSI</th>
                     </tr>
                   </thead>
@@ -617,7 +619,7 @@ export default function InventarisPage() {
                         <td className="py-3.5 px-4 font-bold text-[#1A1A1A]">
                           {c.name}
                         </td>
-                        <td className="py-3.5 px-4 text-center">
+                        <td className="py-3.5 px-4 text-left">
                           <button
                             type="button"
                             onClick={() => {
@@ -689,7 +691,7 @@ export default function InventarisPage() {
                       <th className="py-3 px-4 w-48">NAMA SUPPLIER</th>
                       <th className="py-3 px-4 w-36">NO. KONTAK / WA</th>
                       <th className="py-3 px-4">ALAMAT</th>
-                      <th className="py-3 px-4 w-36 text-center">PRODUK DIPASOK</th>
+                      <th className="py-3 px-4 w-36 text-left">PRODUK DIPASOK</th>
                       <th className="py-3 px-4 w-28 text-right">AKSI</th>
                     </tr>
                   </thead>
@@ -723,7 +725,7 @@ export default function InventarisPage() {
                             {s.address || "-"}
                           </div>
                         </td>
-                        <td className="py-3.5 px-4 text-center">
+                        <td className="py-3.5 px-4 text-left">
                           <button
                             type="button"
                             onClick={() => {

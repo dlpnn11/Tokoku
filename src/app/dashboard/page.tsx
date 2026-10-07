@@ -213,9 +213,9 @@ export default function DashboardPage() {
                   <th className="py-2.5 px-4">Kode Barang</th>
                   <th className="py-2.5 px-4">Nama Produk</th>
                   <th className="py-2.5 px-4">Kategori</th>
-                  <th className="py-2.5 px-4 text-center">Stok Saat Ini</th>
-                  <th className="py-2.5 px-4 text-center">Batas Minimum</th>
-                  <th className="py-2.5 px-4 text-center">Status</th>
+                  <th className="py-2.5 px-4 text-left">Stok Saat Ini</th>
+                  <th className="py-2.5 px-4 text-left">Batas Minimum</th>
+                  <th className="py-2.5 px-4 text-left">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E5E5E0]">
@@ -249,13 +249,19 @@ export default function DashboardPage() {
                         <td className="py-2.5 px-4 text-[#6B7280]">
                           {(p as any).category?.name || "Kategori"}
                         </td>
-                        <td className="py-2.5 px-4 text-center font-black text-[#1A1A1A]">
-                          {p.current_stock} {p.unit}
+                        <td className="py-2.5 px-4 text-left">
+                          <div className="flex items-baseline gap-1 font-black text-[#1A1A1A]">
+                            <span>{p.current_stock}</span>
+                            <span className="text-[10px] font-normal text-[#6B7280]">{p.unit}</span>
+                          </div>
                         </td>
-                        <td className="py-2.5 px-4 text-center text-[#6B7280]">
-                          {p.minimum_stock || 5} {p.unit}
+                        <td className="py-2.5 px-4 text-left">
+                          <div className="flex items-baseline gap-1 text-[#6B7280]">
+                            <span className="font-medium text-[#1A1A1A]">{p.minimum_stock || 5}</span>
+                            <span className="text-[10px]">{p.unit}</span>
+                          </div>
                         </td>
-                        <td className="py-2.5 px-4 text-center">
+                        <td className="py-2.5 px-4 text-left">
                           <span
                             className={cn(
                               "px-2.5 py-0.5 rounded-full text-[10px] font-black inline-block",

@@ -26,8 +26,8 @@ export function DailyRevenueChart({ data }: DailyRevenueChartProps) {
   return (
     <div className="space-y-4">
       {/* Legend & Hover Info */}
-      <div className="flex items-center justify-between text-xs">
-        <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between text-xs min-h-[32px] gap-2">
+        <div className="flex items-center gap-4 shrink-0">
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded-xs bg-[#6FA084] inline-block" />
             <span className="text-[#6B7280] font-medium">Pendapatan Harian</span>
@@ -38,16 +38,22 @@ export function DailyRevenueChart({ data }: DailyRevenueChartProps) {
           </div>
         </div>
 
-        {hoveredIndex !== null && data[hoveredIndex] && (
-          <div className="font-mono text-[11px] font-bold text-[#1A1A1A] bg-[#FAFBF9] border border-[#E5E5E0] px-2.5 py-1 rounded-md">
-            {data[hoveredIndex].dayLabel}: {formatRupiah(data[hoveredIndex].revenue)} (
-            {data[hoveredIndex].transactionsCount} transaksi)
-          </div>
-        )}
+        <div className="flex items-center justify-end min-h-[28px]">
+          {hoveredIndex !== null && data[hoveredIndex] ? (
+            <div className="font-mono text-[11px] font-bold text-[#1A1A1A] bg-[#FAFBF9] border border-[#E5E5E0] px-2.5 py-1 rounded-md shadow-2xs whitespace-nowrap animate-in fade-in duration-100">
+              {data[hoveredIndex].dayLabel}: {formatRupiah(data[hoveredIndex].revenue)} (
+              {data[hoveredIndex].transactionsCount} transaksi)
+            </div>
+          ) : (
+            <span className="text-[11px] text-[#9E9E9E] italic hidden sm:inline whitespace-nowrap">
+              Sorot batang untuk rincian
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Pure Flat Bar Chart Area */}
-      <div className="select-none overflow-x-auto pt-4 pb-2">
+      <div className="select-none overflow-x-auto pt-4 pb-2 scrollbar-none">
         <div className="min-w-[440px]">
           {/* Main Chart Graphic (Height: 190px) */}
           <div className="relative" style={{ height: "190px" }}>
@@ -79,16 +85,9 @@ export function DailyRevenueChart({ data }: DailyRevenueChartProps) {
                     onMouseEnter={() => setHoveredIndex(idx)}
                     onMouseLeave={() => setHoveredIndex(null)}
                   >
-                    {/* Floating Tooltip */}
-                    {isHovered && (
-                      <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-[#1A1A1A] text-white text-[10px] font-bold py-1 px-2.5 rounded-md shadow-md whitespace-nowrap z-30 pointer-events-none">
-                        {item.dayLabel}: {formatRupiah(item.revenue)} ({item.transactionsCount} tx)
-                      </div>
-                    )}
-
                     {/* Flat Solid Bar — ZERO GRADIENTS */}
                     <div
-                      className="w-full max-w-[28px] rounded-t-sm transition-all duration-150"
+                      className="w-full max-w-[28px] rounded-t-sm transition-colors duration-150"
                       style={{
                         height: `${barHeightPx}px`,
                         backgroundColor: isHighest

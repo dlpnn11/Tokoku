@@ -406,16 +406,23 @@ export const reportService = {
     sheet.getCell("A5").value = "1. RINGKASAN EKSEKUTIF (KEY FINANCIAL METRICS)";
     sheet.getCell("A5").font = { name: "Segoe UI", size: 11, bold: true, color: { argb: DARK_NAVY } };
 
-    // KPI Table Header
-    const kpiHeaderRow = sheet.getRow(6);
-    kpiHeaderRow.values = ["Metrik Finansial", "Nilai Tercatat", "Keterangan Operasional"];
-    kpiHeaderRow.height = 22;
-    ["A6", "B6", "C6"].forEach((ref) => {
+    // KPI Table Header: Merge A6:C6 (Metrik), D6 (Nilai), E6:G6 (Keterangan) to align with 7-column layout
+    sheet.mergeCells("A6:C6");
+    sheet.getCell("A6").value = "Metrik Finansial";
+    sheet.getCell("D6").value = "Nilai Tercatat";
+    sheet.mergeCells("E6:G6");
+    sheet.getCell("E6").value = "Keterangan Operasional";
+
+    sheet.getRow(6).height = 22;
+    ["A6", "B6", "C6", "D6", "E6", "F6", "G6"].forEach((ref) => {
       const c = sheet.getCell(ref);
       c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: PRIMARY_BLUE } };
       c.font = { name: "Segoe UI", size: 10, bold: true, color: { argb: "FFFFFFFF" } };
       c.border = headerBorder;
-      c.alignment = { vertical: "middle", horizontal: ref === "A6" ? "left" : ref === "B6" ? "right" : "left" };
+      c.alignment = {
+        vertical: "middle",
+        horizontal: ["A6", "B6", "C6"].includes(ref) ? "left" : ref === "D6" ? "right" : "left",
+      };
     });
 
     const profitMargin = report.totalRevenue > 0
@@ -434,22 +441,31 @@ export const reportService = {
 
     let currentRow = 7;
     kpiData.forEach((item, idx) => {
-      const row = sheet.getRow(currentRow);
-      row.values = [item.metric, item.val, item.note];
-      row.height = 20;
+      sheet.mergeCells(`A${currentRow}:C${currentRow}`);
+      sheet.getCell(`A${currentRow}`).value = item.metric;
+
+      const cVal = sheet.getCell(`D${currentRow}`);
+      cVal.value = item.val;
+
+      sheet.mergeCells(`E${currentRow}:G${currentRow}`);
+      sheet.getCell(`E${currentRow}`).value = item.note;
 
       const bg = item.highlight ? ICE_BLUE : idx % 2 === 1 ? ZEBRA_ROW : "FFFFFFFF";
 
-      ["A", "B", "C"].forEach((col) => {
+      ["A", "B", "C", "D", "E", "F", "G"].forEach((col) => {
         const c = sheet.getCell(`${col}${currentRow}`);
         c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: bg } };
         c.border = thinBorder;
         c.font = { name: "Segoe UI", size: 9.5, bold: !!item.bold, color: { argb: "FF1A1A1A" } };
-        c.alignment = { vertical: "middle", horizontal: col === "B" ? "right" : "left" };
-        if (col === "B" && item.format && typeof item.val === "number") {
-          c.numFmt = item.format;
-        }
+        c.alignment = {
+          vertical: "middle",
+          horizontal: ["A", "B", "C"].includes(col) ? "left" : col === "D" ? "right" : "left",
+        };
       });
+
+      if (item.format && typeof item.val === "number") {
+        cVal.numFmt = item.format;
+      }
       currentRow++;
     });
 
@@ -503,7 +519,6 @@ export const reportService = {
         d.itemsCount,
         avgNota,
       ];
-      row.height = 19;
 
       const bg = idx % 2 === 1 ? ZEBRA_ROW : "FFFFFFFF";
 
@@ -556,54 +571,51 @@ export const reportService = {
     sheet.getCell(`A${currentRow}`).font = { name: "Segoe UI", size: 11, bold: true, color: { argb: DARK_NAVY } };
     currentRow++;
 
-    const bestHeader = sheet.getRow(currentRow);
-    bestHeader.values = [
-      "Peringkat",
-      "Nama Produk",
-      "Kategori",
-      "Unit Terjual",
-      "Total Omzet",
-      "Estimasi Laba",
-      "",
-    ];
-    bestHeader.height = 22;
-    ["A", "B", "C", "D", "E", "F"].forEach((col) => {
+    // Header: A=Peringkat, B:C=Nama Produk, D=Total Omzet, E=Unit Terjual, F=Estimasi Laba, G=Kategori
+    const bestHRow = sheet.getRow(currentRow);
+    sheet.getCell(`A${currentRow}`).value = "Peringkat";
+    sheet.mergeCells(`B${currentRow}:C${currentRow}`);
+    sheet.getCell(`B${currentRow}`).value = "Nama Produk";
+    sheet.getCell(`D${currentRow}`).value = "Total Omzet";
+    sheet.getCell(`E${currentRow}`).value = "Unit Terjual";
+    sheet.getCell(`F${currentRow}`).value = "Estimasi Laba";
+    sheet.getCell(`G${currentRow}`).value = "Kategori";
+    bestHRow.height = 22;
+
+    ["A", "B", "C", "D", "E", "F", "G"].forEach((col) => {
       const c = sheet.getCell(`${col}${currentRow}`);
       c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: PRIMARY_BLUE } };
       c.font = { name: "Segoe UI", size: 10, bold: true, color: { argb: "FFFFFFFF" } };
       c.border = headerBorder;
       c.alignment = {
         vertical: "middle",
-        horizontal: ["A"].includes(col) ? "center" : ["B", "C"].includes(col) ? "left" : "right",
+        horizontal: col === "A" ? "center" : ["B", "C", "G"].includes(col) ? "left" : "right",
       };
     });
     currentRow++;
 
     report.bestSellers.forEach((p, idx) => {
-      const row = sheet.getRow(currentRow);
-      row.values = [
-        `#${idx + 1}`,
-        p.name,
-        p.categoryName,
-        p.quantitySold,
-        p.totalRevenue,
-        p.profit,
-      ];
-      row.height = 19;
+      sheet.getCell(`A${currentRow}`).value = `#${idx + 1}`;
+      sheet.mergeCells(`B${currentRow}:C${currentRow}`);
+      sheet.getCell(`B${currentRow}`).value = p.name;
+      sheet.getCell(`D${currentRow}`).value = p.totalRevenue;
+      sheet.getCell(`E${currentRow}`).value = p.quantitySold;
+      sheet.getCell(`F${currentRow}`).value = p.profit;
+      sheet.getCell(`G${currentRow}`).value = p.categoryName;
 
       const bg = idx % 2 === 1 ? ZEBRA_ROW : "FFFFFFFF";
 
-      ["A", "B", "C", "D", "E", "F"].forEach((col) => {
+      ["A", "B", "C", "D", "E", "F", "G"].forEach((col) => {
         const c = sheet.getCell(`${col}${currentRow}`);
         c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: bg } };
         c.border = thinBorder;
         c.font = { name: "Segoe UI", size: 9.5, color: { argb: "FF1A1A1A" } };
         c.alignment = {
           vertical: "middle",
-          horizontal: ["A"].includes(col) ? "center" : ["B", "C"].includes(col) ? "left" : "right",
+          horizontal: col === "A" ? "center" : ["B", "C", "G"].includes(col) ? "left" : "right",
         };
-        if (col === "D") c.numFmt = '#,##0" pcs"';
-        if (col === "E" || col === "F") c.numFmt = '"Rp"#,##0';
+        if (col === "E") c.numFmt = '#,##0" pcs"';
+        if (col === "D" || col === "F") c.numFmt = '"Rp"#,##0';
       });
       currentRow++;
     });
@@ -615,67 +627,80 @@ export const reportService = {
     sheet.getCell(`A${currentRow}`).font = { name: "Segoe UI", size: 11, bold: true, color: { argb: DARK_NAVY } };
     currentRow++;
 
-    const catHeader = sheet.getRow(currentRow);
-    catHeader.values = [
-      "No",
-      "Kategori Produk",
-      "Total Omzet",
-      "Kuantitas Terjual",
-      "Porsi Penjualan (%)",
-      "",
-    ];
-    catHeader.height = 22;
-    ["A", "B", "C", "D", "E"].forEach((col) => {
+    // Header: A=No, B:C=Kategori Produk, D=Total Omzet, E=Kuantitas Terjual, F:G=Porsi Penjualan (%)
+    const catHRow = sheet.getRow(currentRow);
+    sheet.getCell(`A${currentRow}`).value = "No";
+    sheet.mergeCells(`B${currentRow}:C${currentRow}`);
+    sheet.getCell(`B${currentRow}`).value = "Kategori Produk";
+    sheet.getCell(`D${currentRow}`).value = "Total Omzet";
+    sheet.getCell(`E${currentRow}`).value = "Kuantitas Terjual";
+    sheet.mergeCells(`F${currentRow}:G${currentRow}`);
+    sheet.getCell(`F${currentRow}`).value = "Porsi Penjualan (%)";
+    catHRow.height = 22;
+
+    ["A", "B", "C", "D", "E", "F", "G"].forEach((col) => {
       const c = sheet.getCell(`${col}${currentRow}`);
       c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: PRIMARY_BLUE } };
       c.font = { name: "Segoe UI", size: 10, bold: true, color: { argb: "FFFFFFFF" } };
       c.border = headerBorder;
       c.alignment = {
         vertical: "middle",
-        horizontal: ["A"].includes(col) ? "center" : ["B"].includes(col) ? "left" : "right",
+        horizontal: col === "A" ? "center" : ["B", "C"].includes(col) ? "left" : "right",
       };
     });
     currentRow++;
 
     report.categoryBreakdown.forEach((c, idx) => {
-      const row = sheet.getRow(currentRow);
-      row.values = [
-        idx + 1,
-        c.categoryName,
-        c.totalRevenue,
-        c.quantitySold,
-        `${c.percentage}%`,
-      ];
-      row.height = 19;
+      sheet.getCell(`A${currentRow}`).value = idx + 1;
+      sheet.mergeCells(`B${currentRow}:C${currentRow}`);
+      sheet.getCell(`B${currentRow}`).value = c.categoryName;
+      sheet.getCell(`D${currentRow}`).value = c.totalRevenue;
+      sheet.getCell(`E${currentRow}`).value = c.quantitySold;
+      sheet.mergeCells(`F${currentRow}:G${currentRow}`);
+      sheet.getCell(`F${currentRow}`).value = `${c.percentage}%`;
 
       const bg = idx % 2 === 1 ? ZEBRA_ROW : "FFFFFFFF";
 
-      ["A", "B", "C", "D", "E"].forEach((col) => {
+      ["A", "B", "C", "D", "E", "F", "G"].forEach((col) => {
         const cell = sheet.getCell(`${col}${currentRow}`);
         cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: bg } };
         cell.border = thinBorder;
         cell.font = { name: "Segoe UI", size: 9.5, color: { argb: "FF1A1A1A" } };
         cell.alignment = {
           vertical: "middle",
-          horizontal: ["A"].includes(col) ? "center" : ["B"].includes(col) ? "left" : "right",
+          horizontal: col === "A" ? "center" : ["B", "C"].includes(col) ? "left" : "right",
         };
-        if (col === "C") cell.numFmt = '"Rp"#,##0';
-        if (col === "D") cell.numFmt = '#,##0" pcs"';
+        if (col === "D") cell.numFmt = '"Rp"#,##0';
+        if (col === "E") cell.numFmt = '#,##0" pcs"';
       });
       currentRow++;
     });
 
-    // Auto-fit Column Widths with comfortable padding
-    const minWidths = [12, 28, 26, 22, 18, 18, 20];
+    // Auto-fit Column Widths (A to G)
+    // Dynamic measurement strictly on unmerged table cells, clamped between 7 and 22 points
+    const baseColWidths = [7, 13, 15, 17, 14, 15, 16];
     sheet.columns.forEach((column, i) => {
-      let maxLen = minWidths[i] || 15;
+      let maxLen = 0;
       column.eachCell?.({ includeEmpty: false }, (cell) => {
-        const valStr = cell.value ? String(cell.value) : "";
-        if (valStr.length > maxLen && valStr.length < 50) {
-          maxLen = valStr.length;
+        // Exclude banner header rows 1-4 and section titles
+        if (Number(cell.row) <= 4) return;
+        if (cell.isMerged) return;
+
+        const val = cell.value ? String(cell.value) : "";
+        if (/^[1-4]\.\s/.test(val)) return;
+
+        let len = val.length;
+        if (typeof cell.value === "number") {
+          len = cell.numFmt?.includes("Rp") ? 14 : String(cell.value).length + 4;
+        }
+
+        if (len > maxLen && len < 30) {
+          maxLen = len;
         }
       });
-      column.width = Math.max(maxLen + 3, 14);
+
+      const targetWidth = Math.max(maxLen + 3, baseColWidths[i] || 10);
+      column.width = Math.min(Math.max(targetWidth, 7), 22);
     });
 
     // Write buffer & trigger download

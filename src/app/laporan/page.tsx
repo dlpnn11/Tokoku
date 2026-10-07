@@ -16,6 +16,8 @@ import {
   Layers,
   ArrowUpRight,
   ShieldAlert,
+  ChevronDown,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,8 +43,31 @@ export default function LaporanPage() {
   const [customEndDate, setCustomEndDate] = React.useState("");
   const [loading, setLoading] = React.useState(true);
   const [exportingExcel, setExportingExcel] = React.useState(false);
+  const [isExportMenuOpen, setIsExportMenuOpen] = React.useState(false);
+  const exportMenuRef = React.useRef<HTMLDivElement>(null);
   const [report, setReport] = React.useState<FinancialReportSummary | null>(null);
   const [monthlyHistory, setMonthlyHistory] = React.useState<any[]>([]);
+
+  // Close export menu on outside click or escape
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setIsExportMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsExportMenuOpen(false);
+    };
+
+    if (isExportMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isExportMenuOpen]);
 
   // Compute dates based on period
   const getDateRange = React.useCallback((): { start?: string; end?: string; label: string } => {
@@ -281,33 +306,99 @@ export default function LaporanPage() {
             </div>
           )}
 
-          {/* Export Actions */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* 1. Ekspor Excel (.xlsx) dengan tabel berformat biru */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportExcel}
-              disabled={exportingExcel || !report}
-              className="gap-1.5 text-xs border-[#2F5597] text-[#2F5597] hover:bg-[#F2F4F8] font-bold h-9 shadow-2xs cursor-pointer"
-              title="Unduh workbook resmi Microsoft Excel (.xlsx) dengan tabel berformat biru rapi"
-            >
-              <FileSpreadsheet className={cn("w-4 h-4", exportingExcel && "animate-spin")} />
-              {exportingExcel ? "Menyiapkan Excel..." : "Ekspor Excel (.xlsx)"}
-            </Button>
+          {/* Export & Print Actions */}
+          <div className="flex items-center gap-2">
+            {/* Unified Export Dropdown Menu */}
+            <div className="relative" ref={exportMenuRef}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsExportMenuOpen((prev) => !prev)}
+                disabled={exportingExcel || !report}
+                className={cn(
+                  "gap-2 text-xs font-bold h-9 border-[#6FA084] text-[#6FA084] hover:bg-[#F4F8F5] cursor-pointer transition-colors shadow-2xs",
+                  isExportMenuOpen && "bg-[#F4F8F5]"
+                )}
+                title="Pilih format untuk mengekspor laporan pembukuan toko"
+              >
+                {exportingExcel ? (
+                  <RefreshCw className="w-4 h-4 animate-spin text-[#6FA084]" />
+                ) : (
+                  <Download className="w-4 h-4 text-[#6FA084]" />
+                )}
+                <span>{exportingExcel ? "Menyiapkan File..." : "Ekspor"}</span>
+                <ChevronDown
+                  className={cn(
+                    "w-3.5 h-3.5 text-[#6FA084] transition-transform duration-200",
+                    isExportMenuOpen && "rotate-180"
+                  )}
+                />
+              </Button>
 
-            {/* 2. Ekspor CSV (.csv) data teks mentah */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportCsv}
-              disabled={!report}
-              className="gap-1.5 text-xs border-[#E5E5E0] text-[#6B7280] hover:bg-[#FAFBF9] hover:text-[#1A1A1A] font-semibold h-9 cursor-pointer"
-              title="Unduh data teks polos CSV (.csv) untuk olah data spreadsheet cepat"
-            >
-              <FileDown className="w-4 h-4 text-[#6B7280]" />
-              Ekspor CSV (.csv)
-            </Button>
+              {/* Floating Dropdown Menu */}
+              {isExportMenuOpen && (
+                <div className="absolute right-0 top-full mt-1.5 w-72 bg-white border border-[#E5E5E0] rounded-xl shadow-lg z-40 p-1.5 space-y-1 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#9E9E9E]">
+                    Pilih Format Ekspor
+                  </div>
+
+                  {/* Option 1: .xlsx (Format) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsExportMenuOpen(false);
+                      handleExportExcel();
+                    }}
+                    disabled={exportingExcel}
+                    className="w-full text-left p-2.5 rounded-lg hover:bg-[#F4F8F5] transition-colors flex items-start gap-2.5 cursor-pointer group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-[#2F5597] text-white flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                      <FileSpreadsheet className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-xs text-[#1A1A1A] group-hover:text-[#2F5597]">
+                          .xlsx (Format)
+                        </span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-[#EBF1F9] text-[#2F5597]">
+                          Rapi
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#6B7280] leading-tight mt-0.5">
+                        Tabel Excel berformat biru, border, formula & rupiah
+                      </p>
+                    </div>
+                  </button>
+
+                  {/* Option 2: .csv (Polos) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsExportMenuOpen(false);
+                      handleExportCsv();
+                    }}
+                    className="w-full text-left p-2.5 rounded-lg hover:bg-[#F9F9F7] transition-colors flex items-start gap-2.5 cursor-pointer group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-[#E5E5E0] text-[#1A1A1A] flex items-center justify-center shrink-0 mt-0.5">
+                      <FileDown className="w-4 h-4 text-[#6B7280]" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-xs text-[#1A1A1A] group-hover:text-[#1A1A1A]">
+                          .csv (Polos)
+                        </span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-[#F0F0EB] text-[#6B7280]">
+                          Mentah
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#6B7280] leading-tight mt-0.5">
+                        Data teks murni tanpa format warna / styling tabel
+                      </p>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
 
             {/* 3. Cetak Dokumen Resmi */}
             <Button

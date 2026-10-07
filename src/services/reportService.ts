@@ -369,17 +369,17 @@ export const reportService = {
     };
 
     const headerBorder = {
-      top: { style: "thin" as const, color: { argb: PRIMARY_BLUE } },
-      left: { style: "thin" as const, color: { argb: PRIMARY_BLUE } },
-      bottom: { style: "medium" as const, color: { argb: PRIMARY_BLUE } },
-      right: { style: "thin" as const, color: { argb: PRIMARY_BLUE } },
+      top: { style: "thin" as const, color: { argb: "FF1F4E78" } },
+      left: { style: "thin" as const, color: { argb: "FFFFFFFF" } },
+      bottom: { style: "medium" as const, color: { argb: "FF1F4E78" } },
+      right: { style: "thin" as const, color: { argb: "FFFFFFFF" } },
     };
 
     const totalBorder = {
-      top: { style: "thin" as const, color: { argb: PRIMARY_BLUE } },
-      left: { style: "thin" as const, color: { argb: PRIMARY_BLUE } },
-      bottom: { style: "double" as const, color: { argb: PRIMARY_BLUE } },
-      right: { style: "thin" as const, color: { argb: PRIMARY_BLUE } },
+      top: { style: "thin" as const, color: { argb: "FF1F4E78" } },
+      left: { style: "thin" as const, color: { argb: BORDER_GRAY } },
+      bottom: { style: "double" as const, color: { argb: "FF1F4E78" } },
+      right: { style: "thin" as const, color: { argb: BORDER_GRAY } },
     };
 
     // 1. Title Banner

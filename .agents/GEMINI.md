@@ -24,11 +24,14 @@ Before answering or executing any task, ALWAYS read and synchronize with the fol
 
 ---
 
-## 3. AUTOMATED COMMIT & PUSH POLICY (INDUSTRY STANDARD)
-* **Auto-Commit & Auto-Push:** Whenever an AI assistant completes a task, module, bug fix, or documentation update, the assistant MUST proactively run:
-  1. `git add .`
-  2. `git commit -m "<type>(<scope>): <subject in English>"`
-  3. `git push`
+## 3. AUTOMATED GITHUB WORKFLOW & PORTFOLIO POLICY (INDUSTRY STANDARD)
+* **Automated Multi-Metric GitHub Flow:** Whenever completing a feature, bug fix, or significant task, the assistant executes the automated workflow via `scripts/github-workflow.mjs` or direct GitHub REST API:
+  1. **Issue Creation:** Automatically open a GitHub Issue describing the task.
+  2. **Feature Branching:** Create a dedicated branch (e.g., `feat/...` or `fix/...`).
+  3. **Conventional Commit:** Commit changes referencing the issue (e.g., `closes #X`).
+  4. **Pull Request (PR):** Push branch, open PR with clear overview, and merge into `main`.
+  5. **Auto-Close & Sync:** Issue automatically closes, branch is cleaned up, and `main` is updated.
+* **Direct Commit Fallback:** For small documentation or quick polish tweaks, direct `git add .`, `git commit -m "..."`, and `git push` remains active.
 * **Commit Message Format (Conventional Commits in English):**
   - `feat(<scope>)`: New feature implementation
   - `fix(<scope>)`: Bug fix

@@ -27,28 +27,39 @@ Before answering or executing any task, ALWAYS read and synchronize with the fol
 ## 3. AUTOMATED 4-METRIC GITHUB WORKFLOW & PORTFOLIO ENGINE (MASTER BLUEPRINT)
 This section serves as the **master operational blueprint** across this repository and can be copied directly to any future project to achieve an industry-standard, balanced GitHub contribution profile (100% automated across Commits, Issues, Pull Requests, and Code Reviews).
 
-### A. The 4-Metric Synchronized Pipeline
-Whenever completing a feature, bug fix, refactor, or significant milestone, the assistant MUST execute the automated flow via `scripts/github-workflow.mjs`:
-1. **Issue Creation (`Issues` Metric):** Automatically opens a descriptive GitHub Issue via REST API with technical context and labels.
-2. **Dedicated Feature Branch:** Creates an isolated branch (e.g., `feat/...`, `fix/...`, `perf/...`).
-3. **Conventional Commit (`Commits` Metric):** Commits code changes referencing the issue (e.g., `feat(auth): add jwt middleware (closes #X)`).
-4. **Branch Push:** Pushes the dedicated branch to `origin`.
-5. **Pull Request Opening (`Pull Requests` Metric):** Submits a formal Pull Request targeting `main` with summary, changelog, and issue linkage.
-6. **Automated Code Review (`Code Review` Metric):** Submits an automated peer code review (`POST /repos/:owner/:repo/pulls/:id/reviews`) with status, audit summary, and approval.
-7. **Squash & Merge:** Merges the PR into `main` using squash merge.
-8. **Auto-Cleanup & Sync:** Closes the linked Issue, deletes the remote & local feature branch, and syncs `main` via `git pull`.
-9. **GitHub Actions CI Pipeline:** Automatically triggers `.github/workflows/ci.yml` in the cloud to run Next.js build verification with cached dependencies, ensuring a green checkmark (`✓`) on every commit.
+### A. The Organic Tiered Strategy (Realistic & Natural Contribution Ratios)
+To ensure the GitHub activity profile looks 100% natural and authentic (matching the natural ~70-80% Commits dominance of senior production engineers), tasks are automatically categorized into 3 realistic tiers:
+
+1. **Tier 1: Major Features, Modules, or Significant Refactors (Full 4-Metric Pipeline)**
+   * **Trigger:** Creating a new page, major feature, database migration, or key module.
+   * **Execution:** Run `node scripts/github-workflow.mjs auto-flow "<Title>" "<Desc>" "<CommitMsg>" "<Branch>"`.
+   * **Result:** Creates an Issue, creates a Branch, commits code, opens a PR, submits an automated peer Code Review, merges into `main`, and triggers GitHub Actions CI (`✓`).
+   * **Metrics Affected:** Synchronously increments Issues, PRs, Code Reviews, and Commits.
+
+2. **Tier 2: Iterations, Tweaks, & Sub-tasks within Active Features (Direct Commits)**
+   * **Trigger:** Styling adjustments, fixing edge-case bugs, fine-tuning UI alignment, or sub-component polish.
+   * **Execution:** Direct conventional commit (`git add . && git commit -m "..." && git push`).
+   * **Result:** Keeps Commits naturally higher than PRs/Issues (maintaining the realistic 70-80% Commits ratio so the profile never looks synthetically manufactured).
+
+3. **Tier 3: Future Backlog & Bug Reporting (Issue Logging Only)**
+   * **Trigger:** Planning future features or logging bugs that are not being coded immediately.
+   * **Execution:** Run `node scripts/github-workflow.mjs create-issue "<Title>" "<Desc>"`.
+   * **Result:** Naturally populates the Issues metric without polluting the PR history.
 
 ### B. Command Execution Reference
-* **Standard Automated Flow Command:**
+* **Tier 1 Automated Flow Command:**
   ```bash
   node scripts/github-workflow.mjs auto-flow "<Title>" "<Description>" "<CommitMessage>" "<BranchName>"
   ```
-* **Direct Commit Fallback (Quick Tweaks/Typo Polish Only):**
+* **Tier 2 / Quick Polish Direct Commit Command:**
   ```bash
   git add .
   git commit -m "<type>(<scope>): <subject in English>"
   git push
+  ```
+* **Tier 3 Issue-Only Logging Command:**
+  ```bash
+  node scripts/github-workflow.mjs create-issue "<Title>" "<Description>"
   ```
 
 ### C. Commit Message Format (Conventional Commits in English)

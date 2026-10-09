@@ -43,3 +43,6 @@ next-env.d.ts
 recovery-codes.txt
 .idea/
 Thumbs.db
+
+# AI Agents & IDE Workspace Config
+.agents/

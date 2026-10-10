@@ -726,18 +726,13 @@ export default function InventarisPage() {
                           </div>
                         </td>
                         <td className="py-3.5 px-4 text-left">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedSupplierForDetail(s);
-                              setIsSupplierProductsOpen(true);
-                            }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#F4F8F5] text-[#6FA084] border border-[#D5E5DC] hover:bg-[#6FA084] hover:text-white transition-colors cursor-pointer shadow-xs truncate"
-                            title="Klik untuk melihat dan kelola produk yang dipasok"
+                          <span
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#F4F8F5] text-[#6FA084] border border-[#D5E5DC] select-none truncate"
+                            title={`${s.product_count} produk dipasok oleh supplier ini`}
                           >
                             <Truck className="w-3.5 h-3.5 shrink-0" />
                             <span>{s.product_count} Produk</span>
-                          </button>
+                          </span>
                         </td>
                         <td className="py-3.5 px-4 text-right">
                           <div className="flex items-center justify-end gap-1">

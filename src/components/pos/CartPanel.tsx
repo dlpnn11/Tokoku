@@ -88,9 +88,12 @@ export function CartPanel({ onCheckout, loading = false }: CartPanelProps) {
   };
 
   return (
-    <div className="bg-white border border-[#E5E5E0] rounded-2xl flex flex-col h-full shadow-sm overflow-hidden select-none">
+    <div
+      id="cart-panel"
+      className="bg-white border border-[#E5E5E0] rounded-2xl flex flex-col h-auto lg:h-full shadow-sm overflow-hidden select-none"
+    >
       {/* Header Panel */}
-      <div className="p-4 border-b border-[#E5E5E0] bg-[#FAFBF9] flex items-center justify-between">
+      <div className="p-4 border-b border-[#E5E5E0] bg-[#FAFBF9] flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-[#F4F4F0] border border-[#E5E5E0] flex items-center justify-center text-[#6FA084]">
             <ShoppingCart className="w-4 h-4" />
@@ -122,7 +125,7 @@ export function CartPanel({ onCheckout, loading = false }: CartPanelProps) {
       </div>
 
       {/* Cart Items List */}
-      <div className="flex-1 overflow-y-auto p-3 divide-y divide-[#F0F0EB]">
+      <div className="max-h-[260px] lg:max-h-none lg:flex-1 overflow-y-auto p-3 divide-y divide-[#F0F0EB]">
         {items.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center p-6 text-center text-[#6B7280] space-y-2">
             <ShoppingCart className="w-12 h-12 text-[#E5E5E0]" />
@@ -195,7 +198,7 @@ export function CartPanel({ onCheckout, loading = false }: CartPanelProps) {
       </div>
 
       {/* Payment & Summary Footer Section */}
-      <div className="p-4 border-t border-[#E5E5E0] bg-[#FAFBF9] space-y-3">
+      <div className="p-4 border-t border-[#E5E5E0] bg-[#FAFBF9] space-y-3 shrink-0">
         {/* Total Grand Display */}
         <div className="flex items-baseline justify-between">
           <span className="text-xs font-bold text-[#6B7280] uppercase tracking-wider">

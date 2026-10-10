@@ -122,7 +122,7 @@ export function ProductCatalog({
   };
 
   return (
-    <div className="flex flex-col h-full space-y-3.5 select-none">
+    <div className="flex flex-col h-auto lg:h-full space-y-3.5 select-none">
       {/* Top Search Toolbar */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
@@ -227,7 +227,7 @@ export function ProductCatalog({
       </div>
 
       {/* Product Catalog Grid */}
-      <div className="flex-1 overflow-y-auto pr-1">
+      <div className="max-h-[360px] sm:max-h-[460px] lg:max-h-none lg:flex-1 overflow-y-auto pr-1">
         {products.length === 0 ? (
           <div className="h-64 border border-dashed border-[#E5E5E0] rounded-2xl bg-white flex flex-col items-center justify-center p-6 text-center space-y-2">
             <Package className="w-10 h-10 text-[#D0D0CB]" />

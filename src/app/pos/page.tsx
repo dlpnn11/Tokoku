@@ -13,6 +13,8 @@ import { useCartStore, CartItem } from "@/stores/cartStore";
 import { useAuthStore } from "@/stores/authStore";
 import { supabase } from "@/lib/supabase";
 import { playBeep, playErrorSound, playCashChime } from "@/lib/audio";
+import { formatRupiah } from "@/lib/utils";
+import { ArrowRight } from "lucide-react";
 
 export default function PosPage() {
   const { currentUser } = useAuthStore();
@@ -205,7 +207,7 @@ export default function PosPage() {
       title="TERMINAL KASIR (POS)"
       onOpenScannerPairing={() => setIsScannerModalOpen(true)}
     >
-      <div className="relative h-[calc(100vh-100px)] min-h-[600px] flex flex-col">
+      <div className="relative h-auto lg:h-[calc(100vh-100px)] lg:min-h-[600px] flex flex-col pb-16 lg:pb-0">
         {/* Floating Scanner Toast Message */}
         {toastMessage && (
           <div
@@ -220,9 +222,9 @@ export default function PosPage() {
         )}
 
         {/* 60 / 40 Split Screen Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-full flex-1">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:h-full flex-1">
           {/* Left Column: 60% (7 cols on lg, 8 cols on xl) Catalog */}
-          <div className="lg:col-span-7 xl:col-span-8 h-full flex flex-col min-h-0">
+          <div className="lg:col-span-7 xl:col-span-8 lg:h-full flex flex-col min-h-0">
             <ProductCatalog
               products={products}
               categories={categories}
@@ -236,10 +238,44 @@ export default function PosPage() {
           </div>
 
           {/* Right Column: 40% (5 cols on lg, 4 cols on xl) Virtual Cart & Checkout */}
-          <div className="lg:col-span-5 xl:col-span-4 h-full flex flex-col min-h-0">
+          <div className="lg:col-span-5 xl:col-span-4 lg:h-full flex flex-col min-h-0">
             <CartPanel onCheckout={handleCheckout} loading={checkoutLoading} />
           </div>
         </div>
+
+        {/* Mobile Floating Cart Summary Button */}
+        {items.length > 0 && (
+          <div className="lg:hidden fixed bottom-4 left-4 right-4 z-30 animate-in fade-in slide-in-from-bottom-2">
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.getElementById("cart-panel");
+                if (el) {
+                  el.scrollIntoView({ behavior: "smooth" });
+                }
+              }}
+              className="w-full bg-[#2C2C2C] text-white px-4 py-3 rounded-2xl shadow-xl flex items-center justify-between border border-[#3D3D3D] active:scale-[0.98] transition-all cursor-pointer"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-6 h-6 rounded-md bg-[#6FA084] text-white flex items-center justify-center font-bold text-xs">
+                  {items.reduce((acc, i) => acc + i.quantity, 0)}
+                </div>
+                <div className="text-left">
+                  <span className="text-[10px] text-[#9E9E9E] block uppercase tracking-wider">
+                    Keranjang
+                  </span>
+                  <span className="text-xs font-black text-white">
+                    {formatRupiah(getTotalAmount())}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 text-xs font-bold text-[#6FA084]">
+                <span>Menuju Pembayaran</span>
+                <ArrowRight className="w-4 h-4" />
+              </div>
+            </button>
+          </div>
+        )}
 
         {/* Modals */}
         <ScannerPairingModal

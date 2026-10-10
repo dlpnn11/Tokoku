@@ -59,10 +59,10 @@ export function Header({
         {/* Mobile Hamburger Menu Toggle */}
         <button
           onClick={onOpenMobileMenu}
-          className="md:hidden p-2 rounded-lg text-[#1A1A1A] hover:bg-[#F4F4F0] transition-colors cursor-pointer"
+          className="md:hidden p-2 rounded-lg text-[#1A1A1A] hover:bg-[#F4F4F0] active:scale-90 transition-all duration-200 cursor-pointer"
           aria-label="Buka Menu"
         >
-          <Menu className="w-5 h-5" />
+          <Menu className="w-5 h-5 transition-transform duration-200 hover:scale-105 active:scale-95" />
         </button>
 
         {/* Status Dot & Title */}

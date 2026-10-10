@@ -23,16 +23,23 @@ export function MobileDrawer({ isOpen, onClose }: MobileDrawerProps) {
     };
   }, [isOpen]);
 
+  const handleClose = React.useCallback(() => {
+    if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    onClose();
+  }, [onClose]);
+
   // Handle ESC key press to close drawer
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isOpen) {
-        onClose();
+        handleClose();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, handleClose]);
 
   return (
     <div
@@ -40,7 +47,7 @@ export function MobileDrawer({ isOpen, onClose }: MobileDrawerProps) {
         "fixed inset-0 z-50 md:hidden overflow-hidden pointer-events-none transition-all duration-300",
         isOpen && "pointer-events-auto"
       )}
-      aria-hidden={!isOpen}
+      inert={!isOpen}
     >
       {/* Solid flat overlay with fade transition */}
       <div
@@ -50,7 +57,7 @@ export function MobileDrawer({ isOpen, onClose }: MobileDrawerProps) {
             ? "opacity-60 pointer-events-auto"
             : "opacity-0 pointer-events-none"
         )}
-        onClick={onClose}
+        onClick={handleClose}
       />
 
       {/* Drawer content with slide transition from left */}
@@ -66,7 +73,7 @@ export function MobileDrawer({ isOpen, onClose }: MobileDrawerProps) {
         {/* Close Button Header */}
         <div className="flex justify-end p-2 border-b border-[#3D3D3D]">
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="p-1.5 rounded-lg text-[#9E9E9E] hover:text-white hover:bg-[#3D3D3D] active:scale-90 transition-all cursor-pointer"
             aria-label="Tutup Menu"
           >
@@ -75,7 +82,7 @@ export function MobileDrawer({ isOpen, onClose }: MobileDrawerProps) {
         </div>
 
         {/* Sidebar Navigation */}
-        <Sidebar className="w-full flex-1" onNavClick={onClose} />
+        <Sidebar className="w-full flex-1" onNavClick={handleClose} />
       </div>
     </div>
   );

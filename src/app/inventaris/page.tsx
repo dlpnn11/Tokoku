@@ -620,21 +620,26 @@ export default function InventarisPage() {
                           {c.name}
                         </td>
                         <td className="py-3.5 px-4 text-left">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedCategoryForDetail(c);
-                              setIsCategoryProductsOpen(true);
-                            }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#F4F8F5] text-[#6FA084] border border-[#D5E5DC] hover:bg-[#6FA084] hover:text-white transition-colors cursor-pointer shadow-xs"
-                            title="Klik untuk melihat daftar produk kategori ini"
+                          <span
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#F4F8F5] text-[#6FA084] border border-[#D5E5DC] select-none truncate"
+                            title={`${c.product_count} produk terdaftar dalam kategori ini`}
                           >
-                            <Box className="w-3.5 h-3.5" />
+                            <Box className="w-3.5 h-3.5 shrink-0" />
                             <span>{c.product_count} Produk</span>
-                          </button>
+                          </span>
                         </td>
                         <td className="py-3.5 px-4 text-right">
                           <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => {
+                                setSelectedCategoryForDetail(c);
+                                setIsCategoryProductsOpen(true);
+                              }}
+                              className="p-1.5 hover:bg-[#F4F8F5] rounded text-[#6B7280] hover:text-[#6FA084] transition-colors cursor-pointer"
+                              title="Lihat Detail Produk Kategori"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
                             <button
                               onClick={() => {
                                 setCategoryToEdit(c);

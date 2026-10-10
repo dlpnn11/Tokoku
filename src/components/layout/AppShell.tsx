@@ -42,6 +42,68 @@ export function AppShell({
     }
   }, [isAuthenticated, currentUser?.role, pathname, router]);
 
+  // Touch Swipe Gesture for Mobile Sidebar (Swipe Right to Open, Swipe Left to Close)
+  React.useEffect(() => {
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchStartTime = 0;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (typeof window === "undefined" || window.innerWidth >= 768) return;
+      if (isScannerModalOpen) return;
+
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.closest("[data-no-swipe]") !== null)
+      ) {
+        return;
+      }
+
+      const touch = e.touches[0];
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
+      touchStartTime = Date.now();
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (typeof window === "undefined" || window.innerWidth >= 768) return;
+      if (isScannerModalOpen) return;
+
+      const touch = e.changedTouches[0];
+      const deltaX = touch.clientX - touchStartX;
+      const deltaY = touch.clientY - touchStartY;
+      const duration = Date.now() - touchStartTime;
+
+      // Ignore slow drags (>500ms) or micro taps (<20px)
+      if (duration > 500 || Math.abs(deltaX) < 30) return;
+
+      // Disambiguate against vertical scrolling: horizontal movement must clearly dominate
+      const isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY) * 1.4;
+      if (!isHorizontalSwipe) return;
+
+      // Swipe Right -> Open Sidebar
+      if (!isMobileMenuOpen && deltaX > 60) {
+        setIsMobileMenuOpen(true);
+      }
+      // Swipe Left -> Close Sidebar
+      else if (isMobileMenuOpen && deltaX < -50) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+    window.addEventListener("touchend", handleTouchEnd, { passive: true });
+
+    return () => {
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [isMobileMenuOpen, isScannerModalOpen]);
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#F4F4F0] text-[#1A1A1A] print:h-auto print:w-auto print:overflow-visible print:bg-white print:block">
       {/* Desktop Sticky Sidebar (Visible on md and up) */}

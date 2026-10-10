@@ -220,9 +220,9 @@ export default function RiwayatPage() {
             <span>Filter & Pencarian Nota</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-center">
             {/* Search Input */}
-            <div className="relative">
+            <div className="relative sm:col-span-2 lg:col-span-3">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#9E9E9E]" />
               <Input
                 placeholder="Cari No. Faktur / HP..."
@@ -231,40 +231,43 @@ export default function RiwayatPage() {
                   setSearch(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="pl-9 text-xs h-10"
+                className="pl-9 text-xs h-10 w-full"
               />
             </div>
 
-            {/* Date Start */}
-            <div>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => {
-                  setStartDate(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="text-xs h-10"
-                title="Dari Tanggal"
-              />
-            </div>
-
-            {/* Date End */}
-            <div>
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => {
-                  setEndDate(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="text-xs h-10"
-                title="Sampai Tanggal"
-              />
+            {/* Date Range (Start s/d End) */}
+            <div className="flex items-center gap-2 sm:col-span-2 lg:col-span-5">
+              <div className="relative flex-1">
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => {
+                    setStartDate(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="text-xs h-10 w-full"
+                  title="Dari Tanggal"
+                />
+              </div>
+              <span className="text-xs text-[#6B7280] font-semibold shrink-0 select-none">
+                s/d
+              </span>
+              <div className="relative flex-1">
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => {
+                    setEndDate(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="text-xs h-10 w-full"
+                  title="Sampai Tanggal"
+                />
+              </div>
             </div>
 
             {/* Status Dropdown */}
-            <div>
+            <div className="sm:col-span-1 lg:col-span-2">
               <CustomSelect
                 value={statusFilter}
                 onChange={(val) => {
@@ -281,7 +284,7 @@ export default function RiwayatPage() {
             </div>
 
             {/* Payment Method Dropdown */}
-            <div>
+            <div className="sm:col-span-1 lg:col-span-2">
               <CustomSelect
                 value={methodFilter}
                 onChange={(val) => {

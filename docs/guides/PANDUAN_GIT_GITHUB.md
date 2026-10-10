@@ -125,5 +125,55 @@ Ini adalah hal yang **sangat wajar bagi pemula**. Sejak 2021, GitHub sudah melar
 
 ---
 
+## 5. Strategi 3-Tier Kontribusi GitHub (Alami & Profesional Seperti Senior Engineer)
+
+Untuk membuat riwayat dan grafik kontribusi di profil GitHub kamu terlihat **100% natural, elegan, dan mencerminkan senior production engineer**, seluruh aktivitas pengembangan dibagi ke dalam 3 hierarki (*tiers*):
+
+### Rasio Aktivitas Ideal:
+- 📊 **Commits (Dominan ~75–85%):** Aktivitas harian menulis kode, styling, perbaikan bug, dan penyempurnaan fitur.
+- 🔀 **Pull Requests & Code Reviews (~10–15%):** Rilis milestone besar atau halaman baru.
+- 📌 **Issues (~5–10%):** Perencanaan roadmap backlog dan pelaporan bug.
+
+---
+
+### A. Tier 1: Major Epics / Halaman Baru (~15% tugas)
+* **Kapan Digunakan:**
+  - Membuat **Halaman / Route Baru** (misal: `/promo`, `/laporan`).
+  - **Migrasi Database Baru** (tabel baru Supabase, RPC baru).
+  - **Arsitektur Baru** (integrasi payment gateway, sistem otentikasi baru).
+* **Cara Eksekusi (Otomatis 4 Metrik):**
+  ```bash
+  node scripts/github-workflow.mjs auto-flow "<Judul>" "<Deskripsi>" "<CommitMsg>" "<NamaBranch>"
+  ```
+* **Hasil:** Membuat Issue, Branch, Commit, PR, Peer Review, dan Squash Merge ke `main`.
+
+---
+
+### B. Tier 2: Sub-features, Perbaikan Bug, & Polish UI (DOMINAN ~75–85% tugas)
+* **Kapan Digunakan:**
+  - Penambahan sub-fitur / gesture pada halaman yang sudah ada (misal: Swipe gesture sidebar, shortcut F1-F4).
+  - Perbaikan bug fungsional & responsif (misal: scroll keranjang HP, warning aksesibilitas `aria-hidden`).
+  - Penyesuaian tampilan, CSS, margin, typography, dan refactor kode.
+* **Cara Eksekusi (Direct Commit - Paling Sering Digunakan):**
+  ```bash
+  git add .
+  git commit -m "<type>(<scope>): <pesan dalam bahasa Inggris>"
+  git push
+  ```
+* **Hasil:** Langsung menambah angka Commits di `main` tanpa mengotori riwayat PR. Menjaga profil GitHub kamu tetap aktif secara alami setiap hari.
+
+---
+
+### C. Tier 3: Catatan Backlog & Bug Reporting (~5–10% tugas)
+* **Kapan Digunakan:**
+  - Mencatat ide fitur masa depan yang belum akan dikerjakan di sesi aktif.
+* **Cara Eksekusi (Issue Only):**
+  ```bash
+  node scripts/github-workflow.mjs create-issue "<Judul>" "<Deskripsi>"
+  ```
+* **Hasil:** Menambah metrik Issues di GitHub tanpa membuat PR kosong.
+
+---
+
 > [!TIP]
-> **Tenang saja!** Selama proses pengerjaan, kamu tidak perlu menghafal semua perintah ini. Kapan pun kita selesai mengerjakan satu modul, saya akan selalu mengingatkan dan memberikan perintah CLI yang tinggal kamu klik atau saya jalankan untukmu!
+> **Tenang saja!** Selama proses pengerjaan, kamu tidak perlu menghafal semua perintah ini. Antigravity akan otomatis mengidentifikasi apakah pekerjaan masuk Tier 1 atau Tier 2 dan menjalankannya secara tepat untukmu!

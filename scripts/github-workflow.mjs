@@ -1,7 +1,12 @@
 /**
  * GitHub Automation Workflow for TokoKu
  * Automates Issue Creation -> Branch -> Commit -> Pull Request -> Merge -> Issue Close
- * Ensures balanced contribution metrics across Commits, Issues, and Pull Requests on GitHub.
+ * 
+ * ⚠️ TIER USAGE GUIDELINE:
+ * - Tier 1 (`auto-flow`): Use ONLY for Major Epics, New Pages, or Core Architecture (~15% tasks).
+ * - Tier 2 (Direct Commit): For regular sub-features, UI polish, tweaks, and bugfixes (~80% tasks).
+ *   Command: `git add . && git commit -m "..." && git push`
+ * - Tier 3 (`create-issue`): For future backlog ideas without immediate code (~5% tasks).
  */
 
 import { execSync } from 'child_process';

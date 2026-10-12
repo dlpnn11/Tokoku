@@ -39,27 +39,30 @@ export const useAuthStore = create<AuthState>()(
       currentUser: DEFAULT_PEMILIK,
       isAuthenticated: true,
 
-      login: async (username: string, password_hash: string) => {
+      login: async (username: string, password_input: string) => {
         const cleanUser = username.trim().toLowerCase();
-        const cleanPass = password_hash.trim();
+        const cleanPass = password_input.trim();
 
-        // Check against Supabase users table
+        // 1. Server-side verification via PostgreSQL RPC authenticate_user
         try {
-          const { data, error } = await supabase
-            .from("users")
-            .select("*")
-            .eq("username", cleanUser)
-            .single();
+          const { data, error } = await supabase.rpc("authenticate_user", {
+            p_username: cleanUser,
+            p_password: cleanPass,
+          });
 
-          if (data && !error) {
-            // Verify password
-            if (data.password_hash === cleanPass) {
-              set({
-                currentUser: data as User,
-                isAuthenticated: true,
-              });
-              return { success: true };
-            }
+          if (!error && data?.success && data?.user) {
+            set({
+              currentUser: data.user as User,
+              isAuthenticated: true,
+            });
+            return { success: true };
+          }
+
+          if (data && data.success === false) {
+            return {
+              success: false,
+              message: data.message || "Username atau password yang Anda masukkan salah.",
+            };
           }
         } catch (e) {
           console.warn("Offline auth fallback");

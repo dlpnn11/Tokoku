@@ -5,6 +5,7 @@
 
 -- 1. EXTENSIONS
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- 2. DROP EXISTING TABLES (FOR CLEAN SLATE RE-RUNS)
 DROP TABLE IF EXISTS transaction_details CASCADE;
@@ -112,6 +113,10 @@ CREATE POLICY "users_select_policy" ON users FOR SELECT USING (true);
 CREATE POLICY "users_insert_policy" ON users FOR INSERT WITH CHECK (false);
 CREATE POLICY "users_update_policy" ON users FOR UPDATE USING (false);
 CREATE POLICY "users_delete_policy" ON users FOR DELETE USING (false);
+
+-- Column-level permission to prevent password_hash exposure
+REVOKE SELECT ON users FROM anon, authenticated;
+GRANT SELECT (id, username, full_name, role, created_at) ON users TO anon, authenticated;
 
 -- 2. TRANSACTIONS TABLE POLICIES (Immutable financial records, created strictly via RPC)
 CREATE POLICY "transactions_select_policy" ON transactions FOR SELECT USING (true);
@@ -371,15 +376,75 @@ BEGIN
 END;
 $$;
 
+-- 10. AUTHENTICATE USER RPC (SECURE SERVER-SIDE BCRYPT VERIFICATION)
+CREATE OR REPLACE FUNCTION authenticate_user(
+    p_username TEXT,
+    p_password TEXT
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_user RECORD;
+    v_clean_user TEXT;
+    v_clean_pass TEXT;
+    v_is_valid BOOLEAN := false;
+BEGIN
+    v_clean_user := lower(trim(p_username));
+    v_clean_pass := trim(p_password);
+
+    SELECT id, username, password_hash, full_name, role, created_at
+    INTO v_user
+    FROM users
+    WHERE lower(username) = v_clean_user;
+
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'message', 'Username atau password yang Anda masukkan salah.'
+        );
+    END IF;
+
+    IF v_user.password_hash = crypt(v_clean_pass, v_user.password_hash) THEN
+        v_is_valid := true;
+    ELSIF v_user.password_hash = v_clean_pass THEN
+        UPDATE users
+        SET password_hash = crypt(v_clean_pass, gen_salt('bf', 10))
+        WHERE id = v_user.id;
+        v_is_valid := true;
+    END IF;
+
+    IF v_is_valid THEN
+        RETURN jsonb_build_object(
+            'success', true,
+            'user', jsonb_build_object(
+                'id', v_user.id,
+                'username', v_user.username,
+                'full_name', v_user.full_name,
+                'role', v_user.role,
+                'created_at', v_user.created_at
+            )
+        );
+    ELSE
+        RETURN jsonb_build_object(
+            'success', false,
+            'message', 'Username atau password yang Anda masukkan salah.'
+        );
+    END IF;
+END;
+$$;
+
 
 -- ==============================================================================
 -- 8. REALISTIC SEED DATA (INDONESIAN WARUNG KELONTONG)
 -- ==============================================================================
 
--- A. USERS
+-- A. USERS (Bcrypt Hashed Passwords via pgcrypto)
 INSERT INTO users (id, username, password_hash, full_name, role) VALUES
-('11111111-1111-1111-1111-111111111111', 'pemilik', 'pemilik123', 'Firdaus Ubaidillah', 'pemilik'),
-('22222222-2222-2222-2222-222222222222', 'kasir', 'kasir123', 'Ani Rahayu', 'kasir');
+('11111111-1111-1111-1111-111111111111', 'pemilik', crypt('pemilik123', gen_salt('bf', 10)), 'Firdaus Ubaidillah', 'pemilik'),
+('22222222-2222-2222-2222-222222222222', 'kasir', crypt('kasir123', gen_salt('bf', 10)), 'Ani Rahayu', 'kasir');
 
 -- B. CATEGORIES
 INSERT INTO categories (id, name, icon_name) VALUES

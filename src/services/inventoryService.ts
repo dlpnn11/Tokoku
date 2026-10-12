@@ -291,9 +291,25 @@ export const inventoryService = {
     return (data || []) as Product[];
   },
 
-  // 14. Stock Opname / Direct Stock Adjustment
+  // 14. Stock Opname / Direct Stock Adjustment (Atomic Row-Locked)
   async adjustStock(productId: string, newStock: number) {
     validateNonNegative(newStock, "Stok Opname");
+
+    // 1. Try atomic row-locked stored function
+    try {
+      const { data, error } = await supabase.rpc("set_product_stock_atomic", {
+        p_product_id: productId,
+        p_new_stock: newStock,
+      });
+
+      if (!error && data?.product) {
+        return data.product as Product;
+      }
+    } catch {
+      // Fallback below
+    }
+
+    // 2. Direct atomic update fallback
     const { data, error } = await supabase
       .from("products")
       .update({ current_stock: newStock })
@@ -303,5 +319,25 @@ export const inventoryService = {
 
     if (error) throw error;
     return data as Product;
+  },
+
+  // 15. Atomic Delta Stock Adjustment (Restock / Scrap / Return)
+  async adjustStockDelta(productId: string, delta: number) {
+    const { data, error } = await supabase.rpc("adjust_product_stock_delta", {
+      p_product_id: productId,
+      p_delta: delta,
+    });
+
+    if (error) {
+      throw new Error(error.message || "Gagal memperbarui delta stok produk.");
+    }
+
+    return data as {
+      success: boolean;
+      product_id: string;
+      old_stock: number;
+      new_stock: number;
+      product: Product;
+    };
   },
 };

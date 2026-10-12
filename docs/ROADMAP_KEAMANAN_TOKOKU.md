@@ -13,7 +13,7 @@ Dokumen ini dirancang modular agar setiap item dapat dieksekusi secara terpisah 
 | **01** | PostgREST Filter Injection Sanitization | API & Query Layer | 🔴 Kritis | `fix(security): sanitize postgrest query filters against injection` | `[x] Selesai` |
 | **02** | PostgreSQL Row Level Security (RLS) Hardening | Database Layer | 🔴 Kritis | `fix(security): enforce strict postgresql row level security policies` | `[x] Selesai` |
 | **03** | Database Integrity Constraints (Anti-Minus) | Database Layer | 🟠 Tinggi | `fix(security): add database check constraints for non-negative values` | `[x] Selesai` |
-| **04** | Anti-Race Condition Atomic Concurrency | Concurrency Layer | 🟠 Tinggi | `fix(security): prevent race condition in stock adjustments via atomic queries` | `[ ] Antrean` |
+| **04** | Anti-Race Condition Atomic Concurrency | Concurrency Layer | 🟠 Tinggi | `fix(security): prevent race condition in stock adjustments via atomic queries` | `[x] Selesai` |
 | **05** | Server-Side Password Hashing & Verification | Auth Layer | 🔴 Kritis | `feat(security): implement server-side credential verification with safe hashing` | `[ ] Antrean` |
 | **06** | Anti-Tampering Session & Secure Storage | Auth / Session | 🔴 Kritis | `feat(security): harden auth session storage against client-side tampering` | `[ ] Antrean` |
 | **07** | Timing Attack Mitigation pada Kredensial | Cryptographic Layer| 🟡 Sedang | `fix(security): protect authentication verification against timing attacks` | `[ ] Antrean` |

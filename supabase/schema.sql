@@ -243,6 +243,8 @@ CREATE OR REPLACE FUNCTION cancel_pos_transaction(
 )
 RETURNS JSONB
 LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
     v_status TEXT;
@@ -272,6 +274,103 @@ BEGIN
     RETURN jsonb_build_object('success', true, 'message', 'Transaksi berhasil dibatalkan dan stok dikembalikan');
 END;
 $$;
+
+-- 8. ATOMIC DELTA STOCK ADJUSTMENT (Restock, Return, or Scrap with FOR UPDATE lock)
+CREATE OR REPLACE FUNCTION adjust_product_stock_delta(
+    p_product_id UUID,
+    p_delta INT
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_curr_stock INT;
+    v_prod_name TEXT;
+    v_new_stock INT;
+    v_updated_product JSONB;
+BEGIN
+    SELECT current_stock, name INTO v_curr_stock, v_prod_name
+    FROM products
+    WHERE id = p_product_id
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Produk dengan ID % tidak ditemukan', p_product_id;
+    END IF;
+
+    v_new_stock := v_curr_stock + p_delta;
+
+    IF v_new_stock < 0 THEN
+        RAISE EXCEPTION 'Pengurangan stok melebihi stok yang tersedia untuk produk "%" (Tersisa: %, Perubahan: %)', 
+            v_prod_name, v_curr_stock, p_delta;
+    END IF;
+
+    UPDATE products
+    SET current_stock = v_new_stock
+    WHERE id = p_product_id;
+
+    SELECT to_jsonb(p) INTO v_updated_product
+    FROM products p
+    WHERE p.id = p_product_id;
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'product_id', p_product_id,
+        'old_stock', v_curr_stock,
+        'new_stock', v_new_stock,
+        'product', v_updated_product
+    );
+END;
+$$;
+
+-- 9. ATOMIC SET STOCK FUNCTION (Stock Opname with FOR UPDATE row lock)
+CREATE OR REPLACE FUNCTION set_product_stock_atomic(
+    p_product_id UUID,
+    p_new_stock INT
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_curr_stock INT;
+    v_prod_name TEXT;
+    v_updated_product JSONB;
+BEGIN
+    IF p_new_stock < 0 THEN
+        RAISE EXCEPTION 'Stok baru tidak boleh bernilai negatif (Diberikan: %)', p_new_stock;
+    END IF;
+
+    SELECT current_stock, name INTO v_curr_stock, v_prod_name
+    FROM products
+    WHERE id = p_product_id
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Produk dengan ID % tidak ditemukan', p_product_id;
+    END IF;
+
+    UPDATE products
+    SET current_stock = p_new_stock
+    WHERE id = p_product_id;
+
+    SELECT to_jsonb(p) INTO v_updated_product
+    FROM products p
+    WHERE p.id = p_product_id;
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'product_id', p_product_id,
+        'old_stock', v_curr_stock,
+        'new_stock', p_new_stock,
+        'product', v_updated_product
+    );
+END;
+$$;
+
 
 -- ==============================================================================
 -- 8. REALISTIC SEED DATA (INDONESIAN WARUNG KELONTONG)

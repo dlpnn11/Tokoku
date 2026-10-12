@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { Product, Category, Supplier } from "@/types/database";
+import { sanitizePostgrestFilter } from "@/lib/security";
 
 export interface InventoryStats {
   totalSku: number;
@@ -21,9 +22,12 @@ export const inventoryService = {
       .order("created_at", { ascending: false });
 
     if (filter?.search) {
-      query = query.or(
-        `name.ilike.%${filter.search}%,sku.ilike.%${filter.search}%,barcode.ilike.%${filter.search}%`
-      );
+      const safeSearch = sanitizePostgrestFilter(filter.search);
+      if (safeSearch) {
+        query = query.or(
+          `name.ilike.%${safeSearch}%,sku.ilike.%${safeSearch}%,barcode.ilike.%${safeSearch}%`
+        );
+      }
     }
 
     if (filter?.categoryId && filter.categoryId !== "all") {

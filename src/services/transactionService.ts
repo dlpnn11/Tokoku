@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { Transaction, TransactionDetail } from "@/types/database";
 import { CartItem } from "@/stores/cartStore";
 import { roundPrice500 } from "@/lib/utils";
+import { sanitizePostgrestFilter } from "@/lib/security";
 
 export interface CreateTransactionParams {
   invoiceNumber: string;
@@ -119,8 +120,10 @@ export const transactionService = {
     }
 
     if (options?.search && options.search.trim()) {
-      const s = options.search.trim();
-      query = query.or(`invoice_number.ilike.%${s}%,customer_phone.ilike.%${s}%`);
+      const safeSearch = sanitizePostgrestFilter(options.search);
+      if (safeSearch) {
+        query = query.or(`invoice_number.ilike.%${safeSearch}%,customer_phone.ilike.%${safeSearch}%`);
+      }
     }
 
     if (options?.limit) {

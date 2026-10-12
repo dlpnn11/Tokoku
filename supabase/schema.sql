@@ -107,12 +107,39 @@ ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transaction_details ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Allow all on users" ON users FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all on categories" ON categories FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all on suppliers" ON suppliers FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all on products" ON products FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all on transactions" ON transactions FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all on transaction_details" ON transaction_details FOR ALL USING (true) WITH CHECK (true);
+-- 1. USERS TABLE POLICIES (Read-only for public profiles, direct mutations blocked)
+CREATE POLICY "users_select_policy" ON users FOR SELECT USING (true);
+CREATE POLICY "users_insert_policy" ON users FOR INSERT WITH CHECK (false);
+CREATE POLICY "users_update_policy" ON users FOR UPDATE USING (false);
+CREATE POLICY "users_delete_policy" ON users FOR DELETE USING (false);
+
+-- 2. TRANSACTIONS TABLE POLICIES (Immutable financial records, created strictly via RPC)
+CREATE POLICY "transactions_select_policy" ON transactions FOR SELECT USING (true);
+CREATE POLICY "transactions_insert_policy" ON transactions FOR INSERT WITH CHECK (false);
+CREATE POLICY "transactions_update_policy" ON transactions FOR UPDATE USING (false);
+CREATE POLICY "transactions_delete_policy" ON transactions FOR DELETE USING (false);
+
+-- 3. TRANSACTION DETAILS POLICIES (Immutable details, created strictly via RPC)
+CREATE POLICY "transaction_details_select_policy" ON transaction_details FOR SELECT USING (true);
+CREATE POLICY "transaction_details_insert_policy" ON transaction_details FOR INSERT WITH CHECK (false);
+CREATE POLICY "transaction_details_update_policy" ON transaction_details FOR UPDATE USING (false);
+CREATE POLICY "transaction_details_delete_policy" ON transaction_details FOR DELETE USING (false);
+
+-- 4. PRODUCTS, CATEGORIES, SUPPLIERS POLICIES
+CREATE POLICY "products_select_policy" ON products FOR SELECT USING (true);
+CREATE POLICY "products_insert_policy" ON products FOR INSERT WITH CHECK (true);
+CREATE POLICY "products_update_policy" ON products FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "products_delete_policy" ON products FOR DELETE USING (true);
+
+CREATE POLICY "categories_select_policy" ON categories FOR SELECT USING (true);
+CREATE POLICY "categories_insert_policy" ON categories FOR INSERT WITH CHECK (true);
+CREATE POLICY "categories_update_policy" ON categories FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "categories_delete_policy" ON categories FOR DELETE USING (true);
+
+CREATE POLICY "suppliers_select_policy" ON suppliers FOR SELECT USING (true);
+CREATE POLICY "suppliers_insert_policy" ON suppliers FOR INSERT WITH CHECK (true);
+CREATE POLICY "suppliers_update_policy" ON suppliers FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "suppliers_delete_policy" ON suppliers FOR DELETE USING (true);
 
 -- 6. ATOMIC TRANSACTION CHECKOUT RPC FUNCTION (ACID)
 CREATE OR REPLACE FUNCTION create_pos_transaction(
@@ -127,6 +154,8 @@ CREATE OR REPLACE FUNCTION create_pos_transaction(
 )
 RETURNS JSONB
 LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
     v_tx_id UUID;

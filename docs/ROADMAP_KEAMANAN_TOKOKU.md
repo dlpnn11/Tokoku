@@ -11,7 +11,7 @@ Dokumen ini dirancang modular agar setiap item dapat dieksekusi secara terpisah 
 | No | Modul Keamanan | Lapisan / Kategori | Tingkat Ancaman | Target Commit | Status |
 |:---:|:---|:---|:---:|:---|:---:|
 | **01** | PostgREST Filter Injection Sanitization | API & Query Layer | 🔴 Kritis | `fix(security): sanitize postgrest query filters against injection` | `[x] Selesai` |
-| **02** | PostgreSQL Row Level Security (RLS) Hardening | Database Layer | 🔴 Kritis | `fix(security): enforce strict postgresql row level security policies` | `[ ] Antrean` |
+| **02** | PostgreSQL Row Level Security (RLS) Hardening | Database Layer | 🔴 Kritis | `fix(security): enforce strict postgresql row level security policies` | `[x] Selesai` |
 | **03** | Database Integrity Constraints (Anti-Minus) | Database Layer | 🟠 Tinggi | `fix(security): add database check constraints for non-negative values` | `[ ] Antrean` |
 | **04** | Anti-Race Condition Atomic Concurrency | Concurrency Layer | 🟠 Tinggi | `fix(security): prevent race condition in stock adjustments via atomic queries` | `[ ] Antrean` |
 | **05** | Server-Side Password Hashing & Verification | Auth Layer | 🔴 Kritis | `feat(security): implement server-side credential verification with safe hashing` | `[ ] Antrean` |

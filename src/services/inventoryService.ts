@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { Product, Category, Supplier } from "@/types/database";
-import { sanitizePostgrestFilter } from "@/lib/security";
+import { sanitizePostgrestFilter, validateNonNegative } from "@/lib/security";
 
 export interface InventoryStats {
   totalSku: number;
@@ -113,6 +113,11 @@ export const inventoryService = {
 
   // 5. Create Product
   async createProduct(productData: Omit<Product, "id" | "created_at" | "category" | "supplier">) {
+    if (productData.sell_price !== undefined) validateNonNegative(productData.sell_price, "Harga Jual");
+    if (productData.buy_price !== undefined) validateNonNegative(productData.buy_price, "Harga Beli");
+    if (productData.current_stock !== undefined) validateNonNegative(productData.current_stock, "Stok Saat Ini");
+    if (productData.minimum_stock !== undefined) validateNonNegative(productData.minimum_stock, "Stok Minimum");
+
     const { data, error } = await supabase
       .from("products")
       .insert([productData])
@@ -125,6 +130,11 @@ export const inventoryService = {
 
   // 6. Update Product
   async updateProduct(id: string, productData: Partial<Product>) {
+    if (productData.sell_price !== undefined) validateNonNegative(productData.sell_price, "Harga Jual");
+    if (productData.buy_price !== undefined) validateNonNegative(productData.buy_price, "Harga Beli");
+    if (productData.current_stock !== undefined) validateNonNegative(productData.current_stock, "Stok Saat Ini");
+    if (productData.minimum_stock !== undefined) validateNonNegative(productData.minimum_stock, "Stok Minimum");
+
     const { data, error } = await supabase
       .from("products")
       .update(productData)
@@ -283,6 +293,7 @@ export const inventoryService = {
 
   // 14. Stock Opname / Direct Stock Adjustment
   async adjustStock(productId: string, newStock: number) {
+    validateNonNegative(newStock, "Stok Opname");
     const { data, error } = await supabase
       .from("products")
       .update({ current_stock: newStock })

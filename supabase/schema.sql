@@ -51,10 +51,10 @@ CREATE TABLE products (
     name TEXT NOT NULL,
     category_id UUID NOT NULL REFERENCES categories(id) ON DELETE RESTRICT,
     supplier_id UUID REFERENCES suppliers(id) ON DELETE SET NULL,
-    buy_price NUMERIC(12, 2) NOT NULL DEFAULT 0,
-    sell_price NUMERIC(12, 2) NOT NULL DEFAULT 0,
-    current_stock INTEGER NOT NULL DEFAULT 0,
-    minimum_stock INTEGER NOT NULL DEFAULT 5,
+    buy_price NUMERIC(12, 2) NOT NULL DEFAULT 0 CHECK (buy_price >= 0),
+    sell_price NUMERIC(12, 2) NOT NULL DEFAULT 0 CHECK (sell_price >= 0),
+    current_stock INTEGER NOT NULL DEFAULT 0 CHECK (current_stock >= 0),
+    minimum_stock INTEGER NOT NULL DEFAULT 5 CHECK (minimum_stock >= 0),
     unit TEXT NOT NULL DEFAULT 'pcs',
     image_url TEXT,
     is_active BOOLEAN NOT NULL DEFAULT true,
@@ -68,10 +68,10 @@ CREATE TABLE transactions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     invoice_number TEXT UNIQUE NOT NULL,
     user_id UUID NOT NULL REFERENCES users(id),
-    total_amount NUMERIC(12, 2) NOT NULL DEFAULT 0,
+    total_amount NUMERIC(12, 2) NOT NULL DEFAULT 0 CHECK (total_amount >= 0),
     payment_method TEXT NOT NULL CHECK (payment_method IN ('Tunai', 'QRIS')),
-    cash_received NUMERIC(12, 2),
-    cash_change NUMERIC(12, 2),
+    cash_received NUMERIC(12, 2) CHECK (cash_received IS NULL OR cash_received >= 0),
+    cash_change NUMERIC(12, 2) CHECK (cash_change IS NULL OR cash_change >= 0),
     customer_phone TEXT,
     status TEXT NOT NULL DEFAULT 'Selesai' CHECK (status IN ('Selesai', 'Dibatalkan')),
     created_at TIMESTAMPTZ DEFAULT NOW()
@@ -83,8 +83,8 @@ CREATE TABLE transaction_details (
     transaction_id UUID NOT NULL REFERENCES transactions(id) ON DELETE CASCADE,
     product_id UUID NOT NULL REFERENCES products(id),
     quantity INTEGER NOT NULL CHECK (quantity > 0),
-    unit_price NUMERIC(12, 2) NOT NULL,
-    subtotal NUMERIC(12, 2) NOT NULL
+    unit_price NUMERIC(12, 2) NOT NULL CHECK (unit_price >= 0),
+    subtotal NUMERIC(12, 2) NOT NULL CHECK (subtotal >= 0)
 );
 
 -- 4. INDEXES FOR LIGHTNING FAST CASHIER SEARCH & FILTER

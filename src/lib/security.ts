@@ -53,3 +53,33 @@ export function isSafeSearchTerm(term: string): boolean {
   const injectionPattern = /(?:,|;|\(|\)|\b(?:eq|neq|gt|gte|lt|lte|like|ilike|is|in|cs|cd|ov|sl|sr|nxr|nxl|adj|ov|fts|plfts|phfts|wfts)\b\.)/i;
   return !injectionPattern.test(term);
 }
+
+/**
+ * Validates that a numeric value is non-negative (>= 0).
+ * Throws a TypeError if negative, NaN, or non-finite.
+ */
+export function validateNonNegative(value: number, fieldName: string): number {
+  const num = Number(value);
+  if (isNaN(num) || !isFinite(num)) {
+    throw new Error(`Nilai ${fieldName} harus berupa angka valid.`);
+  }
+  if (num < 0) {
+    throw new Error(`Nilai ${fieldName} tidak boleh bernilai negatif (ditemukan: ${num}).`);
+  }
+  return num;
+}
+
+/**
+ * Validates that an integer quantity is strictly positive (> 0).
+ */
+export function validatePositiveInteger(value: number, fieldName: string): number {
+  const num = Number(value);
+  if (isNaN(num) || !isFinite(num) || !Number.isInteger(num)) {
+    throw new Error(`Nilai ${fieldName} harus berupa bilangan bulat valid.`);
+  }
+  if (num <= 0) {
+    throw new Error(`Nilai ${fieldName} harus lebih besar dari 0 (ditemukan: ${num}).`);
+  }
+  return num;
+}
+

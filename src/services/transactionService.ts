@@ -2,7 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { Transaction, TransactionDetail } from "@/types/database";
 import { CartItem } from "@/stores/cartStore";
 import { roundPrice500 } from "@/lib/utils";
-import { sanitizePostgrestFilter } from "@/lib/security";
+import { sanitizePostgrestFilter, validateNonNegative, validatePositiveInteger } from "@/lib/security";
 
 export interface CreateTransactionParams {
   invoiceNumber: string;
@@ -36,12 +36,26 @@ export const transactionService = {
    * Deducts current_stock and inserts transaction + details in single ACID lock
    */
   async checkout(params: CreateTransactionParams) {
-    const formattedItems = params.items.map((item) => ({
-      product_id: item.product.id,
-      quantity: item.quantity,
-      unit_price: roundPrice500(Number(item.product.sell_price)),
-      subtotal: Number(item.subtotal),
-    }));
+    validateNonNegative(params.totalAmount, "Total Transaksi");
+    if (params.paymentMethod === "Tunai") {
+      validateNonNegative(params.cashReceived, "Uang Diterima");
+      validateNonNegative(params.cashChange, "Uang Kembalian");
+    }
+
+    const formattedItems = params.items.map((item) => {
+      validatePositiveInteger(item.quantity, `Jumlah Barang (${item.product.name})`);
+      const unitPrice = roundPrice500(Number(item.product.sell_price));
+      validateNonNegative(unitPrice, `Harga Satuan (${item.product.name})`);
+      const subtotal = Number(item.subtotal);
+      validateNonNegative(subtotal, `Subtotal (${item.product.name})`);
+
+      return {
+        product_id: item.product.id,
+        quantity: item.quantity,
+        unit_price: unitPrice,
+        subtotal: subtotal,
+      };
+    });
 
     const { data, error } = await supabase.rpc("create_pos_transaction", {
       p_invoice_number: params.invoiceNumber,

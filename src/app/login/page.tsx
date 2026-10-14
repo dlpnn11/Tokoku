@@ -13,11 +13,14 @@ import {
   Crown,
   ShoppingBag,
   CheckCircle2,
+  Clock,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/stores/authStore";
 import { hasTamperAlert, clearTamperAlert } from "@/lib/sessionSecurity";
+import { checkRateLimit, formatCountdown } from "@/lib/rateLimiter";
 
 function LoginForm() {
   const router = useRouter();
@@ -32,6 +35,11 @@ function LoginForm() {
   const [loading, setLoading] = React.useState(false);
   const [tamperDetected, setTamperDetected] = React.useState(false);
 
+  // Rate Limiting & Lockout States
+  const [isLockedOut, setIsLockedOut] = React.useState(false);
+  const [lockCountdown, setLockCountdown] = React.useState(0);
+  const [remainingAttempts, setRemainingAttempts] = React.useState<number | null>(null);
+
   // Check for tamper security alert
   React.useEffect(() => {
     const isParamTamper = searchParams.get("security_alert") === "tampering_detected";
@@ -41,6 +49,54 @@ function LoginForm() {
       clearTamperAlert();
     }
   }, [searchParams]);
+
+  // Synchronize rate limit status when username changes
+  React.useEffect(() => {
+    if (!username.trim()) {
+      setIsLockedOut(false);
+      setLockCountdown(0);
+      setRemainingAttempts(null);
+      return;
+    }
+
+    const status = checkRateLimit(username);
+    if (status.isLocked) {
+      setIsLockedOut(true);
+      setLockCountdown(status.retryAfterSeconds);
+      setRemainingAttempts(0);
+    } else {
+      setIsLockedOut(false);
+      setLockCountdown(0);
+      if (status.failedAttemptsCount > 0) {
+        setRemainingAttempts(status.remainingAttempts);
+      } else {
+        setRemainingAttempts(null);
+      }
+    }
+  }, [username]);
+
+  // Active countdown timer effect for lockout duration
+  React.useEffect(() => {
+    if (!isLockedOut || lockCountdown <= 0) return;
+
+    const timer = setInterval(() => {
+      setLockCountdown((prev) => {
+        if (prev <= 1) {
+          setIsLockedOut(false);
+          clearInterval(timer);
+          const status = checkRateLimit(username);
+          if (!status.isLocked) {
+            setErrorMsg("");
+            setRemainingAttempts(status.remainingAttempts);
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isLockedOut, lockCountdown, username]);
 
   // If already authenticated, redirect to appropriate page
   React.useEffect(() => {
@@ -55,6 +111,8 @@ function LoginForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLockedOut) return;
+
     if (!username.trim() || !password.trim()) {
       setErrorMsg("Harap masukkan username dan password.");
       return;
@@ -75,7 +133,17 @@ function LoginForm() {
           router.push("/pos");
         }
       } else {
-        setErrorMsg(res.message || "Username atau password salah.");
+        if (res.isLocked) {
+          setIsLockedOut(true);
+          setLockCountdown(res.retryAfterSeconds || 300);
+          setRemainingAttempts(0);
+          setErrorMsg(res.message || "Akun dikunci sementara karena terlalu banyak percobaan gagal.");
+        } else {
+          if (res.remainingAttempts !== undefined) {
+            setRemainingAttempts(res.remainingAttempts);
+          }
+          setErrorMsg(res.message || "Username atau password salah.");
+        }
       }
     } catch (err: any) {
       setErrorMsg("Terjadi kesalahan saat masuk. Silakan coba lagi.");
@@ -86,14 +154,24 @@ function LoginForm() {
 
   const handleQuickSelect = (role: "pemilik" | "kasir") => {
     setTamperDetected(false);
-    if (role === "pemilik") {
-      setUsername("pemilik");
-      setPassword("pemilik123");
-    } else {
-      setUsername("kasir");
-      setPassword("kasir123");
-    }
+    const targetUser = role === "pemilik" ? "pemilik" : "kasir";
+    const targetPass = role === "pemilik" ? "pemilik123" : "kasir123";
+    setUsername(targetUser);
+    setPassword(targetPass);
     setErrorMsg("");
+
+    // Check rate limit status for selected demo user
+    const status = checkRateLimit(targetUser);
+    if (status.isLocked) {
+      setIsLockedOut(true);
+      setLockCountdown(status.retryAfterSeconds);
+      setRemainingAttempts(0);
+      setErrorMsg(`Akun ${targetUser} saat ini sedang dikunci sementara.`);
+    } else {
+      setIsLockedOut(false);
+      setLockCountdown(0);
+      setRemainingAttempts(status.failedAttemptsCount > 0 ? status.remainingAttempts : null);
+    }
   };
 
   return (
@@ -129,8 +207,45 @@ function LoginForm() {
           </div>
         )}
 
+        {/* Brute Force Lockout Banner with Live Countdown */}
+        {isLockedOut && (
+          <div className="p-4 bg-[#FFF0F0] border-2 border-[#D64545] rounded-xl flex items-start gap-3 text-xs text-[#1A1A1A] animate-in fade-in zoom-in-95">
+            <ShieldAlert className="w-5 h-5 text-[#D64545] shrink-0 mt-0.5" />
+            <div className="space-y-2 flex-1">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-[#D64545] block text-xs">
+                  🔒 Akun Dikunci Sementara (Brute Force Protection)
+                </span>
+                <span className="px-2 py-0.5 bg-[#D64545] text-white font-mono text-[11px] font-bold rounded-md">
+                  {formatCountdown(lockCountdown)}
+                </span>
+              </div>
+              <p className="text-[#4B5563] leading-relaxed text-[11px]">
+                Terlalu banyak percobaan masuk yang salah (5x berturut-turut). Demi keamanan sistem, akses ke akun ini ditangguhkan sementara selama 5 menit.
+              </p>
+              <div className="flex items-center gap-1.5 text-[10px] text-[#D64545] font-semibold pt-0.5">
+                <Clock className="w-3.5 h-3.5" />
+                <span>Silakan tunggu hingga hitungan mundur selesai untuk mencoba lagi.</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Remaining Attempts Warning */}
+        {!isLockedOut && remainingAttempts !== null && remainingAttempts < 5 && (
+          <div className="px-3 py-2 bg-[#FFFBEB] border border-[#FDE68A] rounded-xl flex items-center justify-between text-xs text-[#92400E]">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-3.5 h-3.5 text-[#D97706] shrink-0" />
+              <span className="text-[11px] font-medium">Percobaan login salah terdeteksi</span>
+            </div>
+            <span className="text-[11px] font-bold bg-[#FEF3C7] px-2 py-0.5 rounded text-[#92400E]">
+              Sisa: {remainingAttempts} / 5
+            </span>
+          </div>
+        )}
+
         {/* Error Alert Banner */}
-        {errorMsg && (
+        {!isLockedOut && errorMsg && (
           <div className="p-3 bg-[#FFF0F0] border border-[#F8BEBE] rounded-xl flex items-center gap-2 text-xs text-[#D64545] font-semibold">
             <ShieldAlert className="w-4 h-4 shrink-0" />
             <span>{errorMsg}</span>
@@ -149,8 +264,9 @@ function LoginForm() {
               <Input
                 placeholder="Masukkan username (pemilik / kasir)"
                 value={username}
+                disabled={loading || isLockedOut}
                 onChange={(e) => setUsername(e.target.value)}
-                className="pl-9 text-xs h-11 border-[#E5E5E0] focus:border-[#6FA084]"
+                className="pl-9 text-xs h-11 border-[#E5E5E0] focus:border-[#6FA084] disabled:bg-[#F4F4F0] disabled:text-[#9E9E9E] disabled:cursor-not-allowed"
                 required
               />
             </div>
@@ -167,14 +283,16 @@ function LoginForm() {
                 type={showPassword ? "text" : "password"}
                 placeholder="Masukkan password"
                 value={password}
+                disabled={loading || isLockedOut}
                 onChange={(e) => setPassword(e.target.value)}
-                className="pl-9 pr-10 text-xs h-11 border-[#E5E5E0] focus:border-[#6FA084]"
+                className="pl-9 pr-10 text-xs h-11 border-[#E5E5E0] focus:border-[#6FA084] disabled:bg-[#F4F4F0] disabled:text-[#9E9E9E] disabled:cursor-not-allowed"
                 required
               />
               <button
                 type="button"
+                disabled={isLockedOut}
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9E9E9E] hover:text-[#1A1A1A] cursor-pointer"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9E9E9E] hover:text-[#1A1A1A] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                 title={showPassword ? "Sembunyikan password" : "Lihat password"}
               >
                 {showPassword ? (
@@ -192,8 +310,9 @@ function LoginForm() {
               <input
                 type="checkbox"
                 checked={rememberMe}
+                disabled={isLockedOut}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                className="rounded border-[#E5E5E0] text-[#6FA084] focus:ring-[#6FA084] cursor-pointer"
+                className="rounded border-[#E5E5E0] text-[#6FA084] focus:ring-[#6FA084] cursor-pointer disabled:cursor-not-allowed"
               />
               <span>Ingat saya di perangkat ini</span>
             </label>
@@ -202,11 +321,26 @@ function LoginForm() {
           {/* Submit Button */}
           <Button
             type="submit"
-            disabled={loading}
-            className="w-full h-11 bg-[#6FA084] hover:bg-[#58836B] text-white font-bold text-xs uppercase tracking-wider rounded-xl gap-2 cursor-pointer shadow-2xs"
+            disabled={loading || isLockedOut}
+            className={`w-full h-11 text-white font-bold text-xs uppercase tracking-wider rounded-xl gap-2 shadow-2xs transition-all ${
+              isLockedOut
+                ? "bg-[#D64545] cursor-not-allowed opacity-90"
+                : "bg-[#6FA084] hover:bg-[#58836B] cursor-pointer"
+            }`}
           >
-            {loading ? "Memverifikasi..." : "Masuk ke Sistem"}
-            <ArrowRight className="w-4 h-4" />
+            {isLockedOut ? (
+              <>
+                <Clock className="w-4 h-4 animate-spin text-white" />
+                <span>Terkunci ({formatCountdown(lockCountdown)})</span>
+              </>
+            ) : loading ? (
+              "Memverifikasi..."
+            ) : (
+              <>
+                <span>Masuk ke Sistem</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
           </Button>
         </form>
 

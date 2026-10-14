@@ -12,6 +12,15 @@ import {
 } from "@/lib/sessionSecurity";
 import { timingSafeEqual } from "@/lib/security";
 
+import {
+  checkRateLimit,
+  recordFailedAttempt,
+  recordSuccessfulLogin,
+  applyProgressiveDelay,
+  formatCountdown,
+  MAX_FAILED_ATTEMPTS,
+} from "@/lib/rateLimiter";
+
 interface AuthState {
   currentUser: User | null;
   isAuthenticated: boolean;
@@ -23,7 +32,13 @@ interface AuthState {
   login: (
     username: string,
     password_input: string
-  ) => Promise<{ success: boolean; message?: string }>;
+  ) => Promise<{
+    success: boolean;
+    message?: string;
+    isLocked?: boolean;
+    retryAfterSeconds?: number;
+    remainingAttempts?: number;
+  }>;
   logout: () => void;
   switchRole: (role: UserRole) => void;
   setUser: (user: User) => void;
@@ -150,7 +165,48 @@ export const useAuthStore = create<AuthState>()(
         const cleanUser = username.trim().toLowerCase();
         const cleanPass = password_input.trim();
 
-        // 1. Server-side verification via PostgreSQL RPC authenticate_user
+        // 1. Sliding Window Rate Limiting & Lockout Check
+        const initialStatus = checkRateLimit(cleanUser);
+        if (initialStatus.isLocked) {
+          return {
+            success: false,
+            isLocked: true,
+            retryAfterSeconds: initialStatus.retryAfterSeconds,
+            remainingAttempts: 0,
+            message: `Akun/klien dikunci sementara karena ${MAX_FAILED_ATTEMPTS}x kegagalan berturut-turut. Tunggu ${formatCountdown(initialStatus.retryAfterSeconds)} sebelum mencoba kembali.`,
+          };
+        }
+
+        // 2. Progressive delay penalty (2000ms delay after 3 failed attempts)
+        if (initialStatus.shouldDelay) {
+          await applyProgressiveDelay();
+        }
+
+        // Helper to record failed attempt and format informative response
+        const handleFailure = (customMsg?: string) => {
+          const failStatus = recordFailedAttempt(cleanUser);
+          if (failStatus.isLocked) {
+            return {
+              success: false,
+              isLocked: true,
+              retryAfterSeconds: failStatus.retryAfterSeconds,
+              remainingAttempts: 0,
+              message: `Batas percobaan (${MAX_FAILED_ATTEMPTS}x) tercapai. Akun dikunci sementara selama 5 menit demi keamanan sistem.`,
+            };
+          }
+
+          return {
+            success: false,
+            isLocked: false,
+            remainingAttempts: failStatus.remainingAttempts,
+            retryAfterSeconds: 0,
+            message:
+              customMsg ||
+              `Username atau password salah. Sisa percobaan: ${failStatus.remainingAttempts}x sebelum akun dikunci.`,
+          };
+        };
+
+        // 3. Server-side verification via PostgreSQL RPC authenticate_user
         try {
           const { data, error } = await supabase.rpc("authenticate_user", {
             p_username: cleanUser,
@@ -158,6 +214,7 @@ export const useAuthStore = create<AuthState>()(
           });
 
           if (!error && data?.success && data?.user) {
+            recordSuccessfulLogin(cleanUser);
             const authedUser = data.user as User;
             set({
               currentUser: authedUser,
@@ -168,21 +225,19 @@ export const useAuthStore = create<AuthState>()(
           }
 
           if (data && data.success === false) {
-            return {
-              success: false,
-              message: data.message || "Username atau password yang Anda masukkan salah.",
-            };
+            return handleFailure(data.message);
           }
         } catch (e) {
           console.warn("Offline auth fallback");
         }
 
-        // Local demo fallback with constant-time equality checks
+        // 4. Local demo fallback with constant-time equality checks
         const isPemilik =
           timingSafeEqual(cleanUser, "pemilik") &&
           timingSafeEqual(cleanPass, "pemilik123");
 
         if (isPemilik) {
+          recordSuccessfulLogin(cleanUser);
           set({ currentUser: DEFAULT_PEMILIK, isAuthenticated: true });
           syncServerCookie(DEFAULT_PEMILIK);
           return { success: true };
@@ -193,15 +248,14 @@ export const useAuthStore = create<AuthState>()(
           timingSafeEqual(cleanPass, "kasir123");
 
         if (isKasir) {
+          recordSuccessfulLogin(cleanUser);
           set({ currentUser: DEFAULT_KASIR, isAuthenticated: true });
           syncServerCookie(DEFAULT_KASIR);
           return { success: true };
         }
 
-        return {
-          success: false,
-          message: "Username atau password yang Anda masukkan salah.",
-        };
+        // 5. Failed credential match
+        return handleFailure("Username atau password yang Anda masukkan salah.");
       },
 
       logout: () => {

@@ -16,18 +16,26 @@ const SESSION_HMAC_SECRET =
 
 /**
  * Constant-time string comparison to prevent side-channel timing attacks.
- * (Cryptographic timing mitigation).
+ * Iterates through maxLen to eliminate early returns on both length and character differences.
  */
 export function constantTimeCompare(a: string, b: string): boolean {
   if (typeof a !== "string" || typeof b !== "string") return false;
-  if (a.length !== b.length) return false;
 
-  let result = 0;
-  for (let i = 0; i < a.length; i++) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  const lenA = a.length;
+  const lenB = b.length;
+  let mismatch = lenA === lenB ? 0 : 1;
+
+  const maxLen = Math.max(lenA, lenB, 1);
+  for (let i = 0; i < maxLen; i++) {
+    const charA = a.charCodeAt(i % (lenA || 1));
+    const charB = b.charCodeAt(i % (lenB || 1));
+    mismatch |= charA ^ charB;
   }
-  return result === 0;
+
+  return mismatch === 0;
 }
+
+export const timingSafeEqual = constantTimeCompare;
 
 /**
  * Creates a deterministic, canonical representation of session-critical user state.

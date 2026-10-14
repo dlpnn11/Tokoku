@@ -16,7 +16,7 @@ Dokumen ini dirancang modular agar setiap item dapat dieksekusi secara terpisah 
 | **04** | Anti-Race Condition Atomic Concurrency | Concurrency Layer | 🟠 Tinggi | `fix(security): prevent race condition in stock adjustments via atomic queries` | `[x] Selesai` |
 | **05** | Server-Side Password Hashing & Verification | Auth Layer | 🔴 Kritis | `feat(security): implement server-side credential verification with safe hashing` | `[x] Selesai` |
 | **06** | Anti-Tampering Session & Secure Storage | Auth / Session | 🔴 Kritis | `feat(security): harden auth session storage against client-side tampering` | `[x] Selesai` |
-| **07** | Timing Attack Mitigation pada Kredensial | Cryptographic Layer| 🟡 Sedang | `fix(security): protect authentication verification against timing attacks` | `[ ] Antrean` |
+| **07** | Timing Attack Mitigation pada Kredensial | Cryptographic Layer| 🟡 Sedang | `fix(security): protect authentication verification against timing attacks` | `[x] Selesai` |
 | **08** | Cashier Terminal Idle Auto-Lockout | Session & POS UX | 🟠 Tinggi | `feat(security): implement cashier terminal idle lockout mechanism` | `[ ] Antrean` |
 | **09** | Rate Limiting & Brute Force Protection | Auth & Network | 🟠 Tinggi | `feat(security): add rate limiting and brute force protection on login` | `[ ] Antrean` |
 | **10** | Next.js Edge Middleware Route Guard | Network / Routing | 🔴 Kritis | `feat(security): implement edge middleware route protection and rbac` | `[ ] Antrean` |

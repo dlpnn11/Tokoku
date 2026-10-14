@@ -29,10 +29,12 @@ function verifyToken(token: string): { valid: boolean; payload?: SessionPayload 
     const payloadJson = Buffer.from(payloadBase64, "base64").toString("utf-8");
     const expectedSig = signToken(payloadBase64);
 
-    if (
-      signature.length !== expectedSig.length ||
-      !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSig))
-    ) {
+    // Pre-hash both strings with SHA-256 to ensure uniform 32-byte buffers
+    // Completely eliminates length mismatch errors and timing leaks
+    const hashSig = crypto.createHash("sha256").update(signature).digest();
+    const hashExpected = crypto.createHash("sha256").update(expectedSig).digest();
+
+    if (!crypto.timingSafeEqual(hashSig, hashExpected)) {
       return { valid: false };
     }
 

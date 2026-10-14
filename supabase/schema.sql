@@ -384,7 +384,7 @@ CREATE OR REPLACE FUNCTION authenticate_user(
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
 DECLARE
     v_user RECORD;
@@ -401,17 +401,19 @@ BEGIN
     WHERE lower(username) = v_clean_user;
 
     IF NOT FOUND THEN
+        -- Constant-time dummy bcrypt calculation to prevent username enumeration via timing analysis
+        PERFORM extensions.crypt(v_clean_pass, '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy');
         RETURN jsonb_build_object(
             'success', false,
             'message', 'Username atau password yang Anda masukkan salah.'
         );
     END IF;
 
-    IF v_user.password_hash = crypt(v_clean_pass, v_user.password_hash) THEN
+    IF v_user.password_hash = extensions.crypt(v_clean_pass, v_user.password_hash) THEN
         v_is_valid := true;
     ELSIF v_user.password_hash = v_clean_pass THEN
         UPDATE users
-        SET password_hash = crypt(v_clean_pass, gen_salt('bf', 10))
+        SET password_hash = extensions.crypt(v_clean_pass, extensions.gen_salt('bf', 10))
         WHERE id = v_user.id;
         v_is_valid := true;
     END IF;

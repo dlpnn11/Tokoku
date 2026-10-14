@@ -83,3 +83,45 @@ export function validatePositiveInteger(value: number, fieldName: string): numbe
   return num;
 }
 
+/**
+ * Constant-time equality comparison between two strings.
+ *
+ * Standard JavaScript `===` exits immediately on the first differing character,
+ * leaking nanosecond-level timing differences that can be measured by attackers.
+ *
+ * This function iterates over the maximum length and accumulates bitwise differences,
+ * ensuring uniform execution time and zero early returns.
+ *
+ * @param a First string to compare
+ * @param b Second string to compare
+ * @returns true if both strings are strictly identical, false otherwise
+ */
+export function timingSafeEqual(a: unknown, b: unknown): boolean {
+  if (typeof a !== "string" || typeof b !== "string") return false;
+
+  const lenA = a.length;
+  const lenB = b.length;
+  // Initialize mismatch indicator (0 if lengths match, 1 if lengths differ)
+  let mismatch = lenA === lenB ? 0 : 1;
+
+  // Iterate over maxLen to ensure execution time is independent of mismatch location
+  const maxLen = Math.max(lenA, lenB, 1);
+  for (let i = 0; i < maxLen; i++) {
+    const charA = a.charCodeAt(i % (lenA || 1));
+    const charB = b.charCodeAt(i % (lenB || 1));
+    mismatch |= charA ^ charB;
+  }
+
+  return mismatch === 0;
+}
+
+/**
+ * Timing-safe credential comparison with string trimming and normalization.
+ * Suitable for password, PIN, or API key verification.
+ */
+export function timingSafeCredentialMatch(input: unknown, target: unknown): boolean {
+  if (typeof input !== "string" || typeof target !== "string") return false;
+  return timingSafeEqual(input.trim(), target.trim());
+}
+
+

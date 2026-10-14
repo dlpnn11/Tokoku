@@ -10,6 +10,7 @@ import {
   handleTamperDetected,
   verifyStorageData,
 } from "@/lib/sessionSecurity";
+import { timingSafeEqual } from "@/lib/security";
 
 interface AuthState {
   currentUser: User | null;
@@ -102,14 +103,22 @@ export const useAuthStore = create<AuthState>()(
           console.warn("Offline auth fallback");
         }
 
-        // Local demo fallback
-        if (cleanUser === "pemilik" && cleanPass === "pemilik123") {
+        // Local demo fallback with constant-time equality checks
+        const isPemilik =
+          timingSafeEqual(cleanUser, "pemilik") &&
+          timingSafeEqual(cleanPass, "pemilik123");
+
+        if (isPemilik) {
           set({ currentUser: DEFAULT_PEMILIK, isAuthenticated: true });
           syncServerCookie(DEFAULT_PEMILIK);
           return { success: true };
         }
 
-        if (cleanUser === "kasir" && cleanPass === "kasir123") {
+        const isKasir =
+          timingSafeEqual(cleanUser, "kasir") &&
+          timingSafeEqual(cleanPass, "kasir123");
+
+        if (isKasir) {
           set({ currentUser: DEFAULT_KASIR, isAuthenticated: true });
           syncServerCookie(DEFAULT_KASIR);
           return { success: true };

@@ -220,7 +220,7 @@ export const useAuthStore = create<AuthState>()(
               currentUser: authedUser,
               isAuthenticated: true,
             });
-            syncServerCookie(authedUser);
+            await syncServerCookie(authedUser);
             return { success: true };
           }
 
@@ -239,7 +239,7 @@ export const useAuthStore = create<AuthState>()(
         if (isPemilik) {
           recordSuccessfulLogin(cleanUser);
           set({ currentUser: DEFAULT_PEMILIK, isAuthenticated: true });
-          syncServerCookie(DEFAULT_PEMILIK);
+          await syncServerCookie(DEFAULT_PEMILIK);
           return { success: true };
         }
 
@@ -250,7 +250,7 @@ export const useAuthStore = create<AuthState>()(
         if (isKasir) {
           recordSuccessfulLogin(cleanUser);
           set({ currentUser: DEFAULT_KASIR, isAuthenticated: true });
-          syncServerCookie(DEFAULT_KASIR);
+          await syncServerCookie(DEFAULT_KASIR);
           return { success: true };
         }
 

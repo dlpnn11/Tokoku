@@ -19,7 +19,7 @@ Dokumen ini dirancang modular agar setiap item dapat dieksekusi secara terpisah 
 | **07** | Timing Attack Mitigation pada Kredensial | Cryptographic Layer| 🟡 Sedang | `fix(security): protect authentication verification against timing attacks` | `[x] Selesai` |
 | **08** | Cashier Terminal Idle Auto-Lockout | Session & POS UX | 🟠 Tinggi | `feat(security): implement cashier terminal idle lockout mechanism` | `[x] Selesai` |
 | **09** | Rate Limiting & Brute Force Protection | Auth & Network | 🟠 Tinggi | `feat(security): add rate limiting and brute force protection on login` | `[x] Selesai` |
-| **10** | Next.js Edge Middleware Route Guard | Network / Routing | 🔴 Kritis | `feat(security): implement edge middleware route protection and rbac` | `[ ] Antrean` |
+| **10** | Next.js Edge Middleware Route Guard | Network / Routing | 🔴 Kritis | `feat(security): implement edge middleware route protection and rbac` | `[x] Selesai` |
 | **11** | Strict HTTP Security Response Headers | Network & Browser | 🟠 Tinggi | `feat(security): configure strict http security headers in next config` | `[ ] Antrean` |
 | **12** | Content Security Policy (CSP) Optimization | Browser Defense | 🟠 Tinggi | `feat(security): define strict content security policy rules` | `[ ] Antrean` |
 | **13** | Request Origin & CSRF Header Validation | Network Defense | 🟡 Sedang | `fix(security): validate request origin and headers against csrf` | `[ ] Antrean` |

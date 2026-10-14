@@ -60,8 +60,8 @@ async function runTestSuite() {
     { label: "Length Difference (Short)", candidate: "SuperSecure" },
   ];
 
-  // Warm up JIT compiler
-  for (let i = 0; i < 10_000; i++) {
+  // Warm up JIT compiler thoroughly so V8 optimizes all code paths equally
+  for (let i = 0; i < 50_000; i++) {
     for (const tc of testCases) {
       timingSafeEqual(tc.candidate, targetSecret);
     }

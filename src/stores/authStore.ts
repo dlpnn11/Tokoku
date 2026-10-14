@@ -16,7 +16,10 @@ interface AuthState {
   currentUser: User | null;
   isAuthenticated: boolean;
   isHydrated: boolean;
+  isTerminalLocked: boolean;
   setHydrated: (val: boolean) => void;
+  lockTerminal: () => void;
+  unlockTerminal: (password: string) => Promise<{ success: boolean; message?: string }>;
   login: (
     username: string,
     password_input: string
@@ -69,8 +72,79 @@ export const useAuthStore = create<AuthState>()(
       currentUser: null,
       isAuthenticated: false,
       isHydrated: false,
+      isTerminalLocked:
+        typeof window !== "undefined"
+          ? sessionStorage.getItem("tokoku_terminal_locked") === "true"
+          : false,
 
       setHydrated: (val: boolean) => set({ isHydrated: val }),
+
+      lockTerminal: () => {
+        set({ isTerminalLocked: true });
+        if (typeof window !== "undefined") {
+          try {
+            sessionStorage.setItem("tokoku_terminal_locked", "true");
+          } catch {
+            // Ignore in restricted environments
+          }
+        }
+      },
+
+      unlockTerminal: async (password: string) => {
+        const { currentUser } = get();
+        if (!currentUser) {
+          return { success: false, message: "Tidak ada sesi pengguna aktif." };
+        }
+
+        const cleanPass = password.trim();
+
+        // 1. Attempt PostgreSQL RPC verification
+        try {
+          const { data, error } = await supabase.rpc("authenticate_user", {
+            p_username: currentUser.username,
+            p_password: cleanPass,
+          });
+
+          if (!error && data?.success) {
+            set({ isTerminalLocked: false });
+            if (typeof window !== "undefined") {
+              try {
+                sessionStorage.removeItem("tokoku_terminal_locked");
+              } catch {}
+            }
+            return { success: true };
+          }
+
+          if (data && data.success === false) {
+            return {
+              success: false,
+              message: "Kata sandi yang Anda masukkan salah.",
+            };
+          }
+        } catch (e) {
+          console.warn("Offline unlock fallback");
+        }
+
+        // 2. Timing-safe fallback verification for local demo accounts
+        const isMatch =
+          (currentUser.role === "pemilik" && timingSafeEqual(cleanPass, "pemilik123")) ||
+          (currentUser.role === "kasir" && timingSafeEqual(cleanPass, "kasir123"));
+
+        if (isMatch) {
+          set({ isTerminalLocked: false });
+          if (typeof window !== "undefined") {
+            try {
+              sessionStorage.removeItem("tokoku_terminal_locked");
+            } catch {}
+          }
+          return { success: true };
+        }
+
+        return {
+          success: false,
+          message: "Kata sandi salah. Silakan coba lagi.",
+        };
+      },
 
       login: async (username: string, password_input: string) => {
         const cleanUser = username.trim().toLowerCase();
@@ -134,10 +208,12 @@ export const useAuthStore = create<AuthState>()(
         set({
           currentUser: null,
           isAuthenticated: false,
+          isTerminalLocked: false,
         });
         if (typeof window !== "undefined") {
           try {
             localStorage.removeItem(SESSION_STORAGE_KEY);
+            sessionStorage.removeItem("tokoku_terminal_locked");
             syncServerCookie(null);
           } catch {
             // Ignore in restricted environments

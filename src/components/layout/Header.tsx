@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Menu, QrCode, ChevronDown, UserCheck, LogOut, ShieldCheck } from "lucide-react";
+import { Menu, QrCode, ChevronDown, UserCheck, LogOut, ShieldCheck, Lock } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { cn } from "@/lib/utils";
 
@@ -18,7 +18,7 @@ export function Header({
   onOpenScannerPairing,
 }: HeaderProps) {
   const router = useRouter();
-  const { currentUser, switchRole, logout } = useAuthStore();
+  const { currentUser, switchRole, logout, lockTerminal } = useAuthStore();
   const [currentDateTime, setCurrentDateTime] = React.useState<string>("");
 
   React.useEffect(() => {
@@ -95,6 +95,16 @@ export function Header({
           </button>
         )}
 
+        {/* Quick Lock Terminal Button */}
+        <button
+          onClick={lockTerminal}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E5E5E0] text-[#4B5563] bg-white hover:bg-[#F4F4F0] hover:text-[#1A1A1A] text-xs font-semibold transition-colors cursor-pointer"
+          title="Kunci Terminal Kasir Sekarang (Alt+L)"
+        >
+          <Lock className="w-3.5 h-3.5 text-[#6B7280]" />
+          <span className="hidden xl:inline">Kunci Layar</span>
+        </button>
+
         {/* Divider */}
         <div className="hidden lg:block h-6 w-[1px] bg-[#E5E5E0]" />
 
@@ -107,7 +117,7 @@ export function Header({
 
 function UserProfileDropdown() {
   const router = useRouter();
-  const { currentUser, switchRole, logout } = useAuthStore();
+  const { currentUser, switchRole, logout, lockTerminal } = useAuthStore();
   const [isOpen, setIsOpen] = React.useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
 
@@ -281,8 +291,20 @@ function UserProfileDropdown() {
 
           <div className="h-[1px] bg-[#E5E5E0] my-1" />
 
-          {/* Logout Action */}
-          <div className="px-2 pt-1">
+          {/* Lock Screen & Logout Actions */}
+          <div className="px-2 pt-1 space-y-1">
+            <button
+              type="button"
+              onClick={() => {
+                setIsOpen(false);
+                lockTerminal();
+              }}
+              className="w-full px-3 py-2 rounded-xl text-xs font-semibold text-[#1A1A1A] hover:bg-[#F4F4F0] flex items-center gap-2 transition-colors cursor-pointer"
+            >
+              <Lock className="w-4 h-4 text-[#6FA084]" />
+              Kunci Terminal (Alt+L)
+            </button>
+
             <button
               type="button"
               onClick={handleLogout}

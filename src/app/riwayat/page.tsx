@@ -34,7 +34,7 @@ const ITEMS_PER_PAGE = 10;
 
 export default function RiwayatPage() {
   const { currentUser } = useAuthStore();
-  const isOwner = currentUser.role === "pemilik";
+  const isOwner = currentUser?.role === "pemilik";
 
   // Data states
   const [transactions, setTransactions] = React.useState<TransactionWithDetails[]>([]);

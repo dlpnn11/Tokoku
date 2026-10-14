@@ -21,13 +21,13 @@ export function AppShell({
 }: AppShellProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { currentUser, isAuthenticated } = useAuthStore();
+  const { currentUser, isAuthenticated, validateSessionIntegrity } = useAuthStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isScannerModalOpen, setIsScannerModalOpen] = React.useState(false);
 
-  // Auth & RBAC Enforcement
+  // Auth, Anti-Tampering & RBAC Enforcement
   React.useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !currentUser) {
       router.replace("/login");
       return;
     }
@@ -37,10 +37,43 @@ export function AppShell({
       pathname.startsWith(route)
     );
 
-    if (currentUser?.role === "kasir" && isOwnerRoute) {
+    if (currentUser.role === "kasir" && isOwnerRoute) {
       router.replace("/pos");
+      return;
     }
-  }, [isAuthenticated, currentUser?.role, pathname, router]);
+
+    // Run cryptographic session integrity check
+    validateSessionIntegrity().then((isValid) => {
+      if (!isValid) {
+        router.replace("/login?security_alert=tampering_detected");
+      }
+    });
+  }, [isAuthenticated, currentUser, pathname, router, validateSessionIntegrity]);
+
+  // Reactive listeners for storage tampering (DevTools console / cross-tab modifications)
+  React.useEffect(() => {
+    const handleTamper = () => {
+      router.replace("/login?security_alert=tampering_detected");
+    };
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "tokoku-auth-storage") {
+        validateSessionIntegrity().then((isValid) => {
+          if (!isValid) {
+            router.replace("/login?security_alert=tampering_detected");
+          }
+        });
+      }
+    };
+
+    window.addEventListener("tokoku:tamper-detected", handleTamper);
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      window.removeEventListener("tokoku:tamper-detected", handleTamper);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, [router, validateSessionIntegrity]);
 
   // Touch Swipe Gesture for Mobile Sidebar (Swipe Right to Open, Swipe Left to Close)
   React.useEffect(() => {

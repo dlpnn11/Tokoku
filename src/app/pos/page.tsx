@@ -158,7 +158,7 @@ export default function PosPage() {
     try {
       await transactionService.checkout({
         invoiceNumber,
-        userId: currentUser.id,
+        userId: currentUser?.id || "22222222-2222-2222-2222-222222222222",
         totalAmount: total,
         paymentMethod,
         cashReceived: paymentMethod === "QRIS" ? total : cashReceived,
@@ -187,7 +187,7 @@ export default function PosPage() {
         cashChange: paymentMethod === "QRIS" ? 0 : Math.max(0, change),
         customerPhone: customerPhone.trim() || undefined,
         items: [...items],
-        cashierName: currentUser.full_name,
+        cashierName: currentUser?.full_name || "Kasir",
         date: formattedDate,
       });
 

@@ -131,7 +131,8 @@ function UserProfileDropdown() {
     };
   }, [isOpen]);
 
-  const getInitials = (name: string) => {
+  const getInitials = (name?: string) => {
+    if (!name) return "TK";
     return name
       .split(" ")
       .map((n) => n[0])
@@ -161,21 +162,21 @@ function UserProfileDropdown() {
         aria-expanded={isOpen}
       >
         <div className="w-8 h-8 rounded-full bg-[#6FA084] text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
-          {getInitials(currentUser.full_name)}
+          {getInitials(currentUser?.full_name)}
         </div>
         <div className="hidden sm:flex flex-col text-left">
           <span className="text-xs font-bold text-[#1A1A1A] leading-tight">
-            {currentUser.full_name}
+            {currentUser?.full_name || "Pengguna"}
           </span>
           <span
             className={cn(
               "text-[10px] font-semibold",
-              currentUser.role === "pemilik"
+              currentUser?.role === "pemilik"
                 ? "text-[#6FA084]"
                 : "text-[#6B7280]"
             )}
           >
-            {currentUser.role === "pemilik" ? "Pemilik" : "Kasir"}
+            {currentUser?.role === "pemilik" ? "Pemilik" : "Kasir"}
           </span>
         </div>
         <ChevronDown
@@ -193,22 +194,22 @@ function UserProfileDropdown() {
           <div className="px-4 py-3 border-b border-[#E5E5E0] bg-[#FAFBF9] rounded-t-2xl -mt-2 mb-1">
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-full bg-[#6FA084] text-white font-bold text-sm flex items-center justify-center shrink-0">
-                {getInitials(currentUser.full_name)}
+                {getInitials(currentUser?.full_name)}
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-bold text-[#1A1A1A] truncate">
-                  {currentUser.full_name}
+                  {currentUser?.full_name || "Pengguna"}
                 </p>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span
                     className={cn(
                       "text-[10px] px-2 py-0.5 rounded-full font-bold uppercase",
-                      currentUser.role === "pemilik"
+                      currentUser?.role === "pemilik"
                         ? "bg-[#EBF3EE] text-[#6FA084]"
                         : "bg-[#F4F4F0] text-[#6B7280]"
                     )}
                   >
-                    {currentUser.role}
+                    {currentUser?.role || "GUEST"}
                   </span>
                   <span className="text-[10px] text-[#6B7280]">• TokoKu POS</span>
                 </div>
@@ -230,7 +231,7 @@ function UserProfileDropdown() {
                 }}
                 className={cn(
                   "w-full px-2.5 py-2 rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer text-left",
-                  currentUser.role === "pemilik"
+                  currentUser?.role === "pemilik"
                     ? "bg-[#F4F8F5] text-[#6FA084] font-bold"
                     : "hover:bg-[#F4F4F0] text-[#1A1A1A]"
                 )}
@@ -244,7 +245,7 @@ function UserProfileDropdown() {
                     </div>
                   </div>
                 </div>
-                {currentUser.role === "pemilik" && (
+                {currentUser?.role === "pemilik" && (
                   <span className="text-xs text-[#6FA084] font-bold">Aktif</span>
                 )}
               </button>
@@ -257,7 +258,7 @@ function UserProfileDropdown() {
                 }}
                 className={cn(
                   "w-full px-2.5 py-2 rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer text-left",
-                  currentUser.role === "kasir"
+                  currentUser?.role === "kasir"
                     ? "bg-[#F4F8F5] text-[#6FA084] font-bold"
                     : "hover:bg-[#F4F4F0] text-[#1A1A1A]"
                 )}
@@ -271,7 +272,7 @@ function UserProfileDropdown() {
                     </div>
                   </div>
                 </div>
-                {currentUser.role === "kasir" && (
+                {currentUser?.role === "kasir" && (
                   <span className="text-xs text-[#6FA084] font-bold">Aktif</span>
                 )}
               </button>

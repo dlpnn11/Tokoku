@@ -64,10 +64,11 @@ export function Sidebar({ onNavClick, className }: SidebarProps) {
   const { currentUser, switchRole } = useAuthStore();
 
   const allowedNavItems = NAV_ITEMS.filter((item) =>
-    item.roles.includes(currentUser.role)
+    currentUser ? item.roles.includes(currentUser.role) : false
   );
 
-  const getInitials = (name: string) => {
+  const getInitials = (name?: string) => {
+    if (!name) return "TK";
     return name
       .split(" ")
       .map((n) => n[0])
@@ -135,21 +136,21 @@ export function Sidebar({ onNavClick, className }: SidebarProps) {
         <div className="p-2.5 rounded-lg bg-[#2F2F2F] flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 overflow-hidden">
             <div className="w-8 h-8 rounded-full bg-[#3D4D43] text-[#6FA084] font-bold text-xs flex items-center justify-center shrink-0 border border-[#6FA084]/40">
-              {getInitials(currentUser.full_name)}
+              {getInitials(currentUser?.full_name)}
             </div>
             <div className="overflow-hidden">
               <p className="text-xs font-semibold text-white truncate leading-tight">
-                {currentUser.full_name}
+                {currentUser?.full_name || "Memuat..."}
               </p>
               <span
                 className={cn(
                   "inline-block mt-0.5 text-[10px] font-bold px-1.5 py-0.2 rounded-full",
-                  currentUser.role === "pemilik"
+                  currentUser?.role === "pemilik"
                     ? "bg-[#6FA084] text-white"
                     : "bg-[#6B7280] text-white"
                 )}
               >
-                {currentUser.role === "pemilik" ? "Pemilik" : "Kasir"}
+                {currentUser?.role === "pemilik" ? "Pemilik" : "Kasir"}
               </span>
             </div>
           </div>
@@ -157,10 +158,11 @@ export function Sidebar({ onNavClick, className }: SidebarProps) {
           {/* Quick Role Switcher Button */}
           <button
             onClick={() =>
+              currentUser &&
               switchRole(currentUser.role === "pemilik" ? "kasir" : "pemilik")
             }
             title={`Ganti ke mode ${
-              currentUser.role === "pemilik" ? "Kasir" : "Pemilik"
+              currentUser?.role === "pemilik" ? "Kasir" : "Pemilik"
             }`}
             className="p-1.5 rounded-md hover:bg-[#3D3D3D] text-[#9E9E9E] hover:text-white transition-colors cursor-pointer shrink-0"
           >

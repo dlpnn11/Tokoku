@@ -41,8 +41,8 @@ export default function HomePage() {
             <span className="font-semibold text-[#1A1A1A]">Masuk Sebagai:</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <Badge variant={currentUser.role === "pemilik" ? "default" : "kasir"}>
-              {currentUser.full_name} ({currentUser.role === "pemilik" ? "Pemilik" : "Kasir"})
+            <Badge variant={currentUser?.role === "pemilik" ? "default" : "kasir"}>
+              {currentUser?.full_name || "Pengguna"} ({currentUser?.role === "pemilik" ? "Pemilik" : "Kasir"})
             </Badge>
           </div>
         </div>
@@ -56,7 +56,7 @@ export default function HomePage() {
             <ArrowRight className="w-4 h-4" />
           </Button>
 
-          {currentUser.role === "pemilik" && (
+          {currentUser?.role === "pemilik" && (
             <Button
               variant="outline"
               className="w-full h-10 text-xs font-semibold"

@@ -36,7 +36,7 @@ type PeriodFilter = "today" | "week" | "month" | "custom";
 
 export default function LaporanPage() {
   const { currentUser } = useAuthStore();
-  const isOwner = currentUser.role === "pemilik";
+  const isOwner = currentUser?.role === "pemilik";
 
   const [period, setPeriod] = React.useState<PeriodFilter>("month");
   const [customStartDate, setCustomStartDate] = React.useState("");

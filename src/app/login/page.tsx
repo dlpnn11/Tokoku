@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Store,
   User,
@@ -17,9 +17,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/stores/authStore";
+import { hasTamperAlert, clearTamperAlert } from "@/lib/sessionSecurity";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login, isAuthenticated, currentUser } = useAuthStore();
 
   const [username, setUsername] = React.useState("");
@@ -28,6 +30,17 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = React.useState(true);
   const [errorMsg, setErrorMsg] = React.useState("");
   const [loading, setLoading] = React.useState(false);
+  const [tamperDetected, setTamperDetected] = React.useState(false);
+
+  // Check for tamper security alert
+  React.useEffect(() => {
+    const isParamTamper = searchParams.get("security_alert") === "tampering_detected";
+    const isStorageTamper = hasTamperAlert();
+    if (isParamTamper || isStorageTamper) {
+      setTamperDetected(true);
+      clearTamperAlert();
+    }
+  }, [searchParams]);
 
   // If already authenticated, redirect to appropriate page
   React.useEffect(() => {
@@ -49,13 +62,14 @@ export default function LoginPage() {
 
     setLoading(true);
     setErrorMsg("");
+    setTamperDetected(false);
 
     try {
       const res = await login(username, password);
       if (res.success) {
         // Redirect based on logged in role
         const store = useAuthStore.getState();
-        if (store.currentUser.role === "pemilik") {
+        if (store.currentUser?.role === "pemilik") {
           router.push("/dashboard");
         } else {
           router.push("/pos");
@@ -71,6 +85,7 @@ export default function LoginPage() {
   };
 
   const handleQuickSelect = (role: "pemilik" | "kasir") => {
+    setTamperDetected(false);
     if (role === "pemilik") {
       setUsername("pemilik");
       setPassword("pemilik123");
@@ -98,6 +113,21 @@ export default function LoginPage() {
             </p>
           </div>
         </div>
+
+        {/* Security Tamper Warning Banner */}
+        {tamperDetected && (
+          <div className="p-4 bg-[#FFF0F0] border-2 border-[#D64545] rounded-xl flex items-start gap-3 text-xs text-[#1A1A1A] animate-in fade-in zoom-in-95">
+            <ShieldAlert className="w-5 h-5 text-[#D64545] shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <span className="font-bold text-[#D64545] block text-xs">
+                🚨 Pelanggaran Integritas Sesi Terdeteksi
+              </span>
+              <p className="text-[#4B5563] leading-relaxed text-[11px]">
+                Sistem mendeteksi adanya manipulasi penyimpanan sesi lokal (<em>client-side tampering attempt</em>). Sesi Anda telah dihentikan secara otomatis demi integritas sistem. Silakan masuk kembali dengan kredensial yang sah.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Error Alert Banner */}
         {errorMsg && (
@@ -243,5 +273,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <React.Suspense fallback={<div className="min-h-screen bg-[#F4F4F0]" />}>
+      <LoginForm />
+    </React.Suspense>
   );
 }

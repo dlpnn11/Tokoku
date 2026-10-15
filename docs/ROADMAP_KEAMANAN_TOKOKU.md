@@ -21,7 +21,7 @@ Dokumen ini dirancang modular agar setiap item dapat dieksekusi secara terpisah 
 | **09** | Rate Limiting & Brute Force Protection | Auth & Network | 🟠 Tinggi | `feat(security): add rate limiting and brute force protection on login` | `[x] Selesai` |
 | **10** | Next.js Edge Middleware Route Guard | Network / Routing | 🔴 Kritis | `feat(security): implement edge middleware route protection and rbac` | `[x] Selesai` |
 | **11** | Strict HTTP Security Response Headers | Network & Browser | 🟠 Tinggi | `feat(security): configure strict http security headers in next config` | `[x] Selesai` |
-| **12** | Content Security Policy (CSP) Optimization | Browser Defense | 🟠 Tinggi | `feat(security): define strict content security policy rules` | `[ ] Antrean` |
+| **12** | Content Security Policy (CSP) Optimization | Browser Defense | 🟠 Tinggi | `feat(security): define strict content security policy rules` | `[x] Selesai` |
 | **13** | Request Origin & CSRF Header Validation | Network Defense | 🟡 Sedang | `fix(security): validate request origin and headers against csrf` | `[ ] Antrean` |
 | **14** | Server-Side Price & Subtotal Validation | Business Logic | 🔴 Kritis | `fix(security): recalculate and verify product prices server-side during checkout` | `[ ] Antrean` |
 | **15** | Runtime Input Schema Validation (Zod) | Data Validation | 🟠 Tinggi | `feat(security): enforce runtime input schema validation for data mutations` | `[ ] Antrean` |

@@ -167,16 +167,25 @@ DECLARE
     v_item RECORD;
     v_curr_stock INT;
     v_prod_name TEXT;
+    v_official_price NUMERIC;
+    v_item_subtotal NUMERIC;
+    v_calculated_total NUMERIC := 0;
 BEGIN
     -- 1. Validate items array is not empty
-    IF jsonb_array_length(p_items) = 0 THEN
+    IF p_items IS NULL OR jsonb_array_length(p_items) = 0 THEN
         RAISE EXCEPTION 'Keranjang belanja tidak boleh kosong';
     END IF;
 
-    -- 2. Verify stock availability with ROW-LEVEL LOCKING
+    -- 2. Lock stock, verify authoritative catalog price, and recalculate subtotals server-side
     FOR v_item IN SELECT * FROM jsonb_to_recordset(p_items) AS x(product_id UUID, quantity INT, unit_price NUMERIC, subtotal NUMERIC)
     LOOP
-        SELECT current_stock, name INTO v_curr_stock, v_prod_name
+        -- Check quantity validity
+        IF v_item.quantity IS NULL OR v_item.quantity <= 0 THEN
+            RAISE EXCEPTION 'Jumlah barang tidak valid (harus lebih besar dari 0)';
+        END IF;
+
+        -- Row-level locking to prevent race conditions during stock verification
+        SELECT current_stock, name, sell_price INTO v_curr_stock, v_prod_name, v_official_price
         FROM products
         WHERE id = v_item.product_id
         FOR UPDATE;
@@ -188,9 +197,31 @@ BEGIN
         IF v_curr_stock < v_item.quantity THEN
             RAISE EXCEPTION 'Stok produk "%" tidak mencukupi (Tersisa: %, Diminta: %)', v_prod_name, v_curr_stock, v_item.quantity;
         END IF;
+
+        -- Authoritative server-side subtotal calculation from official products table price
+        v_item_subtotal := v_official_price * v_item.quantity;
+        v_calculated_total := v_calculated_total + v_item_subtotal;
+
+        -- Anti-Price Tampering: detect if client attempted to manipulate item unit_price
+        IF v_item.unit_price IS NOT NULL AND v_item.unit_price <> v_official_price THEN
+            RAISE EXCEPTION 'Manipulasi harga terdeteksi pada produk "%": harga klien (Rp %) tidak sesuai dengan harga katalog resmi (Rp %)',
+                v_prod_name, v_item.unit_price, v_official_price;
+        END IF;
+
+        -- Anti-Subtotal Tampering: detect if client attempted to manipulate item subtotal
+        IF v_item.subtotal IS NOT NULL AND v_item.subtotal <> v_item_subtotal THEN
+            RAISE EXCEPTION 'Manipulasi subtotal terdeteksi pada produk "%": subtotal klien (Rp %) tidak sesuai dengan perhitungan server (Rp %)',
+                v_prod_name, v_item.subtotal, v_item_subtotal;
+        END IF;
     END LOOP;
 
-    -- 3. Insert transaction header
+    -- 3. Anti-Grand Total Tampering: verify total amount matches authoritative sum
+    IF p_total_amount IS NOT NULL AND p_total_amount <> v_calculated_total THEN
+        RAISE EXCEPTION 'Manipulasi total transaksi terdeteksi: total klien (Rp %) tidak sesuai dengan kalkulasi server resmi (Rp %)',
+            p_total_amount, v_calculated_total;
+    END IF;
+
+    -- 4. Insert authoritative transaction header
     INSERT INTO transactions (
         invoice_number,
         user_id,
@@ -203,7 +234,7 @@ BEGIN
     ) VALUES (
         p_invoice_number,
         p_user_id,
-        p_total_amount,
+        v_calculated_total, -- Always authoritative server total
         p_payment_method,
         p_cash_received,
         p_cash_change,
@@ -211,9 +242,12 @@ BEGIN
         'Selesai'
     ) RETURNING id INTO v_tx_id;
 
-    -- 4. Insert transaction details & deduct current_stock
+    -- 5. Insert transaction details using authoritative official sell_price and subtotal, and deduct stock
     FOR v_item IN SELECT * FROM jsonb_to_recordset(p_items) AS x(product_id UUID, quantity INT, unit_price NUMERIC, subtotal NUMERIC)
     LOOP
+        SELECT sell_price INTO v_official_price FROM products WHERE id = v_item.product_id;
+        v_item_subtotal := v_official_price * v_item.quantity;
+
         INSERT INTO transaction_details (
             transaction_id,
             product_id,
@@ -224,8 +258,8 @@ BEGIN
             v_tx_id,
             v_item.product_id,
             v_item.quantity,
-            v_item.unit_price,
-            v_item.subtotal
+            v_official_price, -- Always authoritative catalog price
+            v_item_subtotal   -- Always authoritative catalog subtotal
         );
 
         UPDATE products
@@ -237,6 +271,7 @@ BEGIN
         'success', true,
         'transaction_id', v_tx_id,
         'invoice_number', p_invoice_number,
+        'total_amount', v_calculated_total,
         'message', 'Transaksi berhasil disimpan'
     );
 END;

@@ -23,7 +23,7 @@ Dokumen ini dirancang modular agar setiap item dapat dieksekusi secara terpisah 
 | **11** | Strict HTTP Security Response Headers | Network & Browser | 🟠 Tinggi | `feat(security): configure strict http security headers in next config` | `[x] Selesai` |
 | **12** | Content Security Policy (CSP) Optimization | Browser Defense | 🟠 Tinggi | `feat(security): define strict content security policy rules` | `[x] Selesai` |
 | **13** | Request Origin & CSRF Header Validation | Network Defense | 🟡 Sedang | `fix(security): validate request origin and headers against csrf` | `[x] Selesai` |
-| **14** | Server-Side Price & Subtotal Validation | Business Logic | 🔴 Kritis | `fix(security): recalculate and verify product prices server-side during checkout` | `[ ] Antrean` |
+| **14** | Server-Side Price & Subtotal Validation | Business Logic | 🔴 Kritis | `fix(security): recalculate and verify product prices server-side during checkout` | `[x] Selesai` |
 | **15** | Runtime Input Schema Validation (Zod) | Data Validation | 🟠 Tinggi | `feat(security): enforce runtime input schema validation for data mutations` | `[ ] Antrean` |
 | **16** | XSS Sanitization & Safe WhatsApp URL Encoding | Client & Output | 🟠 Tinggi | `fix(security): sanitize user input and escape receipt outputs against xss` | `[ ] Antrean` |
 | **17** | Validasi Integritas Pembayaran & Kembalian | Business Logic | 🟠 Tinggi | `fix(security): validate cash payment balance and change server-side` | `[ ] Antrean` |

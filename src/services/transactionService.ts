@@ -42,25 +42,49 @@ export const transactionService = {
       validateNonNegative(params.cashChange, "Uang Kembalian");
     }
 
+    if (!params.items || params.items.length === 0) {
+      throw new Error("Keranjang belanja tidak boleh kosong.");
+    }
+
+    let calculatedGrandTotal = 0;
+
     const formattedItems = params.items.map((item) => {
       validatePositiveInteger(item.quantity, `Jumlah Barang (${item.product.name})`);
-      const unitPrice = roundPrice500(Number(item.product.sell_price));
-      validateNonNegative(unitPrice, `Harga Satuan (${item.product.name})`);
+      const officialUnitPrice = roundPrice500(Number(item.product.sell_price));
+      validateNonNegative(officialUnitPrice, `Harga Satuan (${item.product.name})`);
+
+      const expectedSubtotal = officialUnitPrice * item.quantity;
       const subtotal = Number(item.subtotal);
       validateNonNegative(subtotal, `Subtotal (${item.product.name})`);
+
+      // Anti-Subtotal Tampering Verification
+      if (subtotal !== expectedSubtotal) {
+        throw new Error(
+          `Manipulasi subtotal terdeteksi pada produk "${item.product.name}": subtotal tertera (Rp ${subtotal}) tidak sesuai kalkulasi resmi (Rp ${expectedSubtotal}).`
+        );
+      }
+
+      calculatedGrandTotal += expectedSubtotal;
 
       return {
         product_id: item.product.id,
         quantity: item.quantity,
-        unit_price: unitPrice,
-        subtotal: subtotal,
+        unit_price: officialUnitPrice,
+        subtotal: expectedSubtotal,
       };
     });
+
+    // Anti-Grand Total Tampering Verification
+    if (params.totalAmount !== calculatedGrandTotal) {
+      throw new Error(
+        `Manipulasi total transaksi terdeteksi: total klien (Rp ${params.totalAmount}) tidak sesuai dengan kalkulasi resmi (Rp ${calculatedGrandTotal}).`
+      );
+    }
 
     const { data, error } = await supabase.rpc("create_pos_transaction", {
       p_invoice_number: params.invoiceNumber,
       p_user_id: params.userId,
-      p_total_amount: params.totalAmount,
+      p_total_amount: calculatedGrandTotal,
       p_payment_method: params.paymentMethod,
       p_cash_received: params.cashReceived,
       p_cash_change: params.cashChange,

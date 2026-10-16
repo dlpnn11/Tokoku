@@ -8,6 +8,7 @@ import { Product, Category, Supplier } from "@/types/database";
 import { formatRupiah, roundPrice500 } from "@/lib/utils";
 import { CustomSelect } from "@/components/ui/select";
 import { Barcode } from "lucide-react";
+import { ProductInputSchema, formatZodError } from "@/lib/schemas";
 
 interface ProductFormModalProps {
   isOpen: boolean;
@@ -77,36 +78,32 @@ export function ProductFormModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) {
-      setErrorMsg("Nama produk wajib diisi");
-      return;
-    }
-    if (!sku.trim()) {
-      setErrorMsg("Kode SKU internal wajib diisi");
-      return;
-    }
-    if (!categoryId) {
-      setErrorMsg("Kategori wajib dipilih");
+    setErrorMsg("");
+
+    const payload = {
+      name: name.trim(),
+      sku: sku.trim(),
+      barcode: barcode.trim() ? barcode.trim() : null,
+      category_id: categoryId,
+      supplier_id: supplierId || null,
+      buy_price: Number(buyPrice) || 0,
+      sell_price: roundPrice500(Number(sellPrice) || 0),
+      current_stock: Number(currentStock) || 0,
+      minimum_stock: Number(minimumStock) || 5,
+      unit,
+      is_active: isActive,
+    };
+
+    const validation = ProductInputSchema.safeParse(payload);
+    if (!validation.success) {
+      setErrorMsg(formatZodError(validation.error));
       return;
     }
 
     setLoading(true);
-    setErrorMsg("");
 
     try {
-      await onSubmit({
-        name: name.trim(),
-        sku: sku.trim(),
-        barcode: barcode.trim() ? barcode.trim() : null,
-        category_id: categoryId,
-        supplier_id: supplierId || null,
-        buy_price: Number(buyPrice) || 0,
-        sell_price: roundPrice500(Number(sellPrice) || 0),
-        current_stock: Number(currentStock) || 0,
-        minimum_stock: Number(minimumStock) || 5,
-        unit,
-        is_active: isActive,
-      });
+      await onSubmit(validation.data);
       onClose();
     } catch (err: any) {
       if (

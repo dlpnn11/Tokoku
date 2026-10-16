@@ -1,6 +1,13 @@
 import { supabase } from "@/lib/supabase";
 import { Product, Category, Supplier } from "@/types/database";
 import { sanitizePostgrestFilter, validateNonNegative } from "@/lib/security";
+import {
+  ProductInputSchema,
+  SupplierInputSchema,
+  CategoryInputSchema,
+  StockAdjustmentSchema,
+  formatZodError,
+} from "@/lib/schemas";
 
 export interface InventoryStats {
   totalSku: number;
@@ -111,16 +118,16 @@ export const inventoryService = {
     };
   },
 
-  // 5. Create Product
+  // 5. Create Product (Zod validated)
   async createProduct(productData: Omit<Product, "id" | "created_at" | "category" | "supplier">) {
-    if (productData.sell_price !== undefined) validateNonNegative(productData.sell_price, "Harga Jual");
-    if (productData.buy_price !== undefined) validateNonNegative(productData.buy_price, "Harga Beli");
-    if (productData.current_stock !== undefined) validateNonNegative(productData.current_stock, "Stok Saat Ini");
-    if (productData.minimum_stock !== undefined) validateNonNegative(productData.minimum_stock, "Stok Minimum");
+    const parseResult = ProductInputSchema.safeParse(productData);
+    if (!parseResult.success) {
+      throw new Error(`Validasi produk gagal: ${formatZodError(parseResult.error)}`);
+    }
 
     const { data, error } = await supabase
       .from("products")
-      .insert([productData])
+      .insert([parseResult.data])
       .select("*, category:categories(*), supplier:suppliers(*)")
       .single();
 
@@ -128,16 +135,19 @@ export const inventoryService = {
     return data as Product;
   },
 
-  // 6. Update Product
+  // 6. Update Product (Zod validated)
   async updateProduct(id: string, productData: Partial<Product>) {
-    if (productData.sell_price !== undefined) validateNonNegative(productData.sell_price, "Harga Jual");
-    if (productData.buy_price !== undefined) validateNonNegative(productData.buy_price, "Harga Beli");
-    if (productData.current_stock !== undefined) validateNonNegative(productData.current_stock, "Stok Saat Ini");
-    if (productData.minimum_stock !== undefined) validateNonNegative(productData.minimum_stock, "Stok Minimum");
+    if (!id || typeof id !== "string") {
+      throw new Error("ID produk tidak valid");
+    }
+    const parseResult = ProductInputSchema.partial().safeParse(productData);
+    if (!parseResult.success) {
+      throw new Error(`Validasi update produk gagal: ${formatZodError(parseResult.error)}`);
+    }
 
     const { data, error } = await supabase
       .from("products")
-      .update(productData)
+      .update(parseResult.data)
       .eq("id", id)
       .select("*, category:categories(*), supplier:suppliers(*)")
       .single();
@@ -153,11 +163,16 @@ export const inventoryService = {
     return true;
   },
 
-  // 8. Create Category
+  // 8. Create Category (Zod validated)
   async createCategory(name: string, icon_name?: string) {
+    const parseResult = CategoryInputSchema.safeParse({ name, icon_name });
+    if (!parseResult.success) {
+      throw new Error(`Validasi kategori gagal: ${formatZodError(parseResult.error)}`);
+    }
+
     const { data, error } = await supabase
       .from("categories")
-      .insert([{ name, icon_name: icon_name || "Package" }])
+      .insert([parseResult.data])
       .select()
       .single();
 
@@ -165,11 +180,16 @@ export const inventoryService = {
     return data as Category;
   },
 
-  // 8B. Update Category
+  // 8B. Update Category (Zod validated)
   async updateCategory(id: string, name: string) {
+    const parseResult = CategoryInputSchema.shape.name.safeParse(name);
+    if (!parseResult.success) {
+      throw new Error(`Validasi nama kategori gagal: ${formatZodError(parseResult.error)}`);
+    }
+
     const { data, error } = await supabase
       .from("categories")
-      .update({ name })
+      .update({ name: parseResult.data })
       .eq("id", id)
       .select()
       .single();
@@ -185,11 +205,16 @@ export const inventoryService = {
     return true;
   },
 
-  // 10. Create Supplier (with optional product assignment)
+  // 10. Create Supplier (Zod validated)
   async createSupplier(supplierData: { name: string; phone?: string; address?: string }) {
+    const parseResult = SupplierInputSchema.safeParse(supplierData);
+    if (!parseResult.success) {
+      throw new Error(`Validasi supplier gagal: ${formatZodError(parseResult.error)}`);
+    }
+
     const { data, error } = await supabase
       .from("suppliers")
-      .insert([supplierData])
+      .insert([parseResult.data])
       .select()
       .single();
 
@@ -208,14 +233,22 @@ export const inventoryService = {
     return supplier;
   },
 
-  // 10B. Update Supplier
+  // 10B. Update Supplier (Zod validated)
   async updateSupplier(
     id: string,
     supplierData: { name: string; phone?: string; address?: string }
   ) {
+    if (!id || typeof id !== "string") {
+      throw new Error("ID supplier tidak valid");
+    }
+    const parseResult = SupplierInputSchema.partial().safeParse(supplierData);
+    if (!parseResult.success) {
+      throw new Error(`Validasi update supplier gagal: ${formatZodError(parseResult.error)}`);
+    }
+
     const { data, error } = await supabase
       .from("suppliers")
-      .update(supplierData)
+      .update(parseResult.data)
       .eq("id", id)
       .select()
       .single();
@@ -291,15 +324,19 @@ export const inventoryService = {
     return (data || []) as Product[];
   },
 
-  // 14. Stock Opname / Direct Stock Adjustment (Atomic Row-Locked)
+  // 14. Stock Opname / Direct Stock Adjustment (Atomic Row-Locked & Zod Validated)
   async adjustStock(productId: string, newStock: number) {
-    validateNonNegative(newStock, "Stok Opname");
+    const parseResult = StockAdjustmentSchema.safeParse({ productId, newStock });
+    if (!parseResult.success) {
+      throw new Error(`Validasi stok opname gagal: ${formatZodError(parseResult.error)}`);
+    }
+    const { productId: pId, newStock: validStock } = parseResult.data;
 
     // 1. Try atomic row-locked stored function
     try {
       const { data, error } = await supabase.rpc("set_product_stock_atomic", {
-        p_product_id: productId,
-        p_new_stock: newStock,
+        p_product_id: pId,
+        p_new_stock: validStock,
       });
 
       if (!error && data?.product) {
@@ -312,8 +349,8 @@ export const inventoryService = {
     // 2. Direct atomic update fallback
     const { data, error } = await supabase
       .from("products")
-      .update({ current_stock: newStock })
-      .eq("id", productId)
+      .update({ current_stock: validStock })
+      .eq("id", pId)
       .select()
       .single();
 

@@ -3,6 +3,7 @@ import { Transaction, TransactionDetail } from "@/types/database";
 import { CartItem } from "@/stores/cartStore";
 import { roundPrice500 } from "@/lib/utils";
 import { sanitizePostgrestFilter, validateNonNegative, validatePositiveInteger } from "@/lib/security";
+import { TransactionInputSchema, formatZodError } from "@/lib/schemas";
 
 export interface CreateTransactionParams {
   invoiceNumber: string;
@@ -36,14 +37,35 @@ export const transactionService = {
    * Deducts current_stock and inserts transaction + details in single ACID lock
    */
   async checkout(params: CreateTransactionParams) {
+    if (!params.items || params.items.length === 0) {
+      throw new Error("Keranjang belanja tidak boleh kosong.");
+    }
+
+    // 1. Runtime schema validation using Zod
+    const txValidation = TransactionInputSchema.safeParse({
+      invoiceNumber: params.invoiceNumber,
+      userId: params.userId,
+      totalAmount: params.totalAmount,
+      paymentMethod: params.paymentMethod,
+      cashReceived: params.cashReceived,
+      cashChange: params.cashChange,
+      customerPhone: params.customerPhone || null,
+      items: params.items.map((i) => ({
+        product_id: i.product.id,
+        quantity: i.quantity,
+        unit_price: roundPrice500(Number(i.product.sell_price)),
+        subtotal: Number(i.subtotal),
+      })),
+    });
+
+    if (!txValidation.success) {
+      throw new Error(`Validasi transaksi kasir gagal: ${formatZodError(txValidation.error)}`);
+    }
+
     validateNonNegative(params.totalAmount, "Total Transaksi");
     if (params.paymentMethod === "Tunai") {
       validateNonNegative(params.cashReceived, "Uang Diterima");
       validateNonNegative(params.cashChange, "Uang Kembalian");
-    }
-
-    if (!params.items || params.items.length === 0) {
-      throw new Error("Keranjang belanja tidak boleh kosong.");
     }
 
     let calculatedGrandTotal = 0;

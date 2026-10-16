@@ -132,4 +132,22 @@ export {
 } from "./csrf";
 export type { CsrfValidationResult } from "./csrf";
 
+export {
+  ProductInputSchema,
+  SupplierInputSchema,
+  CategoryInputSchema,
+  StockAdjustmentSchema,
+  TransactionInputSchema,
+  TransactionItemSchema,
+  formatZodError,
+  validateWithSchema,
+} from "./schemas";
+export type {
+  ProductInput,
+  SupplierInput,
+  CategoryInput,
+  StockAdjustmentInput,
+  TransactionInput,
+} from "./schemas";
+
 

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Product, Supplier } from "@/types/database";
 import { Search, Check, PackagePlus } from "lucide-react";
 import { cn, formatRupiah } from "@/lib/utils";
+import { SupplierInputSchema, formatZodError } from "@/lib/schemas";
 
 interface SupplierModalProps {
   isOpen: boolean;
@@ -37,10 +38,12 @@ export function SupplierModal({
   const [selectedProductIds, setSelectedProductIds] = React.useState<string[]>([]);
   const [productSearch, setProductSearch] = React.useState("");
   const [loading, setLoading] = React.useState(false);
+  const [errorMsg, setErrorMsg] = React.useState("");
 
   // Sync form when modal opens or supplierToEdit changes
   React.useEffect(() => {
     if (isOpen) {
+      setErrorMsg("");
       if (supplierToEdit) {
         setName(supplierToEdit.name || "");
         setPhone(supplierToEdit.phone || "");
@@ -86,21 +89,34 @@ export function SupplierModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    setErrorMsg("");
+
+    const payload = {
+      name: name.trim(),
+      phone: phone.trim() || null,
+      address: address.trim() || null,
+    };
+
+    const validation = SupplierInputSchema.safeParse(payload);
+    if (!validation.success) {
+      setErrorMsg(formatZodError(validation.error));
+      return;
+    }
+
     setLoading(true);
     try {
       await onSubmit(
         {
-          name: name.trim(),
-          phone: phone.trim() || undefined,
-          address: address.trim() || undefined,
+          name: validation.data.name,
+          phone: validation.data.phone || undefined,
+          address: validation.data.address || undefined,
           productIds: selectedProductIds,
         },
         supplierToEdit ? supplierToEdit.id : undefined
       );
       onClose();
     } catch (err: any) {
-      alert("Gagal menyimpan supplier: " + (err.message || "Error"));
+      setErrorMsg(err.message || "Gagal menyimpan data supplier");
     } finally {
       setLoading(false);
     }
@@ -121,6 +137,11 @@ export function SupplierModal({
       className="max-w-xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        {errorMsg && (
+          <div className="p-3 bg-[#FDEAEA] border border-[#F8BEBE] text-[#D64545] text-xs rounded-lg font-medium">
+            {errorMsg}
+          </div>
+        )}
         <div>
           <label className="text-xs font-bold text-[#1A1A1A] block mb-1">
             Nama Supplier / Toko Grosir <span className="text-[#D64545]">*</span>

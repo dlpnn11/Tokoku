@@ -5,6 +5,7 @@ import {
   verifySessionToken,
   EdgeSessionPayload,
 } from "@/lib/sessionEdge";
+import { validateCsrfRequest, isMutationMethod } from "@/lib/csrf";
 
 // Routes that strictly require the "pemilik" (Store Owner) role
 const OWNER_ONLY_ROUTES = ["/dashboard", "/inventaris", "/laporan"];
@@ -25,14 +26,36 @@ function isMatchingRoute(pathname: string, routes: string[]): boolean {
  * Next.js Edge Middleware Route Guard.
  *
  * Runs before pages are rendered on the server to prevent:
- * 1. Unauthorized access to protected routes without a valid session.
- * 2. Privilege escalation (RBAC) where cashiers attempt to access owner-only pages.
- * 3. Client UI flicker caused by client-only redirects.
+ * 1. Cross-Site Request Forgery (CSRF) & untrusted origin mutations.
+ * 2. Unauthorized access to protected routes without a valid session.
+ * 3. Privilege escalation (RBAC) where cashiers attempt to access owner-only pages.
+ * 4. Client UI flicker caused by client-only redirects.
  */
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // 1. Bypass public API routes, Next internals, mobile scan pairing, and favicon
+  // 1. Request Origin & CSRF Header Validation for state-modifying requests (POST, PUT, PATCH, DELETE)
+  // Protects all endpoints (including /api/* and server mutations) from Cross-Site Request Forgery
+  if (isMutationMethod(req.method)) {
+    const csrfCheck = validateCsrfRequest(req);
+    if (!csrfCheck.valid) {
+      if (pathname.startsWith("/api")) {
+        return NextResponse.json(
+          {
+            error: "CSRF_FORBIDDEN",
+            message: csrfCheck.reason || "Cross-site request forgery detected.",
+          },
+          { status: 403 }
+        );
+      }
+      return new NextResponse(
+        `403 Forbidden: ${csrfCheck.reason || "Cross-Site Request Forgery detected"}`,
+        { status: 403 }
+      );
+    }
+  }
+
+  // 2. Bypass public API routes, Next internals, mobile scan pairing, and favicon
   if (
     pathname.startsWith("/api") ||
     pathname.startsWith("/_next") ||

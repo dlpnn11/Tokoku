@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
+import { validateCsrfRequest } from "@/lib/csrf";
 
 const SESSION_COOKIE_NAME = "tokoku_session";
 const SERVER_SESSION_SECRET =
@@ -80,6 +81,14 @@ export async function GET(req: NextRequest) {
  * POST: Issues an httpOnly, SameSite=Strict session cookie upon successful login.
  */
 export async function POST(req: NextRequest) {
+  const csrfCheck = validateCsrfRequest(req);
+  if (!csrfCheck.valid) {
+    return NextResponse.json(
+      { success: false, message: csrfCheck.reason || "Cross-site request forgery detected." },
+      { status: 403 }
+    );
+  }
+
   try {
     const body = await req.json();
     const user = body?.user;
@@ -130,7 +139,15 @@ export async function POST(req: NextRequest) {
 /**
  * DELETE: Clears the httpOnly session cookie upon logout.
  */
-export async function DELETE() {
+export async function DELETE(req: NextRequest) {
+  const csrfCheck = validateCsrfRequest(req);
+  if (!csrfCheck.valid) {
+    return NextResponse.json(
+      { success: false, message: csrfCheck.reason || "Cross-site request forgery detected." },
+      { status: 403 }
+    );
+  }
+
   const res = NextResponse.json({
     success: true,
     message: "Session cookie destroyed.",

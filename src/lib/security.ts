@@ -124,4 +124,12 @@ export function timingSafeCredentialMatch(input: unknown, target: unknown): bool
   return timingSafeEqual(input.trim(), target.trim());
 }
 
+export {
+  validateCsrfRequest,
+  isMutationMethod,
+  normalizeHost,
+  areHostsEquivalent,
+} from "./csrf";
+export type { CsrfValidationResult } from "./csrf";
+
 

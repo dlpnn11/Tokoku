@@ -149,5 +149,14 @@ export type {
   StockAdjustmentInput,
   TransactionInput,
 } from "./schemas";
-
-
+export {
+  escapeHtml,
+  stripHtml,
+  sanitizePlainText,
+  sanitizeMultiLineText,
+  sanitizePhoneNumber,
+  isValidPhoneNumber,
+  buildSafeWhatsAppUrl,
+  sanitizeReceiptData,
+} from "./sanitizer";
+export type { SanitizedReceiptItem, SanitizedReceiptData } from "./sanitizer";

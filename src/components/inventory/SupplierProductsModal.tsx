@@ -17,6 +17,11 @@ import {
   Plus,
   ExternalLink,
 } from "lucide-react";
+import {
+  sanitizePlainText,
+  sanitizePhoneNumber,
+  buildSafeWhatsAppUrl,
+} from "@/lib/security";
 
 interface SupplierProductsModalProps {
   isOpen: boolean;
@@ -97,9 +102,13 @@ export function SupplierProductsModal({
   };
 
   // WhatsApp link format
-  const sanitizedPhone = supplier.phone
-    ? supplier.phone.replace(/[^0-9]/g, "").replace(/^0/, "62")
-    : null;
+  const safeSupplierName = sanitizePlainText(supplier.name, 100);
+  const safeWaUrl = supplier.phone
+    ? buildSafeWhatsAppUrl(
+        supplier.phone,
+        `Halo ${safeSupplierName}, saya dari TokoKu ingin kulakan barang`
+      )
+    : "";
 
   const totalStockValue = suppliedProducts.reduce(
     (sum, p) => sum + Number(p.buy_price || 0) * Number(p.current_stock || 0),
@@ -110,7 +119,7 @@ export function SupplierProductsModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Produk Dipasok: ${supplier.name}`}
+      title={`Produk Dipasok: ${safeSupplierName}`}
       description="Daftar seluruh barang dagangan yang dipasok oleh distributor ini."
       className="max-w-3xl"
     >
@@ -121,13 +130,13 @@ export function SupplierProductsModal({
             {supplier.phone && (
               <div className="flex items-center gap-2 text-[#1A1A1A]">
                 <Phone className="w-3.5 h-3.5 text-[#6FA084]" />
-                <span className="font-semibold">{supplier.phone}</span>
+                <span className="font-semibold">{sanitizePlainText(supplier.phone, 30)}</span>
               </div>
             )}
             {supplier.address && (
               <div className="flex items-center gap-2 text-[#6B7280]">
                 <MapPin className="w-3.5 h-3.5 text-[#6B7280]" />
-                <span>{supplier.address}</span>
+                <span>{sanitizePlainText(supplier.address, 150)}</span>
               </div>
             )}
             <div className="text-[11px] text-[#6B7280] pt-1">
@@ -136,11 +145,9 @@ export function SupplierProductsModal({
             </div>
           </div>
 
-          {sanitizedPhone && (
+          {safeWaUrl && (
             <a
-              href={`https://wa.me/${sanitizedPhone}?text=Halo%20${encodeURIComponent(
-                supplier.name
-              )},%20saya%20dari%20TokoKu%20ingin%20kulakan%20barang`}
+              href={safeWaUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#25D366] text-white text-xs font-bold hover:bg-[#20ba5a] transition-colors shrink-0 shadow-xs"

@@ -24,6 +24,12 @@ import { formatRupiah, roundPrice500, cn } from "@/lib/utils";
 import { TransactionWithDetails } from "@/services/transactionService";
 import { toPng } from "html-to-image";
 import { DigitalReceiptCard } from "@/components/pos/DigitalReceiptCard";
+import {
+  sanitizePlainText,
+  sanitizeMultiLineText,
+  sanitizePhoneNumber,
+  buildSafeWhatsAppUrl,
+} from "@/lib/security";
 
 interface TransactionDetailModalProps {
   isOpen: boolean;
@@ -118,42 +124,43 @@ export function TransactionDetailModal({
   };
 
   const getWaTextMessage = () => {
+    const safeInvoice = sanitizePlainText(transaction.invoice_number, 50);
+    const safeDate = sanitizePlainText(formattedDate, 60);
+    const safeCashier = sanitizePlainText(transaction.user?.full_name || "Kasir TokoKu", 100);
+    const safeMethod = sanitizePlainText(transaction.payment_method, 30);
+
     return (
       `*BUKTI PEMBAYARAN TOKOKU*\n` +
       `Toko Grosir Sumber Rejeki\n` +
-      `No. Invoice: ${transaction.invoice_number}\n` +
-      `Waktu: ${formattedDate}\n` +
-      `Kasir: ${transaction.user?.full_name || "Kasir TokoKu"}\n` +
+      `No. Invoice: ${safeInvoice}\n` +
+      `Waktu: ${safeDate}\n` +
+      `Kasir: ${safeCashier}\n` +
       `--------------------------------\n` +
       (transaction.details || [])
         .map(
           (d) =>
-            `• ${d.product?.name || "Produk"} (${d.quantity}x) = ${formatRupiah(Number(d.subtotal))}`
+            `• ${sanitizePlainText(d.product?.name || "Produk", 100)} (${d.quantity}x) = ${formatRupiah(Number(d.subtotal))}`
         )
         .join("\n") +
       `\n--------------------------------\n` +
       `*Total: ${formatRupiah(Number(transaction.total_amount))}*\n` +
-      `Metode: ${transaction.payment_method}\n\n` +
+      `Metode: ${safeMethod}\n\n` +
       `Terima kasih telah berbelanja di TokoKu!`
     );
   };
 
   const handleDirectWa = async () => {
-    let clean = phoneInput.replace(/[^0-9]/g, "");
-    if (!clean) {
-      alert("Silakan masukkan nomor WhatsApp tujuan terlebih dahulu.");
+    const rawMsg = getWaTextMessage();
+    const safeUrl = buildSafeWhatsAppUrl(phoneInput, rawMsg);
+    if (!safeUrl) {
+      alert("Silakan masukkan nomor WhatsApp yang valid (contoh: 08123456789 atau 628123456789).");
       return;
-    }
-    if (clean.startsWith("0")) {
-      clean = "62" + clean.slice(1);
     }
 
     // Auto-download receipt image so user can attach it
     handleDownloadImage();
 
-    const text = encodeURIComponent(getWaTextMessage());
-    const url = `https://wa.me/${clean}?text=${text}`;
-    window.open(url, "_blank");
+    window.open(safeUrl, "_blank", "noopener,noreferrer");
   };
 
   const handleNativeShare = async () => {
@@ -170,9 +177,12 @@ export function TransactionDetailModal({
         },
       });
 
+      const safeMsg = sanitizeMultiLineText(getWaTextMessage());
+      const safeInvoice = sanitizePlainText(transaction.invoice_number, 50);
+
       const res = await fetch(dataUrl);
       const blob = await res.blob();
-      const file = new File([blob], `Resi_TokoKu_${transaction.invoice_number}.png`, {
+      const file = new File([blob], `Resi_TokoKu_${safeInvoice}.png`, {
         type: "image/png",
       });
 
@@ -180,8 +190,8 @@ export function TransactionDetailModal({
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],
-          title: `Resi Pembayaran TokoKu ${transaction.invoice_number}`,
-          text: getWaTextMessage(),
+          title: `Resi Pembayaran TokoKu ${safeInvoice}`,
+          text: safeMsg,
         });
         return;
       }
@@ -189,31 +199,29 @@ export function TransactionDetailModal({
       // 2. Try Native Web Share with text
       if (navigator.share) {
         const link = document.createElement("a");
-        link.download = `Resi_TokoKu_${transaction.invoice_number}.png`;
+        link.download = `Resi_TokoKu_${safeInvoice}.png`;
         link.href = dataUrl;
         link.click();
 
         await navigator.share({
-          title: `Resi Pembayaran TokoKu ${transaction.invoice_number}`,
-          text: getWaTextMessage(),
+          title: `Resi Pembayaran TokoKu ${safeInvoice}`,
+          text: safeMsg,
         });
         return;
       }
 
       // 3. Fallback: Auto download PNG and launch WhatsApp protocol
       const link = document.createElement("a");
-      link.download = `Resi_TokoKu_${transaction.invoice_number}.png`;
+      link.download = `Resi_TokoKu_${safeInvoice}.png`;
       link.href = dataUrl;
       link.click();
 
-      const text = encodeURIComponent(getWaTextMessage());
-      let clean = phoneInput.replace(/[^0-9]/g, "");
-      if (clean.startsWith("0")) clean = "62" + clean.slice(1);
-
-      if (clean) {
-        window.open(`https://wa.me/${clean}?text=${text}`, "_blank");
+      const safeUrl = buildSafeWhatsAppUrl(phoneInput, safeMsg);
+      if (safeUrl) {
+        window.open(safeUrl, "_blank", "noopener,noreferrer");
       } else {
-        window.location.href = `whatsapp://send?text=${text}`;
+        const encodedText = encodeURIComponent(safeMsg);
+        window.location.href = `whatsapp://send?text=${encodedText}`;
       }
     } catch (err: any) {
       if (err.name !== "AbortError") {
@@ -360,23 +368,23 @@ export function TransactionDetailModal({
               <div className="flex justify-between">
                 <span>Invoice:</span>
                 <span className="font-bold text-[#1A1A1A]">
-                  {transaction.invoice_number}
+                  {sanitizePlainText(transaction.invoice_number, 50)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span>Waktu:</span>
-                <span>{formattedDate}</span>
+                <span>{sanitizePlainText(formattedDate, 60)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Kasir:</span>
                 <span className="font-medium text-[#1A1A1A]">
-                  {transaction.user?.full_name || "Kasir"}
+                  {sanitizePlainText(transaction.user?.full_name || "Kasir", 100)}
                 </span>
               </div>
               {transaction.customer_phone && (
                 <div className="flex justify-between">
                   <span>Pelanggan:</span>
-                  <span>{transaction.customer_phone}</span>
+                  <span>{sanitizePlainText(transaction.customer_phone, 25)}</span>
                 </div>
               )}
             </div>
@@ -387,7 +395,7 @@ export function TransactionDetailModal({
                 return (
                   <div key={idx} className="text-xs">
                     <p className="font-bold text-[#1A1A1A]">
-                      {detail.product?.name || "Produk"}
+                      {sanitizePlainText(detail.product?.name || "Produk", 120)}
                     </p>
                     <div className="flex justify-between text-[#6B7280] text-[11px]">
                       <span>

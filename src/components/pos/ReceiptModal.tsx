@@ -20,6 +20,12 @@ import { formatRupiah, roundPrice500, cn } from "@/lib/utils";
 import { CartItem } from "@/stores/cartStore";
 import { toPng } from "html-to-image";
 import { DigitalReceiptCard } from "./DigitalReceiptCard";
+import {
+  sanitizePlainText,
+  sanitizeMultiLineText,
+  sanitizePhoneNumber,
+  buildSafeWhatsAppUrl,
+} from "@/lib/security";
 
 interface ReceiptModalProps {
   isOpen: boolean;
@@ -107,43 +113,44 @@ export function ReceiptModal({
   };
 
   const getWaTextMessage = () => {
+    const safeInvoice = sanitizePlainText(transactionData.invoiceNumber, 50);
+    const safeDate = sanitizePlainText(transactionData.date, 60);
+    const safeCashier = sanitizePlainText(transactionData.cashierName, 100);
+    const safeMethod = sanitizePlainText(transactionData.paymentMethod, 30);
+
     return (
       `*BUKTI PEMBAYARAN TOKOKU*\n` +
       `Toko Grosir Sumber Rejeki\n` +
-      `No. Invoice: ${transactionData.invoiceNumber}\n` +
-      `Waktu: ${transactionData.date}\n` +
-      `Kasir: ${transactionData.cashierName}\n` +
+      `No. Invoice: ${safeInvoice}\n` +
+      `Waktu: ${safeDate}\n` +
+      `Kasir: ${safeCashier}\n` +
       `--------------------------------\n` +
       transactionData.items
         .map(
           (i) =>
-            `• ${i.product.name} (${i.quantity}x) = ${formatRupiah(i.subtotal)}`
+            `• ${sanitizePlainText(i.product.name, 100)} (${i.quantity}x) = ${formatRupiah(i.subtotal)}`
         )
         .join("\n") +
       `\n--------------------------------\n` +
       `*Total: ${formatRupiah(transactionData.totalAmount)}*\n` +
-      `Metode: ${transactionData.paymentMethod}\n\n` +
+      `Metode: ${safeMethod}\n\n` +
       `Terima kasih telah berbelanja di TokoKu!`
     );
   };
 
   // Direct WA to specific number (New Customer)
   const handleDirectWa = async () => {
-    let clean = phoneInput.replace(/[^0-9]/g, "");
-    if (!clean) {
-      alert("Silakan masukkan nomor WhatsApp tujuan terlebih dahulu.");
+    const rawMsg = getWaTextMessage();
+    const safeUrl = buildSafeWhatsAppUrl(phoneInput, rawMsg);
+    if (!safeUrl) {
+      alert("Silakan masukkan nomor WhatsApp yang valid (contoh: 08123456789 atau 628123456789).");
       return;
-    }
-    if (clean.startsWith("0")) {
-      clean = "62" + clean.slice(1);
     }
 
     // Auto-download receipt image so cashier can easily attach it
     handleDownloadImage();
 
-    const text = encodeURIComponent(getWaTextMessage());
-    const url = `https://wa.me/${clean}?text=${text}`;
-    window.open(url, "_blank");
+    window.open(safeUrl, "_blank", "noopener,noreferrer");
   };
 
   // Native Share Menu (Shares file & text directly to WhatsApp app / contact picker)
@@ -153,9 +160,12 @@ export function ReceiptModal({
       const dataUrl = await getReceiptImage();
       if (!dataUrl) return;
 
+      const safeMsg = sanitizeMultiLineText(getWaTextMessage());
+      const safeInvoice = sanitizePlainText(transactionData.invoiceNumber, 50);
+
       const res = await fetch(dataUrl);
       const blob = await res.blob();
-      const file = new File([blob], `Resi_TokoKu_${transactionData.invoiceNumber}.png`, {
+      const file = new File([blob], `Resi_TokoKu_${safeInvoice}.png`, {
         type: "image/png",
       });
 
@@ -163,8 +173,8 @@ export function ReceiptModal({
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],
-          title: `Resi Pembayaran TokoKu ${transactionData.invoiceNumber}`,
-          text: getWaTextMessage(),
+          title: `Resi Pembayaran TokoKu ${safeInvoice}`,
+          text: safeMsg,
         });
         return;
       }
@@ -172,31 +182,29 @@ export function ReceiptModal({
       // 2. Try Native Web Share with text
       if (navigator.share) {
         const link = document.createElement("a");
-        link.download = `Resi_TokoKu_${transactionData.invoiceNumber}.png`;
+        link.download = `Resi_TokoKu_${safeInvoice}.png`;
         link.href = dataUrl;
         link.click();
 
         await navigator.share({
-          title: `Resi Pembayaran TokoKu ${transactionData.invoiceNumber}`,
-          text: getWaTextMessage(),
+          title: `Resi Pembayaran TokoKu ${safeInvoice}`,
+          text: safeMsg,
         });
         return;
       }
 
       // 3. Fallback: Auto-download PNG and open WhatsApp application protocol
       const link = document.createElement("a");
-      link.download = `Resi_TokoKu_${transactionData.invoiceNumber}.png`;
+      link.download = `Resi_TokoKu_${safeInvoice}.png`;
       link.href = dataUrl;
       link.click();
 
-      const text = encodeURIComponent(getWaTextMessage());
-      let clean = phoneInput.replace(/[^0-9]/g, "");
-      if (clean.startsWith("0")) clean = "62" + clean.slice(1);
-
-      if (clean) {
-        window.open(`https://wa.me/${clean}?text=${text}`, "_blank");
+      const safeUrl = buildSafeWhatsAppUrl(phoneInput, safeMsg);
+      if (safeUrl) {
+        window.open(safeUrl, "_blank", "noopener,noreferrer");
       } else {
-        window.location.href = `whatsapp://send?text=${text}`;
+        const encodedText = encodeURIComponent(safeMsg);
+        window.location.href = `whatsapp://send?text=${encodedText}`;
       }
     } catch (err: any) {
       if (err.name !== "AbortError") {
@@ -293,16 +301,16 @@ export function ReceiptModal({
               <div className="flex justify-between">
                 <span>Invoice:</span>
                 <span className="font-bold text-[#1A1A1A]">
-                  {transactionData.invoiceNumber}
+                  {sanitizePlainText(transactionData.invoiceNumber, 50)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span>Waktu:</span>
-                <span>{transactionData.date}</span>
+                <span>{sanitizePlainText(transactionData.date, 60)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Kasir:</span>
-                <span>{transactionData.cashierName}</span>
+                <span>{sanitizePlainText(transactionData.cashierName, 100)}</span>
               </div>
             </div>
 
@@ -310,7 +318,7 @@ export function ReceiptModal({
             <div className="pt-2 border-t border-[#E5E5E0] space-y-1.5 text-[11px]">
               {transactionData.items.map((item) => (
                 <div key={item.product.id}>
-                  <div className="font-bold truncate">{item.product.name}</div>
+                  <div className="font-bold truncate">{sanitizePlainText(item.product.name, 120)}</div>
                   <div className="flex justify-between text-[10px] text-[#6B7280]">
                     <span>
                       {item.quantity} x {formatRupiah(roundPrice500(Number(item.product.sell_price)))}

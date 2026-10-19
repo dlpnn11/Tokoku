@@ -173,7 +173,41 @@ export const TransactionInputSchema = z.object({
   items: z
     .array(TransactionItemSchema)
     .min(1, "Keranjang belanja tidak boleh kosong"),
-});
+})
+  .superRefine((data, ctx) => {
+    if (data.paymentMethod === "Tunai") {
+      if (data.cashReceived < data.totalAmount) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["cashReceived"],
+          message: `Uang tunai yang diterima (Rp ${data.cashReceived.toLocaleString("id-ID")}) kurang dari total belanja (Rp ${data.totalAmount.toLocaleString("id-ID")})`,
+        });
+      }
+      const expectedChange = data.cashReceived - data.totalAmount;
+      if (data.cashChange !== expectedChange) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["cashChange"],
+          message: `Uang kembalian tidak sesuai: diterima Rp ${data.cashChange.toLocaleString("id-ID")}, seharusnya Rp ${expectedChange.toLocaleString("id-ID")}`,
+        });
+      }
+    } else if (data.paymentMethod === "QRIS") {
+      if (data.cashChange !== 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["cashChange"],
+          message: "Transaksi QRIS tidak boleh memiliki uang kembalian",
+        });
+      }
+      if (data.cashReceived < data.totalAmount) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["cashReceived"],
+          message: "Nominal pembayaran QRIS harus sesuai dengan total transaksi",
+        });
+      }
+    }
+  });
 
 export type TransactionInput = z.infer<typeof TransactionInputSchema>;
 

@@ -103,6 +103,32 @@ export const transactionService = {
       );
     }
 
+    // Modul 17: Payment Integrity & Cash Change Validation
+    if (params.paymentMethod === "Tunai") {
+      validateNonNegative(params.cashReceived, "Uang Diterima");
+      validateNonNegative(params.cashChange, "Uang Kembalian");
+
+      if (params.cashReceived < calculatedGrandTotal) {
+        throw new Error(
+          `Uang tunai yang diterima (Rp ${params.cashReceived.toLocaleString("id-ID")}) kurang dari total transaksi (Rp ${calculatedGrandTotal.toLocaleString("id-ID")}).`
+        );
+      }
+
+      const expectedChange = params.cashReceived - calculatedGrandTotal;
+      if (params.cashChange !== expectedChange) {
+        throw new Error(
+          `Manipulasi uang kembalian terdeteksi: kembalian klien (Rp ${params.cashChange.toLocaleString("id-ID")}) tidak sesuai kalkulasi resmi (Rp ${expectedChange.toLocaleString("id-ID")}).`
+        );
+      }
+    } else if (params.paymentMethod === "QRIS") {
+      if (params.cashChange !== 0) {
+        throw new Error("Transaksi QRIS tidak boleh memiliki uang kembalian.");
+      }
+      if (params.cashReceived < calculatedGrandTotal) {
+        throw new Error("Nominal pembayaran QRIS tidak mencukupi total transaksi.");
+      }
+    }
+
     const { data, error } = await supabase.rpc("create_pos_transaction", {
       p_invoice_number: params.invoiceNumber,
       p_user_id: params.userId,

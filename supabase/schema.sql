@@ -75,7 +75,14 @@ CREATE TABLE transactions (
     cash_change NUMERIC(12, 2) CHECK (cash_change IS NULL OR cash_change >= 0),
     customer_phone TEXT,
     status TEXT NOT NULL DEFAULT 'Selesai' CHECK (status IN ('Selesai', 'Dibatalkan')),
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT chk_tx_cash_integrity CHECK (
+        (payment_method = 'Tunai' AND cash_received >= total_amount AND cash_change = (cash_received - total_amount))
+        OR
+        (payment_method = 'QRIS' AND (cash_change IS NULL OR cash_change = 0) AND (cash_received IS NULL OR cash_received >= total_amount))
+        OR
+        (payment_method NOT IN ('Tunai', 'QRIS'))
+    )
 );
 
 -- Table: transaction_details
@@ -170,6 +177,8 @@ DECLARE
     v_official_price NUMERIC;
     v_item_subtotal NUMERIC;
     v_calculated_total NUMERIC := 0;
+    v_cash_change NUMERIC := 0;
+    v_cash_received NUMERIC;
 BEGIN
     -- 1. Validate items array is not empty
     IF p_items IS NULL OR jsonb_array_length(p_items) = 0 THEN
@@ -221,7 +230,41 @@ BEGIN
             p_total_amount, v_calculated_total;
     END IF;
 
-    -- 4. Insert authoritative transaction header
+    -- 4. Payment Integrity & Cash Change Validation (Modul 17)
+    IF p_payment_method NOT IN ('Tunai', 'QRIS') THEN
+        RAISE EXCEPTION 'Metode pembayaran tidak valid: "%" (hanya "Tunai" atau "QRIS" yang diperbolehkan)', p_payment_method;
+    END IF;
+
+    IF p_payment_method = 'Tunai' THEN
+        IF p_cash_received IS NULL OR p_cash_received < v_calculated_total THEN
+            RAISE EXCEPTION 'Uang tunai yang diterima (Rp %) kurang dari total transaksi (Rp %)', 
+                COALESCE(p_cash_received, 0), v_calculated_total;
+        END IF;
+
+        -- Authoritative calculation of cash change
+        v_cash_change := p_cash_received - v_calculated_total;
+        v_cash_received := p_cash_received;
+
+        -- Detect if client attempted to tamper with cash change calculation
+        IF p_cash_change IS NOT NULL AND p_cash_change <> v_cash_change THEN
+            RAISE EXCEPTION 'Manipulasi kembalian terdeteksi: kembalian klien (Rp %) tidak sesuai kalkulasi resmi server (Rp %)',
+                p_cash_change, v_cash_change;
+        END IF;
+    ELSIF p_payment_method = 'QRIS' THEN
+        v_cash_received := COALESCE(p_cash_received, v_calculated_total);
+        v_cash_change := 0;
+
+        IF v_cash_received < v_calculated_total THEN
+            RAISE EXCEPTION 'Nominal pembayaran QRIS (Rp %) tidak mencukupi total transaksi (Rp %)',
+                v_cash_received, v_calculated_total;
+        END IF;
+
+        IF p_cash_change IS NOT NULL AND p_cash_change <> 0 THEN
+            RAISE EXCEPTION 'Transaksi QRIS tidak boleh memiliki uang kembalian';
+        END IF;
+    END IF;
+
+    -- 5. Insert authoritative transaction header
     INSERT INTO transactions (
         invoice_number,
         user_id,
@@ -236,13 +279,13 @@ BEGIN
         p_user_id,
         v_calculated_total, -- Always authoritative server total
         p_payment_method,
-        p_cash_received,
-        p_cash_change,
+        v_cash_received,    -- Always verified payment amount
+        v_cash_change,      -- Always authoritative calculated change
         p_customer_phone,
         'Selesai'
     ) RETURNING id INTO v_tx_id;
 
-    -- 5. Insert transaction details using authoritative official sell_price and subtotal, and deduct stock
+    -- 6. Insert transaction details using authoritative official sell_price and subtotal, and deduct stock
     FOR v_item IN SELECT * FROM jsonb_to_recordset(p_items) AS x(product_id UUID, quantity INT, unit_price NUMERIC, subtotal NUMERIC)
     LOOP
         SELECT sell_price INTO v_official_price FROM products WHERE id = v_item.product_id;

@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { Product, Category, Supplier } from "@/types/database";
-import { sanitizePostgrestFilter, validateNonNegative } from "@/lib/security";
+import { sanitizePostgrestFilter, validateNonNegative, getSafeErrorMessage } from "@/lib/security";
 import {
   ProductInputSchema,
   SupplierInputSchema,
@@ -54,7 +54,14 @@ export const inventoryService = {
     }
 
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) {
+      throw new Error(
+        getSafeErrorMessage(error, {
+          fallbackMessage: "Gagal memuat produk inventaris.",
+          context: "getProducts",
+        })
+      );
+    }
     return (data || []) as Product[];
   },
 
@@ -65,7 +72,14 @@ export const inventoryService = {
       .select("*, products(id)")
       .order("name", { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      throw new Error(
+        getSafeErrorMessage(error, {
+          fallbackMessage: "Gagal memuat kategori produk.",
+          context: "getCategories",
+        })
+      );
+    }
 
     return (data || []).map((cat: any) => ({
       ...cat,
@@ -80,7 +94,14 @@ export const inventoryService = {
       .select("*, products(id)")
       .order("name", { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      throw new Error(
+        getSafeErrorMessage(error, {
+          fallbackMessage: "Gagal memuat supplier mitra.",
+          context: "getSuppliers",
+        })
+      );
+    }
 
     return (data || []).map((sup: any) => ({
       ...sup,
@@ -94,7 +115,14 @@ export const inventoryService = {
       .from("products")
       .select("buy_price, current_stock, minimum_stock, is_active");
 
-    if (error) throw error;
+    if (error) {
+      throw new Error(
+        getSafeErrorMessage(error, {
+          fallbackMessage: "Gagal memuat statistik inventaris.",
+          context: "getStats",
+        })
+      );
+    }
 
     const items = data || [];
     let totalValuation = 0;
@@ -131,7 +159,14 @@ export const inventoryService = {
       .select("*, category:categories(*), supplier:suppliers(*)")
       .single();
 
-    if (error) throw error;
+    if (error) {
+      throw new Error(
+        getSafeErrorMessage(error, {
+          fallbackMessage: "Gagal menambahkan produk baru.",
+          context: "createProduct",
+        })
+      );
+    }
     return data as Product;
   },
 
@@ -152,14 +187,28 @@ export const inventoryService = {
       .select("*, category:categories(*), supplier:suppliers(*)")
       .single();
 
-    if (error) throw error;
+    if (error) {
+      throw new Error(
+        getSafeErrorMessage(error, {
+          fallbackMessage: "Gagal memperbarui data produk.",
+          context: "updateProduct",
+        })
+      );
+    }
     return data as Product;
   },
 
   // 7. Delete Product
   async deleteProduct(id: string) {
     const { error } = await supabase.from("products").delete().eq("id", id);
-    if (error) throw error;
+    if (error) {
+      throw new Error(
+        getSafeErrorMessage(error, {
+          fallbackMessage: "Gagal menghapus produk.",
+          context: "deleteProduct",
+        })
+      );
+    }
     return true;
   },
 
@@ -176,7 +225,14 @@ export const inventoryService = {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      throw new Error(
+        getSafeErrorMessage(error, {
+          fallbackMessage: "Gagal menambahkan kategori.",
+          context: "createCategory",
+        })
+      );
+    }
     return data as Category;
   },
 
@@ -194,14 +250,28 @@ export const inventoryService = {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      throw new Error(
+        getSafeErrorMessage(error, {
+          fallbackMessage: "Gagal memperbarui kategori.",
+          context: "updateCategory",
+        })
+      );
+    }
     return data as Category;
   },
 
   // 9. Delete Category
   async deleteCategory(id: string) {
     const { error } = await supabase.from("categories").delete().eq("id", id);
-    if (error) throw error;
+    if (error) {
+      throw new Error(
+        getSafeErrorMessage(error, {
+          fallbackMessage: "Gagal menghapus kategori.",
+          context: "deleteCategory",
+        })
+      );
+    }
     return true;
   },
 
@@ -218,7 +288,14 @@ export const inventoryService = {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      throw new Error(
+        getSafeErrorMessage(error, {
+          fallbackMessage: "Gagal menambahkan data supplier.",
+          context: "createSupplier",
+        })
+      );
+    }
     return data as Supplier;
   },
 
@@ -253,7 +330,14 @@ export const inventoryService = {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      throw new Error(
+        getSafeErrorMessage(error, {
+          fallbackMessage: "Gagal memperbarui data supplier.",
+          context: "updateSupplier",
+        })
+      );
+    }
     return data as Supplier;
   },
 
@@ -277,7 +361,14 @@ export const inventoryService = {
   // 11. Delete Supplier
   async deleteSupplier(id: string) {
     const { error } = await supabase.from("suppliers").delete().eq("id", id);
-    if (error) throw error;
+    if (error) {
+      throw new Error(
+        getSafeErrorMessage(error, {
+          fallbackMessage: "Gagal menghapus supplier.",
+          context: "deleteSupplier",
+        })
+      );
+    }
     return true;
   },
 
@@ -289,7 +380,14 @@ export const inventoryService = {
       .eq("supplier_id", supplierId)
       .order("name", { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      throw new Error(
+        getSafeErrorMessage(error, {
+          fallbackMessage: "Gagal memuat produk supplier.",
+          context: "getProductsBySupplier",
+        })
+      );
+    }
     return (data || []) as Product[];
   },
 
@@ -300,7 +398,14 @@ export const inventoryService = {
       .update({ supplier_id: supplierId })
       .in("id", productIds);
 
-    if (error) throw error;
+    if (error) {
+      throw new Error(
+        getSafeErrorMessage(error, {
+          fallbackMessage: "Gagal menghubungkan produk ke supplier.",
+          context: "assignProductsToSupplier",
+        })
+      );
+    }
   },
 
   async removeProductFromSupplier(productId: string) {
@@ -309,7 +414,14 @@ export const inventoryService = {
       .update({ supplier_id: null })
       .eq("id", productId);
 
-    if (error) throw error;
+    if (error) {
+      throw new Error(
+        getSafeErrorMessage(error, {
+          fallbackMessage: "Gagal melepaskan kaitan supplier pada produk.",
+          context: "removeProductFromSupplier",
+        })
+      );
+    }
   },
 
   // 13. Category Products Helper
@@ -320,7 +432,14 @@ export const inventoryService = {
       .eq("category_id", categoryId)
       .order("name", { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      throw new Error(
+        getSafeErrorMessage(error, {
+          fallbackMessage: "Gagal memuat produk kategori.",
+          context: "getProductsByCategory",
+        })
+      );
+    }
     return (data || []) as Product[];
   },
 
@@ -354,7 +473,14 @@ export const inventoryService = {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      throw new Error(
+        getSafeErrorMessage(error, {
+          fallbackMessage: "Gagal memperbarui stok produk.",
+          context: "adjustStock",
+        })
+      );
+    }
     return data as Product;
   },
 
@@ -366,7 +492,12 @@ export const inventoryService = {
     });
 
     if (error) {
-      throw new Error(error.message || "Gagal memperbarui delta stok produk.");
+      throw new Error(
+        getSafeErrorMessage(error, {
+          fallbackMessage: "Gagal memperbarui delta stok produk.",
+          context: "adjustStockDelta",
+        })
+      );
     }
 
     return data as {

@@ -160,3 +160,8 @@ export {
   sanitizeReceiptData,
 } from "./sanitizer";
 export type { SanitizedReceiptItem, SanitizedReceiptData } from "./sanitizer";
+export {
+  getSafeErrorMessage,
+  containsSensitiveDatabaseDetails,
+} from "./errorHandler";
+export type { ErrorSanitizationOptions } from "./errorHandler";

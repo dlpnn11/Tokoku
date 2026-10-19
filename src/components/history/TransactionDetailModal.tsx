@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { formatRupiah, roundPrice500, cn } from "@/lib/utils";
 import { TransactionWithDetails } from "@/services/transactionService";
 import { toPng } from "html-to-image";
+import { getSafeErrorMessage } from "@/lib/errorHandler";
 import { DigitalReceiptCard } from "@/components/pos/DigitalReceiptCard";
 import {
   sanitizePlainText,
@@ -239,7 +240,12 @@ export function TransactionDetailModal({
       setShowConfirmCancel(false);
       onClose();
     } catch (err: any) {
-      alert(err.message || "Gagal membatalkan transaksi.");
+      alert(
+        getSafeErrorMessage(err, {
+          fallbackMessage: "Gagal membatalkan transaksi.",
+          context: "TransactionDetailModal.cancel",
+        })
+      );
     } finally {
       setCancelling(false);
     }

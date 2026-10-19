@@ -8,6 +8,7 @@ import { Product, Supplier } from "@/types/database";
 import { Search, Check, PackagePlus } from "lucide-react";
 import { cn, formatRupiah } from "@/lib/utils";
 import { SupplierInputSchema, formatZodError } from "@/lib/schemas";
+import { getSafeErrorMessage } from "@/lib/errorHandler";
 
 interface SupplierModalProps {
   isOpen: boolean;
@@ -116,7 +117,12 @@ export function SupplierModal({
       );
       onClose();
     } catch (err: any) {
-      setErrorMsg(err.message || "Gagal menyimpan data supplier");
+      setErrorMsg(
+        getSafeErrorMessage(err, {
+          fallbackMessage: "Gagal menyimpan data supplier.",
+          context: "SupplierModal",
+        })
+      );
     } finally {
       setLoading(false);
     }

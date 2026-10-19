@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Product } from "@/types/database";
 import { ClipboardList, Plus, AlertCircle } from "lucide-react";
+import { getSafeErrorMessage } from "@/lib/errorHandler";
 
 interface StockOpnameModalProps {
   isOpen: boolean;
@@ -79,7 +80,12 @@ export function StockOpnameModal({
       await onSaveOpname(adjustments);
       onClose();
     } catch (err: any) {
-      alert("Gagal menyimpan opname: " + (err.message || "Error"));
+      alert(
+        getSafeErrorMessage(err, {
+          fallbackMessage: "Gagal menyimpan stock opname.",
+          context: "StockOpnameModal",
+        })
+      );
     } finally {
       setLoading(false);
     }

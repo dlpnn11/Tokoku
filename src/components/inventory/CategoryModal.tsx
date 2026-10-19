@@ -5,6 +5,7 @@ import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Category } from "@/types/database";
+import { getSafeErrorMessage } from "@/lib/errorHandler";
 
 interface CategoryModalProps {
   isOpen: boolean;
@@ -37,7 +38,12 @@ export function CategoryModal({
       setName("");
       onClose();
     } catch (err: any) {
-      alert("Gagal menyimpan kategori: " + (err.message || "Error"));
+      alert(
+        getSafeErrorMessage(err, {
+          fallbackMessage: "Gagal menyimpan kategori.",
+          context: "CategoryModal",
+        })
+      );
     } finally {
       setLoading(false);
     }

@@ -28,6 +28,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Product, Category, Supplier } from "@/types/database";
 import { inventoryService, InventoryStats } from "@/services/inventoryService";
 import { formatRupiah } from "@/lib/utils";
+import { getSafeErrorMessage } from "@/lib/errorHandler";
 import { ProductFormModal } from "@/components/inventory/ProductFormModal";
 import { ProductDetailModal } from "@/components/inventory/ProductDetailModal";
 import { StockOpnameModal } from "@/components/inventory/StockOpnameModal";
@@ -131,7 +132,12 @@ export default function InventarisPage() {
         await inventoryService.deleteProduct(id);
         await loadData();
       } catch (err: any) {
-        alert("Gagal menghapus produk: " + (err.message || "Error"));
+        alert(
+          getSafeErrorMessage(err, {
+            fallbackMessage: "Gagal menghapus produk.",
+            context: "handleDeleteProduct",
+          })
+        );
       }
     }
   };
@@ -161,7 +167,12 @@ export default function InventarisPage() {
         await inventoryService.deleteCategory(id);
         await loadData();
       } catch (err: any) {
-        alert("Gagal menghapus kategori: " + (err.message || "Error"));
+        alert(
+          getSafeErrorMessage(err, {
+            fallbackMessage: "Gagal menghapus kategori.",
+            context: "handleDeleteCategory",
+          })
+        );
       }
     }
   };
@@ -206,7 +217,12 @@ export default function InventarisPage() {
         await inventoryService.deleteSupplier(id);
         await loadData();
       } catch (err: any) {
-        alert("Gagal menghapus supplier: " + (err.message || "Error"));
+        alert(
+          getSafeErrorMessage(err, {
+            fallbackMessage: "Gagal menghapus supplier.",
+            context: "handleDeleteSupplier",
+          })
+        );
       }
     }
   };

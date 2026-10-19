@@ -9,6 +9,7 @@ import { formatRupiah, roundPrice500 } from "@/lib/utils";
 import { CustomSelect } from "@/components/ui/select";
 import { Barcode } from "lucide-react";
 import { ProductInputSchema, formatZodError } from "@/lib/schemas";
+import { getSafeErrorMessage } from "@/lib/errorHandler";
 
 interface ProductFormModalProps {
   isOpen: boolean;
@@ -106,19 +107,12 @@ export function ProductFormModal({
       await onSubmit(validation.data);
       onClose();
     } catch (err: any) {
-      if (
-        err.message?.includes("idx_products_barcode_unique") ||
-        err.message?.toLowerCase().includes("barcode")
-      ) {
-        setErrorMsg("Nomor barcode ini sudah digunakan oleh produk lain!");
-      } else if (
-        err.message?.includes("products_sku_key") ||
-        err.message?.toLowerCase().includes("sku")
-      ) {
-        setErrorMsg("Kode SKU ini sudah digunakan oleh produk lain!");
-      } else {
-        setErrorMsg(err.message || "Gagal menyimpan produk");
-      }
+      setErrorMsg(
+        getSafeErrorMessage(err, {
+          fallbackMessage: "Gagal menyimpan data produk.",
+          context: "ProductFormModal",
+        })
+      );
     } finally {
       setLoading(false);
     }

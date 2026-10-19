@@ -21,6 +21,7 @@ import {
   sanitizePlainText,
   sanitizePhoneNumber,
   buildSafeWhatsAppUrl,
+  getSafeErrorMessage,
 } from "@/lib/security";
 
 interface SupplierProductsModalProps {
@@ -79,7 +80,12 @@ export function SupplierProductsModal({
         await fetchSupplied();
         await onRefresh();
       } catch (err: any) {
-        alert("Gagal melepaskan produk: " + (err.message || "Error"));
+        alert(
+          getSafeErrorMessage(err, {
+            fallbackMessage: "Gagal melepaskan kaitan produk dari supplier.",
+            context: "SupplierProductsModal.removeProduct",
+          })
+        );
       }
     }
   };
@@ -95,7 +101,12 @@ export function SupplierProductsModal({
       await fetchSupplied();
       await onRefresh();
     } catch (err: any) {
-      alert("Gagal menambahkan produk: " + (err.message || "Error"));
+      alert(
+        getSafeErrorMessage(err, {
+          fallbackMessage: "Gagal menambahkan produk ke supplier.",
+          context: "SupplierProductsModal.addProduct",
+        })
+      );
     } finally {
       setAddingProduct(false);
     }

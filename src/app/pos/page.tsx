@@ -15,6 +15,7 @@ import { useScannerStore } from "@/stores/scannerStore";
 import { supabase } from "@/lib/supabase";
 import { playBeep, playErrorSound, playCashChime } from "@/lib/audio";
 import { formatRupiah } from "@/lib/utils";
+import { getSafeErrorMessage } from "@/lib/errorHandler";
 import { ArrowRight } from "lucide-react";
 
 export default function PosPage() {
@@ -216,7 +217,12 @@ export default function PosPage() {
       await loadCatalog(); // Refresh stocks
     } catch (err: any) {
       playErrorSound();
-      alert("Gagal memproses transaksi: " + (err.message || "Error"));
+      alert(
+        getSafeErrorMessage(err, {
+          fallbackMessage: "Gagal memproses transaksi kasir.",
+          context: "PosPage.handleCheckout",
+        })
+      );
     } finally {
       setCheckoutLoading(false);
     }

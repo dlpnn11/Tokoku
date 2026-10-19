@@ -2,7 +2,12 @@ import { supabase } from "@/lib/supabase";
 import { Transaction, TransactionDetail } from "@/types/database";
 import { CartItem } from "@/stores/cartStore";
 import { roundPrice500 } from "@/lib/utils";
-import { sanitizePostgrestFilter, validateNonNegative, validatePositiveInteger } from "@/lib/security";
+import {
+  sanitizePostgrestFilter,
+  validateNonNegative,
+  validatePositiveInteger,
+  getSafeErrorMessage,
+} from "@/lib/security";
 import { TransactionInputSchema, formatZodError } from "@/lib/schemas";
 
 export interface CreateTransactionParams {
@@ -141,7 +146,12 @@ export const transactionService = {
     });
 
     if (error) {
-      throw new Error(error.message || "Gagal memproses transaksi kasir.");
+      throw new Error(
+        getSafeErrorMessage(error, {
+          fallbackMessage: "Gagal memproses transaksi kasir.",
+          context: "Checkout",
+        })
+      );
     }
 
     return data as {
@@ -219,7 +229,14 @@ export const transactionService = {
     }
 
     const { data, error, count } = await query;
-    if (error) throw error;
+    if (error) {
+      throw new Error(
+        getSafeErrorMessage(error, {
+          fallbackMessage: "Gagal memuat daftar transaksi.",
+          context: "GetTransactions",
+        })
+      );
+    }
 
     return {
       transactions: (data || []) as TransactionWithDetails[],
@@ -237,7 +254,14 @@ export const transactionService = {
       .eq("id", id)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      throw new Error(
+        getSafeErrorMessage(error, {
+          fallbackMessage: "Gagal memuat detail faktur transaksi.",
+          context: "GetTransactionById",
+        })
+      );
+    }
     return data as TransactionWithDetails;
   },
 
@@ -250,7 +274,12 @@ export const transactionService = {
     });
 
     if (error) {
-      throw new Error(error.message || "Gagal membatalkan transaksi.");
+      throw new Error(
+        getSafeErrorMessage(error, {
+          fallbackMessage: "Gagal membatalkan transaksi.",
+          context: "CancelTransaction",
+        })
+      );
     }
 
     return data as { success: boolean; message: string };

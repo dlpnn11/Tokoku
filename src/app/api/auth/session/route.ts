@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { validateCsrfRequest } from "@/lib/csrf";
+import { getSafeErrorMessage } from "@/lib/errorHandler";
 
 const SESSION_COOKIE_NAME = "tokoku_session";
 const SERVER_SESSION_SECRET =
@@ -130,7 +131,13 @@ export async function POST(req: NextRequest) {
     return res;
   } catch (err: any) {
     return NextResponse.json(
-      { success: false, message: err.message || "Failed to create session" },
+      {
+        success: false,
+        message: getSafeErrorMessage(err, {
+          fallbackMessage: "Gagal membuat sesi login.",
+          context: "SessionPostRoute",
+        }),
+      },
       { status: 500 }
     );
   }

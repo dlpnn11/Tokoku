@@ -11,6 +11,7 @@ import { inventoryService } from "@/services/inventoryService";
 import { transactionService } from "@/services/transactionService";
 import { useCartStore, CartItem } from "@/stores/cartStore";
 import { useAuthStore } from "@/stores/authStore";
+import { useScannerStore } from "@/stores/scannerStore";
 import { supabase } from "@/lib/supabase";
 import { playBeep, playErrorSound, playCashChime } from "@/lib/audio";
 import { formatRupiah } from "@/lib/utils";
@@ -81,13 +82,32 @@ export default function PosPage() {
     loadCatalog();
   }, [loadCatalog]);
 
-  // 2. Setup Supabase Realtime Listener for Mobile Scanner Pairing
-  const ROOM_ID = "tokoku-main-pos";
+  // 2. Setup Supabase Realtime Listener for Mobile Scanner Pairing with Expiring Tokens
+  const { session, initSession, verifyIncomingToken } = useScannerStore();
+
   React.useEffect(() => {
-    const channel = supabase.channel(`pos-room-${ROOM_ID}`);
+    initSession();
+  }, [initSession]);
+
+  React.useEffect(() => {
+    if (!session?.roomId) return;
+
+    const channel = supabase.channel(`pos-room-${session.roomId}`);
 
     channel
       .on("broadcast", { event: "BARCODE_SCANNED" }, async ({ payload }) => {
+        // Modul 18: Cryptographic Token & TTL Verification
+        const verification = verifyIncomingToken(payload?.token);
+        if (!verification.valid) {
+          playErrorSound();
+          showToast(`[Keamanan] Scan ditolak: ${verification.reason}`, "error");
+          console.warn("[Security] Unauthorized scanner broadcast rejected:", {
+            payload,
+            reason: verification.reason,
+          });
+          return;
+        }
+
         const scannedCode = (payload?.barcode || payload?.sku || "").trim();
         if (!scannedCode) return;
 
@@ -129,7 +149,7 @@ export default function PosPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [products, addItem]);
+  }, [session?.roomId, verifyIncomingToken, products, addItem]);
 
   // 3. Handle Product Click from Left Catalog
   const handleSelectProduct = (product: Product) => {
@@ -281,7 +301,6 @@ export default function PosPage() {
         <ScannerPairingModal
           isOpen={isScannerModalOpen}
           onClose={() => setIsScannerModalOpen(false)}
-          roomId={ROOM_ID}
         />
 
         <ReceiptModal

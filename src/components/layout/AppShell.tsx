@@ -195,7 +195,6 @@ export function AppShell({
         <ScannerPairingModal
           isOpen={isScannerModalOpen}
           onClose={() => setIsScannerModalOpen(false)}
-          roomId="tokoku-main-pos"
         />
       </div>
 

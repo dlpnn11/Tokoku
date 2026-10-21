@@ -5,6 +5,8 @@
  * timing-safe comparisons, canonical payload signing, and automatic tamper containment.
  */
 
+import { auditService } from "@/services/auditService";
+
 export const SESSION_STORAGE_KEY = "tokoku-auth-storage";
 export const TAMPER_ALERT_KEY = "tokoku_tamper_detected";
 export const TAMPER_REASON_KEY = "tokoku_tamper_reason";
@@ -193,6 +195,12 @@ export function handleTamperDetected(reason: string): void {
         detail: { reason, timestamp: Date.now() },
       })
     );
+
+    auditService.recordAuditEvent({
+      action: "TAMPERING_DETECTED",
+      entity: "auth",
+      oldValues: { reason },
+    });
   } catch (err) {
     console.error("[SECURITY] Failed to process tamper containment:", err);
   }

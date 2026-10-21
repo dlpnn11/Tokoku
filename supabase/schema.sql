@@ -8,6 +8,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- 2. DROP EXISTING TABLES (FOR CLEAN SLATE RE-RUNS)
+DROP TABLE IF EXISTS audit_logs CASCADE;
 DROP TABLE IF EXISTS transaction_details CASCADE;
 DROP TABLE IF EXISTS transactions CASCADE;
 DROP TABLE IF EXISTS products CASCADE;
@@ -95,17 +96,37 @@ CREATE TABLE transaction_details (
     subtotal NUMERIC(12, 2) NOT NULL CHECK (subtotal >= 0)
 );
 
--- 4. INDEXES FOR LIGHTNING FAST CASHIER SEARCH & FILTER
+-- Table: audit_logs (Immutable Security Audit Trail)
+CREATE TABLE audit_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    action TEXT NOT NULL,
+    entity TEXT NOT NULL,
+    entity_id TEXT,
+    old_values JSONB,
+    new_values JSONB,
+    ip_address TEXT,
+    user_agent TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 4. INDEXES FOR LIGHTNING FAST SEARCH & FILTER
 CREATE INDEX idx_products_sku ON products(sku);
 CREATE INDEX idx_products_name ON products(name);
 CREATE INDEX idx_products_category ON products(category_id);
 CREATE INDEX idx_transactions_invoice ON transactions(invoice_number);
 CREATE INDEX idx_transactions_created_at ON transactions(created_at DESC);
 CREATE INDEX idx_transaction_details_tx ON transaction_details(transaction_id);
+CREATE INDEX idx_audit_logs_action ON audit_logs(action);
+CREATE INDEX idx_audit_logs_entity ON audit_logs(entity);
+CREATE INDEX idx_audit_logs_entity_id ON audit_logs(entity_id);
+CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at DESC);
+CREATE INDEX idx_audit_logs_user_id ON audit_logs(user_id);
 
 -- 5. ENABLE SUPABASE REALTIME REPLICATION
 ALTER PUBLICATION supabase_realtime ADD TABLE products;
 ALTER PUBLICATION supabase_realtime ADD TABLE transactions;
+ALTER PUBLICATION supabase_realtime ADD TABLE audit_logs;
 
 -- 5B. ROW LEVEL SECURITY (RLS) POLICIES
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
@@ -114,6 +135,7 @@ ALTER TABLE suppliers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transaction_details ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 
 -- 1. USERS TABLE POLICIES (Read-only for public profiles, direct mutations blocked)
 CREATE POLICY "users_select_policy" ON users FOR SELECT USING (true);
@@ -152,6 +174,12 @@ CREATE POLICY "suppliers_select_policy" ON suppliers FOR SELECT USING (true);
 CREATE POLICY "suppliers_insert_policy" ON suppliers FOR INSERT WITH CHECK (true);
 CREATE POLICY "suppliers_update_policy" ON suppliers FOR UPDATE USING (true) WITH CHECK (true);
 CREATE POLICY "suppliers_delete_policy" ON suppliers FOR DELETE USING (true);
+
+-- 5. AUDIT LOGS POLICIES (Append-only immutable audit trail)
+CREATE POLICY "audit_logs_select_policy" ON audit_logs FOR SELECT USING (true);
+CREATE POLICY "audit_logs_insert_policy" ON audit_logs FOR INSERT WITH CHECK (true);
+CREATE POLICY "audit_logs_update_policy" ON audit_logs FOR UPDATE USING (false);
+CREATE POLICY "audit_logs_delete_policy" ON audit_logs FOR DELETE USING (false);
 
 -- 6. ATOMIC TRANSACTION CHECKOUT RPC FUNCTION (ACID)
 CREATE OR REPLACE FUNCTION create_pos_transaction(
@@ -515,6 +543,267 @@ BEGIN
     END IF;
 END;
 $$;
+
+
+-- ==============================================================================
+-- 7B. IMMUTABLE SECURITY AUDIT TRAIL FUNCTIONS & TRIGGERS (MODUL 20)
+-- ==============================================================================
+
+-- 1. Strict Database-Enforced Immutability Trigger (Disallows UPDATE and DELETE on audit_logs)
+CREATE OR REPLACE FUNCTION prevent_audit_log_modification()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RAISE EXCEPTION 'Keamanan Audit Trail: Tabel audit_logs bersifat immutable (append-only). Operasi UPDATE atau DELETE dilarang demi kepatuhan non-repudiation.';
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_audit_logs_immutable ON audit_logs;
+CREATE TRIGGER trg_audit_logs_immutable
+BEFORE UPDATE OR DELETE ON audit_logs
+FOR EACH ROW
+EXECUTE FUNCTION prevent_audit_log_modification();
+
+-- 2. Application-Level Audit Logging RPC Helper
+CREATE OR REPLACE FUNCTION log_security_audit_event(
+    p_user_id UUID DEFAULT NULL,
+    p_action TEXT DEFAULT 'SECURITY_EVENT',
+    p_entity TEXT DEFAULT 'system',
+    p_entity_id TEXT DEFAULT NULL,
+    p_old_values JSONB DEFAULT NULL,
+    p_new_values JSONB DEFAULT NULL,
+    p_ip_address TEXT DEFAULT NULL,
+    p_user_agent TEXT DEFAULT NULL
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_log_id UUID;
+BEGIN
+    INSERT INTO audit_logs (
+        user_id,
+        action,
+        entity,
+        entity_id,
+        old_values,
+        new_values,
+        ip_address,
+        user_agent
+    ) VALUES (
+        p_user_id,
+        p_action,
+        p_entity,
+        p_entity_id,
+        p_old_values,
+        p_new_values,
+        p_ip_address,
+        p_user_agent
+    ) RETURNING id INTO v_log_id;
+
+    RETURN v_log_id;
+END;
+$$;
+
+-- 3. Automated Products Audit Trigger (Price changes, stock adjustments, creation, deletion)
+CREATE OR REPLACE FUNCTION audit_products_trigger_func()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF (TG_OP = 'UPDATE') THEN
+        -- Price Changes (HARGA_DIUBAH)
+        IF (OLD.sell_price <> NEW.sell_price OR OLD.buy_price <> NEW.buy_price) THEN
+            INSERT INTO audit_logs (
+                action,
+                entity,
+                entity_id,
+                old_values,
+                new_values
+            ) VALUES (
+                'HARGA_DIUBAH',
+                'products',
+                NEW.id::text,
+                jsonb_build_object(
+                    'sku', OLD.sku,
+                    'name', OLD.name,
+                    'buy_price', OLD.buy_price,
+                    'sell_price', OLD.sell_price
+                ),
+                jsonb_build_object(
+                    'sku', NEW.sku,
+                    'name', NEW.name,
+                    'buy_price', NEW.buy_price,
+                    'sell_price', NEW.sell_price
+                )
+            );
+        END IF;
+
+        -- Stock Adjustments (STOK_DISESUAIKAN)
+        IF (OLD.current_stock <> NEW.current_stock) THEN
+            INSERT INTO audit_logs (
+                action,
+                entity,
+                entity_id,
+                old_values,
+                new_values
+            ) VALUES (
+                'STOK_DISESUAIKAN',
+                'products',
+                NEW.id::text,
+                jsonb_build_object(
+                    'sku', OLD.sku,
+                    'name', OLD.name,
+                    'current_stock', OLD.current_stock
+                ),
+                jsonb_build_object(
+                    'sku', NEW.sku,
+                    'name', NEW.name,
+                    'current_stock', NEW.current_stock,
+                    'delta', (NEW.current_stock - OLD.current_stock)
+                )
+            );
+        END IF;
+
+        -- General Info Updates (PRODUK_DIUBAH)
+        IF (OLD.sell_price = NEW.sell_price AND OLD.buy_price = NEW.buy_price AND OLD.current_stock = NEW.current_stock) THEN
+            INSERT INTO audit_logs (
+                action,
+                entity,
+                entity_id,
+                old_values,
+                new_values
+            ) VALUES (
+                'PRODUK_DIUBAH',
+                'products',
+                NEW.id::text,
+                jsonb_build_object('name', OLD.name, 'is_active', OLD.is_active, 'category_id', OLD.category_id),
+                jsonb_build_object('name', NEW.name, 'is_active', NEW.is_active, 'category_id', NEW.category_id)
+            );
+        END IF;
+
+        RETURN NEW;
+    ELSIF (TG_OP = 'INSERT') THEN
+        INSERT INTO audit_logs (
+            action,
+            entity,
+            entity_id,
+            new_values
+        ) VALUES (
+            'PRODUK_DIBUAT',
+            'products',
+            NEW.id::text,
+            jsonb_build_object(
+                'sku', NEW.sku,
+                'name', NEW.name,
+                'buy_price', NEW.buy_price,
+                'sell_price', NEW.sell_price,
+                'current_stock', NEW.current_stock
+            )
+        );
+        RETURN NEW;
+    ELSIF (TG_OP = 'DELETE') THEN
+        INSERT INTO audit_logs (
+            action,
+            entity,
+            entity_id,
+            old_values
+        ) VALUES (
+            'PRODUK_DIHAPUS',
+            'products',
+            OLD.id::text,
+            jsonb_build_object(
+                'sku', OLD.sku,
+                'name', OLD.name,
+                'current_stock', OLD.current_stock
+            )
+        );
+        RETURN OLD;
+    END IF;
+
+    RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_audit_products ON products;
+CREATE TRIGGER trg_audit_products
+AFTER INSERT OR UPDATE OR DELETE ON products
+FOR EACH ROW
+EXECUTE FUNCTION audit_products_trigger_func();
+
+-- 4. Automated Transactions Audit Trigger (Creation, Cancellation)
+CREATE OR REPLACE FUNCTION audit_transactions_trigger_func()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF (TG_OP = 'UPDATE') THEN
+        -- Transaction Cancellation (TRANSAKSI_DIBATALKAN)
+        IF (OLD.status <> NEW.status AND NEW.status = 'Dibatalkan') THEN
+            INSERT INTO audit_logs (
+                user_id,
+                action,
+                entity,
+                entity_id,
+                old_values,
+                new_values
+            ) VALUES (
+                NEW.user_id,
+                'TRANSAKSI_DIBATALKAN',
+                'transactions',
+                NEW.id::text,
+                jsonb_build_object(
+                    'invoice_number', OLD.invoice_number,
+                    'status', OLD.status,
+                    'total_amount', OLD.total_amount
+                ),
+                jsonb_build_object(
+                    'invoice_number', NEW.invoice_number,
+                    'status', NEW.status
+                )
+            );
+        END IF;
+        RETURN NEW;
+    ELSIF (TG_OP = 'INSERT') THEN
+        -- Transaction Creation (TRANSAKSI_DIBUAT)
+        INSERT INTO audit_logs (
+            user_id,
+            action,
+            entity,
+            entity_id,
+            new_values
+        ) VALUES (
+            NEW.user_id,
+            'TRANSAKSI_DIBUAT',
+            'transactions',
+            NEW.id::text,
+            jsonb_build_object(
+                'invoice_number', NEW.invoice_number,
+                'total_amount', NEW.total_amount,
+                'payment_method', NEW.payment_method,
+                'cash_received', NEW.cash_received,
+                'cash_change', NEW.cash_change
+            )
+        );
+        RETURN NEW;
+    END IF;
+
+    RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_audit_transactions ON transactions;
+CREATE TRIGGER trg_audit_transactions
+AFTER INSERT OR UPDATE ON transactions
+FOR EACH ROW
+EXECUTE FUNCTION audit_transactions_trigger_func();
 
 
 -- ==============================================================================

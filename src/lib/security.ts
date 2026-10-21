@@ -165,3 +165,6 @@ export {
   containsSensitiveDatabaseDetails,
 } from "./errorHandler";
 export type { ErrorSanitizationOptions } from "./errorHandler";
+export { auditService } from "@/services/auditService";
+export type { AuditLogFilterOptions, RecordAuditParams, AuditStats } from "@/services/auditService";
+

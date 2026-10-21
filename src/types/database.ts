@@ -77,3 +77,33 @@ export interface CartItem {
   unit_price: number;
   subtotal: number;
 }
+
+export type AuditAction =
+  | "HARGA_DIUBAH"
+  | "STOK_DISESUAIKAN"
+  | "PRODUK_DIBUAT"
+  | "PRODUK_DIUBAH"
+  | "PRODUK_DIHAPUS"
+  | "TRANSAKSI_DIBUAT"
+  | "TRANSAKSI_DIBATALKAN"
+  | "LOGIN_SUKSES"
+  | "LOGIN_GAGAL"
+  | "LOGOUT"
+  | "TERMINAL_DIKUNCI"
+  | "TERMINAL_DIBUKA"
+  | "TAMPERING_DETECTED";
+
+export interface AuditLog {
+  id: string;
+  user_id?: string | null;
+  action: AuditAction | string;
+  entity: "products" | "transactions" | "auth" | "system" | string;
+  entity_id?: string | null;
+  old_values?: Record<string, any> | null;
+  new_values?: Record<string, any> | null;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  created_at: string;
+  user?: User | null;
+}
+

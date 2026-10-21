@@ -20,6 +20,7 @@ import {
   formatCountdown,
   MAX_FAILED_ATTEMPTS,
 } from "@/lib/rateLimiter";
+import { auditService } from "@/services/auditService";
 
 interface AuthState {
   currentUser: User | null;
@@ -95,6 +96,7 @@ export const useAuthStore = create<AuthState>()(
       setHydrated: (val: boolean) => set({ isHydrated: val }),
 
       lockTerminal: () => {
+        const { currentUser } = get();
         set({ isTerminalLocked: true });
         if (typeof window !== "undefined") {
           try {
@@ -103,6 +105,12 @@ export const useAuthStore = create<AuthState>()(
             // Ignore in restricted environments
           }
         }
+        auditService.recordAuditEvent({
+          userId: currentUser?.id,
+          action: "TERMINAL_DIKUNCI",
+          entity: "auth",
+          newValues: { username: currentUser?.username, role: currentUser?.role },
+        });
       },
 
       unlockTerminal: async (password: string) => {
@@ -127,6 +135,12 @@ export const useAuthStore = create<AuthState>()(
                 sessionStorage.removeItem("tokoku_terminal_locked");
               } catch {}
             }
+            auditService.recordAuditEvent({
+              userId: currentUser.id,
+              action: "TERMINAL_DIBUKA",
+              entity: "auth",
+              newValues: { username: currentUser.username },
+            });
             return { success: true };
           }
 
@@ -152,6 +166,12 @@ export const useAuthStore = create<AuthState>()(
               sessionStorage.removeItem("tokoku_terminal_locked");
             } catch {}
           }
+          auditService.recordAuditEvent({
+            userId: currentUser.id,
+            action: "TERMINAL_DIBUKA",
+            entity: "auth",
+            newValues: { username: currentUser.username },
+          });
           return { success: true };
         }
 
@@ -185,7 +205,18 @@ export const useAuthStore = create<AuthState>()(
         // Helper to record failed attempt and format informative response
         const handleFailure = (customMsg?: string) => {
           const failStatus = recordFailedAttempt(cleanUser);
+          auditService.recordAuditEvent({
+            action: "LOGIN_GAGAL",
+            entity: "auth",
+            newValues: { username: cleanUser, reason: customMsg || "Kredensial tidak valid" },
+          });
+
           if (failStatus.isLocked) {
+            auditService.recordAuditEvent({
+              action: "RATE_LIMIT_EXCEEDED",
+              entity: "auth",
+              newValues: { username: cleanUser, retryAfterSeconds: failStatus.retryAfterSeconds },
+            });
             return {
               success: false,
               isLocked: true,
@@ -221,6 +252,12 @@ export const useAuthStore = create<AuthState>()(
               isAuthenticated: true,
             });
             await syncServerCookie(authedUser);
+            auditService.recordAuditEvent({
+              userId: authedUser.id,
+              action: "LOGIN_SUKSES",
+              entity: "auth",
+              newValues: { username: cleanUser, role: authedUser.role },
+            });
             return { success: true };
           }
 
@@ -240,6 +277,12 @@ export const useAuthStore = create<AuthState>()(
           recordSuccessfulLogin(cleanUser);
           set({ currentUser: DEFAULT_PEMILIK, isAuthenticated: true });
           await syncServerCookie(DEFAULT_PEMILIK);
+          auditService.recordAuditEvent({
+            userId: DEFAULT_PEMILIK.id,
+            action: "LOGIN_SUKSES",
+            entity: "auth",
+            newValues: { username: cleanUser, role: "pemilik", method: "local_fallback" },
+          });
           return { success: true };
         }
 
@@ -251,6 +294,12 @@ export const useAuthStore = create<AuthState>()(
           recordSuccessfulLogin(cleanUser);
           set({ currentUser: DEFAULT_KASIR, isAuthenticated: true });
           await syncServerCookie(DEFAULT_KASIR);
+          auditService.recordAuditEvent({
+            userId: DEFAULT_KASIR.id,
+            action: "LOGIN_SUKSES",
+            entity: "auth",
+            newValues: { username: cleanUser, role: "kasir", method: "local_fallback" },
+          });
           return { success: true };
         }
 
@@ -259,6 +308,15 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
+        const { currentUser } = get();
+        if (currentUser) {
+          auditService.recordAuditEvent({
+            userId: currentUser.id,
+            action: "LOGOUT",
+            entity: "auth",
+            newValues: { username: currentUser.username, role: currentUser.role },
+          });
+        }
         set({
           currentUser: null,
           isAuthenticated: false,

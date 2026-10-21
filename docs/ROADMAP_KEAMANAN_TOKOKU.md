@@ -29,7 +29,7 @@ Dokumen ini dirancang modular agar setiap item dapat dieksekusi secara terpisah 
 | **17** | Validasi Integritas Pembayaran & Kembalian | Business Logic | 🟠 Tinggi | `fix(security): validate cash payment balance and change server-side` | `[x] Selesai` |
 | **18** | Secure Expiring Tokens for Mobile Scanner | Realtime Layer | 🟠 Tinggi | `feat(security): secure mobile barcode scanner realtime channel with expiring tokens` | `[x] Selesai` |
 | **19** | Sanitasi Pesan Error (Anti-Information Disclosure)| Error Handling | 🟡 Sedang | `fix(security): sanitize database error messages to prevent information disclosure` | `[x] Selesai` |
-| **20** | Immutable Security Audit Trail Logging | Audit & Compliance | 🟠 Tinggi | `feat(security): add immutable security audit trail logging` | `[ ] Antrean` |
+| **20** | Immutable Security Audit Trail Logging | Audit & Compliance | 🟠 Tinggi | `feat(security): add immutable security audit trail logging` | `[x] Selesai` |
 
 ---
 

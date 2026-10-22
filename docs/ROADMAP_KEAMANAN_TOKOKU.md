@@ -1,12 +1,12 @@
 # 🛡️ MASTER ROADMAP KEAMANAN & PENGUATAN SISTEM (SECURITY HARDENING) — TOKOKU POS
 
-Dokumen ini memuat blueprint komprehensif mengenai **20 lapisan pertahanan keamanan (Cybersecurity Defense in Depth)** untuk sistem kasir ritel **TokoKu POS & Inventory Management System** (Next.js 16 App Router, Supabase PostgreSQL, Zustand).
+Dokumen ini memuat blueprint komprehensif mengenai **26 lapisan pertahanan keamanan (Cybersecurity Defense in Depth)** untuk sistem kasir ritel **TokoKu POS & Inventory Management System** (Next.js 16 App Router, Supabase PostgreSQL, Zustand).
 
-Dokumen ini dirancang modular agar setiap item dapat dieksekusi secara terpisah satu per satu sesuai instruksi Dalvin, menghasilkan riwayat commit git yang bersih, teruji, dan berstandar industri.
+Dokumen ini dirancang modular agar setiap item dapat dieksekusi secara terpisah satu per satu sesuai instruksi Dalvin, menghasilkan riwayat commit git yang bersih, teruji, dan berstandar industri tanpa mengorbankan kecepatan dan kenyamanan penggunaan kasir (*Zero-Friction & Background Hardening*).
 
 ---
 
-## 📊 TABEL MATRIKS 20 LAPISAN KEAMANAN TOKOKU
+## 📊 TABEL MATRIKS 26 LAPISAN KEAMANAN TOKOKU
 
 | No | Modul Keamanan | Lapisan / Kategori | Tingkat Ancaman | Target Commit | Status |
 |:---:|:---|:---|:---:|:---|:---:|
@@ -30,10 +30,16 @@ Dokumen ini dirancang modular agar setiap item dapat dieksekusi secara terpisah 
 | **18** | Secure Expiring Tokens for Mobile Scanner | Realtime Layer | 🟠 Tinggi | `feat(security): secure mobile barcode scanner realtime channel with expiring tokens` | `[x] Selesai` |
 | **19** | Sanitasi Pesan Error (Anti-Information Disclosure)| Error Handling | 🟡 Sedang | `fix(security): sanitize database error messages to prevent information disclosure` | `[x] Selesai` |
 | **20** | Immutable Security Audit Trail Logging | Audit & Compliance | 🟠 Tinggi | `feat(security): add immutable security audit trail logging` | `[x] Selesai` |
+| **21** | Visual Security Audit Log Dashboard & Anomaly Inspector | Security Ops & UI | 🟠 Tinggi | `feat(security): implement visual audit trail and incident inspector interface` | `[ ] Antrean` |
+| **22** | Customer PII Masking & Privacy Guard (UU PDP) | Data Privacy & Legal | 🟡 Sedang | `fix(security): enforce customer pii masking and data privacy protection` | `[ ] Antrean` |
+| **23** | Supervisor Security Override PIN for High-Risk Actions | Access Control & Anti-Fraud | 🟠 Tinggi | `feat(security): add supervisor security override pin for high-risk mutations` | `[ ] Antrean` |
+| **24** | POS Shift Cash Reconciliation & Blind Balancing | Financial POS Integrity | 🟠 Tinggi | `feat(security): implement cashier shift reconciliation with blind cash balancing` | `[ ] Antrean` |
+| **25** | Automated Database Backup & Disaster Recovery Snapshot | Disaster Recovery & Backup | 🟠 Tinggi | `feat(security): implement automated database backup and disaster recovery snapshot script` | `[ ] Antrean` |
+| **26** | Automated Secret Leak Prevention & CI/CD Security Audit | DevSecOps & Supply Chain | 🟠 Tinggi | `ci(security): integrate automated dependency audit and secret leak scanning` | `[ ] Antrean` |
 
 ---
 
-## 🔍 DEEP DIVE 20 MODUL KEAMANAN SECARA MENYELURUH
+## 🔍 DEEP DIVE 26 MODUL KEAMANAN SECARA MENYELURUH
 
 ---
 
@@ -395,14 +401,123 @@ Dokumen ini dirancang modular agar setiap item dapat dieksekusi secara terpisah 
 
 ---
 
+### MODUL 21: Visual Security Audit Log Dashboard & Anomaly Inspector
+* **Tingkat Ancaman:** 🟠 Tinggi
+* **Kategori:** Security Operations & Visual Monitoring
+* **Celah & Skenario Serangan:**
+  Di Modul 20 sistem telah merekam seluruh perubahan harga, penyesuaian stok, pembatalan transaksi, dan alarm tampering ke tabel PostgreSQL `audit_logs` melalui `auditService.ts`. Namun saat ini data tersebut belum memiliki antarmuka visual khusus di aplikasi kasir. Pemilik toko harus membuka Supabase Table Editor secara manual untuk melihat aktivitas mencurigakan staf.
+* **Solusi Teknis:**
+  1. Membangun antarmuka visual khusus akun Pemilik (`role: 'pemilik'`) di `/laporan/keamanan` atau modal audit terintegrasi.
+  2. Menampilkan KPI Security Cards ringkas: Total Log, Frekuensi Perubahan Harga, Penyesuaian Stok, Pembatalan Transaksi, dan Peringatan Keamanan (*Security Alerts*).
+  3. Menyediakan tabel log interaktif dengan fitur filter berdasarkan tanggal, jenis tindakan (*action*), entitas, dan pencarian aman (*sanitized search*).
+  4. Menyediakan tombol ekspor laporan audit ke format CSV/Excel untuk arsip pemilik.
+* **Target Commit:** `feat(security): implement visual audit trail and incident inspector interface`
+* **Verifikasi & Pengujian:**
+  Membuka halaman Laporan Keamanan dengan akun pemilik menampilkan riwayat audit secara real-time dan akurat sesuai data di tabel `audit_logs`.
+* **Garansi Nol Gangguan (Zero-Friction):**
+  100% transparan bagi kasir. Kasir tidak melihat menu ini dan alur transaksi kasir sama sekali tidak terpengaruh (nol detik overhead).
+
+---
+
+### MODUL 22: Customer PII Masking & Privacy Guard (Kepatuhan UU PDP)
+* **Tingkat Ancaman:** 🟡 Sedang
+* **Kategori:** Data Privacy & Legal Compliance (UU No. 27/2022 PDP)
+* **Celah & Skenario Serangan:**
+  Saat kasir melayani pelanggan yang meminta struk via WhatsApp, nomor ponsel pelanggan tersimpan dan tampil utuh di tabel riwayat transaksi (`081234567890`). Pelanggan lain di antrean kasir dapat mengintip (*shoulder surfing*) atau staf kasir yang tidak bertanggung jawab dapat mencatat nomor ponsel pelanggan untuk dijual/spam promosi pribadi.
+* **Solusi Teknis:**
+  1. Membuat fungsi utilitas `maskPhoneNumber(phone: string): string` di `src/lib/sanitizer.ts` yang menyamarkan digit tengah nomor ponsel secara otomatis (contoh: `0812****8901`).
+  2. Menerapkan masking ini pada tabel riwayat transaksi kasir, modal detail transaksi, dan antarmuka pencarian riwayat umum.
+  3. Pengiriman WhatsApp otomatis tetap berjalan 100% lancar tanpa mengharuskan kasir mengetik ulang nomor.
+  4. Menyediakan fitur *Reveal Full Number* (Buka Sensor) yang dilindungi validasi hak akses hanya untuk peran `pemilik`.
+* **Target Commit:** `fix(security): enforce customer pii masking and data privacy protection`
+* **Verifikasi & Pengujian:**
+  Di tabel riwayat transaksi, nomor ponsel pelanggan tampil tersensor secara otomatis. Pengiriman struk WA tetap berfungsi normal.
+* **Garansi Nol Gangguan (Zero-Friction):**
+  Kasir tidak perlu melakukan langkah ekstra apa pun. Penyamaran nomor berjalan otomatis di sisi render.
+
+---
+
+### MODUL 23: Supervisor Security Override PIN for High-Risk Actions (Anti-Fraud Internal)
+* **Tingkat Ancaman:** 🟠 Tinggi
+* **Kategori:** Access Control & Internal Fraud Prevention
+* **Celah & Skenario Serangan:**
+  Kasir yang memiliki akses terminal dapat secara sepihak membatalkan transaksi yang sudah dibayar tunai oleh pelanggan (mengantongi uang tunainya), meretur barang fiktif, atau menghapus produk dari inventaris. Saat ini belum ada pengaman ganda jika kasir mencoba melakukan tindakan yang merusak integritas keuangan/katalog.
+* **Solusi Teknis:**
+  1. Mengidentifikasi aksi mutasi berisiko tinggi: Pembatalan transaksi lunas (*void*), penghapusan produk dari katalog, dan penyesuaian stok opname manual yang bernilai minus besar.
+  2. Jika akun yang sedang aktif adalah `kasir`, aksi tersebut dicegat dan memunculkan modal verifikasi cepat: *"Tindakan ini memerlukan PIN Otorisasi Pemilik"*.
+  3. Pemilik memasukkan 4-6 digit PIN cepat untuk mengizinkan tindakan tersebut di tempat.
+  4. Setiap override supervisor otomatis dicatat ke dalam `audit_logs` dengan keterangan `SUPERVISOR_OVERRIDE_APPROVED` beserta identitas kasir yang meminta.
+* **Target Commit:** `feat(security): add supervisor security override pin for high-risk mutations`
+* **Verifikasi & Pengujian:**
+  Kasir mencoba membatalkan transaksi yang sudah lunas -> dicegat oleh modal PIN Otorisasi Pemilik. Jika PIN salah, aksi digagalkan dan event anomali dicatat ke audit log.
+* **Garansi Nol Gangguan (Zero-Friction):**
+  Transaksi kasir reguler (scan barcode, tambah barang ke keranjang, hitung kembalian, cetak struk) 100% normal tanpa meminta PIN. PIN hanya diminta pada aksi anomali/pembatalan berisiko tinggi.
+
+---
+
+### MODUL 24: POS Shift Cash Reconciliation & Blind Balancing (Integritas Uang Laci Kasir)
+* **Tingkat Ancaman:** 🟠 Tinggi
+* **Kategori:** Financial POS Integrity & Physical Cash Control
+* **Celah & Skenario Serangan:**
+  Kecurangan kasir paling sering terjadi pada manipulasi uang fisik di laci kasir (*cash drawer*). Jika kasir mengetahui persis berapa total uang tunai yang seharusnya terkumpul sebelum menghitung fisik uangnya, kasir dapat dengan mudah mengambil selisih uang lebih (*cash overage*).
+* **Solusi Teknis:**
+  1. Menambahkan alur standar ritel: **Buka Shift (Modal Awal)** dan **Tutup Shift (Rekonsiliasi Kas)**.
+  2. Saat tutup shift, kasir melakukan *Blind Cash Count* (menginput jumlah uang fisik lembaran/koin yang ada di laci tanpa sistem membocorkan nominal penjualan teoretis sistem hari itu).
+  3. Setelah kasir men-submit hitungan fisik, sistem otomatis membandingkan dengan total penjualan tunai riil di database:
+     - Dihitung selisih kas (*cash discrepancy*): Pas, Lebih (*Over*), atau Kurang (*Short*).
+  4. Hasil rekonsiliasi dicatat permanen ke `audit_logs` dan dapat dicetak sebagai struk tutup kasir.
+* **Target Commit:** `feat(security): implement cashier shift reconciliation with blind cash balancing`
+* **Verifikasi & Pengujian:**
+  Simulasi tutup kasir dengan selisih uang fisik menghasilkan pencatatan selisih otomatis di database audit log dan menampilkan ringkasan rekap shift yang transparan bagi pemilik.
+* **Garansi Nol Gangguan (Zero-Friction):**
+  Memperjelas proses serah-terima kasir antar shift, menghilangkan keraguan selisih uang kas fisik tanpa menambah beban alur transaksi pelanggan.
+
+---
+
+### MODUL 25: Automated Database Backup & Disaster Recovery Snapshot (Anti-Data Loss)
+* **Tingkat Ancaman:** 🟠 Tinggi
+* **Kategori:** Disaster Recovery & Business Continuity
+* **Celah & Skenario Serangan:**
+  Jika terjadi kegagalan infrastruktur cloud, kesalahan manusia (human error), atau serangan yang merusak data tabel Supabase, toko tidak memiliki salinan cadangan (*backup snapshot*) mandiri di luar cloud Supabase. Toko bisa terhenti beroperasi berhari-hari dan kehilangan seluruh data transaksi bernilai jutaan rupiah.
+* **Solusi Teknis:**
+  1. Membuat skrip utilitas otomatis `scripts/backup-database.mjs` yang mengekspor seluruh skema, data produk, transaksi, dan audit log ke dalam format JSON/SQL terenkripsi dengan checksum integritas SHA-256.
+  2. Menyediakan mekanisme restore instan `scripts/restore-database.mjs` yang mampu merekonstruksi database dalam hitungan detik jika terjadi bencana data.
+  3. Menambahkan tombol "Unduh Cadangan Data (Backup)" khusus akun Pemilik di menu Laporan / Pengaturan.
+* **Target Commit:** `feat(security): implement automated database backup and disaster recovery snapshot script`
+* **Verifikasi & Pengujian:**
+  Menjalankan skrip backup menghasilkan file snapshot terenkripsi yang valid dan lolos verifikasi checksum integritas.
+* **Garansi Nol Gangguan (Zero-Friction):**
+  Berjalan 100% di server/background tanpa beban komputasi di peramban kasir.
+
+---
+
+### MODUL 26: Automated Secret Leak Prevention & CI/CD Security Audit (DevSecOps)
+* **Tingkat Ancaman:** 🟠 Tinggi
+* **Kategori:** DevSecOps & Supply Chain Defense
+* **Celah & Skenario Serangan:**
+  Pustaka pihak ketiga (*npm packages*) yang digunakan dapat memiliki kerentanan keamanan baru (*vulnerabilities/zero-day*) atau tanpa sengaja developer melakukan commit API key rahasia (seperti Supabase Service Role Key) ke dalam git repository publik.
+* **Solusi Teknis:**
+  1. Membuat skrip verifikasi otomatis `scripts/security-audit.mjs` yang memeriksa:
+     - Ketiadaan secret key sensitif (`SUPABASE_SERVICE_ROLE_KEY`, password mentah) di dalam folder `src/`.
+     - Validasi keutuhan file package-lock (`npm audit --audit-level=high`).
+     - Pemindaian sintaks berisiko (`eval`, `dangerouslySetInnerHTML` tanpa sanitasi).
+  2. Mengintegrasikan skrip ini ke dalam workflow pre-commit atau GitHub Actions CI pipeline.
+* **Target Commit:** `ci(security): integrate automated dependency audit and secret leak scanning`
+* **Verifikasi & Pengujian:**
+  Menjalankan skrip mendeteksi secara instan jika ada kunci rahasia yang tidak sengaja tertulis di file kode sebelum dapat di-push ke GitHub.
+* **Garansi Nol Gangguan (Zero-Friction):**
+  100% berjalan di level development/CI tanpa efek apapun pada pengguna aplikasi kasir.
+
+---
+
 ## 🚀 PANDUAN EKSEKUSI BAGI DALVIN
 
 Setiap kali Dalvin ingin menjalankan perbaikan keamanan, Dalvin cukup mengirimkan pesan singkat, contohnya:
-> *"Lanjut eksekusi nomor 1"* atau *"Kerjakan nomor 5"*
+> *"Lanjut eksekusi nomor 21"* atau *"Kerjakan nomor 22"*
 
 AI Assistant akan:
 1. Memverifikasi kode terdampak.
-2. Mengimplementasikan proteksi keamanan secara menyeluruh tanpa merusak fungsionalitas aplikasi yang sudah berjalan.
-3. Melakukan pengujian/verifikasi.
+2. Mengimplementasikan proteksi keamanan secara menyeluruh tanpa merusak fungsionalitas aplikasi yang sudah berjalan (*Zero-Friction*).
+3. Melakukan pengujian/verifikasi mandiri.
 4. Melakukan Git Commit mandiri dengan format Conventional Commit yang sudah ditetapkan.
 5. Memperbarui status checklist di dokumen ini dari `[ ] Antrean` menjadi `[x] Selesai`.

@@ -8,7 +8,7 @@ import {
 import { validateCsrfRequest, isMutationMethod } from "@/lib/csrf";
 
 // Routes that strictly require the "pemilik" (Store Owner) role
-const OWNER_ONLY_ROUTES = ["/dashboard", "/inventaris", "/laporan"];
+const OWNER_ONLY_ROUTES = ["/dashboard", "/inventaris", "/laporan", "/audit"];
 
 // Routes that require any authenticated user ("kasir" or "pemilik")
 const AUTH_ROUTES = ["/pos", "/riwayat", ...OWNER_ONLY_ROUTES];

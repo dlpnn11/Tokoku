@@ -51,7 +51,12 @@ export function AppShell({
       return;
     }
 
-    const ownerOnlyRoutes = ["/dashboard", "/inventaris", "/laporan"];
+    const ownerOnlyRoutes = [
+      "/dashboard",
+      "/inventaris",
+      "/laporan",
+      "/audit",
+    ];
     const isOwnerRoute = ownerOnlyRoutes.some((route) =>
       pathname.startsWith(route)
     );

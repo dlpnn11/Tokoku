@@ -10,6 +10,7 @@ import {
   History,
   BarChart3,
   ArrowLeftRight,
+  ShieldCheck,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { cn } from "@/lib/utils";
@@ -50,6 +51,12 @@ const NAV_ITEMS: NavItem[] = [
     label: "Laporan",
     href: "/laporan",
     icon: BarChart3,
+    roles: ["pemilik"],
+  },
+  {
+    label: "Audit Keamanan",
+    href: "/audit",
+    icon: ShieldCheck,
     roles: ["pemilik"],
   },
 ];

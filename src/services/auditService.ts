@@ -197,4 +197,45 @@ export const auditService = {
       securityAlertsCount,
     };
   },
+
+  /**
+   * Formats and exports audit logs to standard CSV string format.
+   */
+  exportLogsToCsv(logs: AuditLog[]): string {
+    const headers = [
+      "ID Log",
+      "Waktu (ISO)",
+      "Aksi",
+      "Entitas",
+      "ID Entitas",
+      "Nama Operator",
+      "Peran",
+      "Alamat IP",
+      "User Agent",
+      "Nilai Lama (JSON)",
+      "Nilai Baru (JSON)",
+    ];
+
+    const rows = logs.map((log) => [
+      log.id,
+      log.created_at,
+      log.action,
+      log.entity,
+      log.entity_id || "-",
+      log.user?.full_name || log.user?.username || "Sistem / Otomatis",
+      log.user?.role || "-",
+      log.ip_address || "Lokal",
+      (log.user_agent || "-").replace(/"/g, '""'),
+      log.old_values ? JSON.stringify(log.old_values).replace(/"/g, '""') : "-",
+      log.new_values ? JSON.stringify(log.new_values).replace(/"/g, '""') : "-",
+    ]);
+
+    const csvContent = [
+      headers.map((h) => `"${h}"`).join(","),
+      ...rows.map((row) => row.map((col) => `"${col}"`).join(",")),
+    ].join("\r\n");
+
+    return "\uFEFF" + csvContent; // Add UTF-8 BOM for Microsoft Excel compatibility
+  },
 };
+

@@ -91,7 +91,8 @@ export type AuditAction =
   | "LOGOUT"
   | "TERMINAL_DIKUNCI"
   | "TERMINAL_DIBUKA"
-  | "TAMPERING_DETECTED";
+  | "TAMPERING_DETECTED"
+  | "CUSTOMER_PII_REVEALED";
 
 export interface AuditLog {
   id: string;

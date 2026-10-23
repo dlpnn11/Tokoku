@@ -18,6 +18,7 @@ import {
   ChevronRight,
   TrendingUp,
   Wallet,
+  ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +30,7 @@ import {
   TransactionWithDetails,
 } from "@/services/transactionService";
 import { TransactionDetailModal } from "@/components/history/TransactionDetailModal";
+import { maskPhoneNumber } from "@/lib/security";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -368,8 +370,19 @@ export default function RiwayatPage() {
                         key={tx.id}
                         className="hover:bg-[#F9F9F7] transition-colors h-14"
                       >
-                        <td className="py-3 px-4 font-mono font-bold text-[#1A1A1A]">
-                          {tx.invoice_number}
+                        <td className="py-3 px-4">
+                          <span className="font-mono font-bold text-[#1A1A1A] block">
+                            {tx.invoice_number}
+                          </span>
+                          {tx.customer_phone && (
+                            <div
+                              className="inline-flex items-center gap-1 text-[10px] text-[#6B7280] font-mono mt-0.5"
+                              title="Nomor Pelanggan Tersensor Otomatis (UU PDP No. 27/2022)"
+                            >
+                              <ShieldCheck className="w-3 h-3 text-[#6FA084]" />
+                              <span>{maskPhoneNumber(tx.customer_phone)}</span>
+                            </div>
+                          )}
                         </td>
                         <td className="py-3 px-4 text-[#6B7280] whitespace-nowrap">
                           {formattedDate}

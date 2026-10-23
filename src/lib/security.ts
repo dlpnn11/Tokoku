@@ -158,8 +158,12 @@ export {
   isValidPhoneNumber,
   buildSafeWhatsAppUrl,
   sanitizeReceiptData,
+  maskPhoneNumber,
+  maskCustomerName,
+  maskEmail,
+  isPIIMasked,
 } from "./sanitizer";
-export type { SanitizedReceiptItem, SanitizedReceiptData } from "./sanitizer";
+export type { SanitizedReceiptItem, SanitizedReceiptData, MaskPhoneOptions } from "./sanitizer";
 export {
   getSafeErrorMessage,
   containsSensitiveDatabaseDetails,

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { formatRupiah, roundPrice500 } from "@/lib/utils";
 import { Store, CheckCircle2 } from "lucide-react";
-import { sanitizePlainText } from "@/lib/security";
+import { sanitizePlainText, maskPhoneNumber } from "@/lib/security";
 
 export interface DigitalReceiptItem {
   name: string;
@@ -21,6 +21,7 @@ export interface DigitalReceiptProps {
   cashReceived?: number | null;
   cashChange?: number | null;
   customerPhone?: string | null;
+  maskCustomerPII?: boolean;
   items: DigitalReceiptItem[];
   storeName?: string;
   storeAddress?: string;
@@ -37,6 +38,7 @@ export const DigitalReceiptCard = React.forwardRef<HTMLDivElement, DigitalReceip
       cashReceived,
       cashChange,
       customerPhone,
+      maskCustomerPII = true,
       items,
       storeName = "Toko Grosir Sumber Rejeki",
       storeAddress = "Pasar Induk Kramat Jati Blok A5",
@@ -51,6 +53,11 @@ export const DigitalReceiptCard = React.forwardRef<HTMLDivElement, DigitalReceip
     const safeCashierName = sanitizePlainText(cashierName, 100);
     const safePaymentMethod = sanitizePlainText(paymentMethod, 30);
     const safeCustomerPhone = customerPhone ? sanitizePlainText(customerPhone, 25) : null;
+    const displayCustomerPhone = safeCustomerPhone
+      ? maskCustomerPII
+        ? maskPhoneNumber(safeCustomerPhone)
+        : safeCustomerPhone
+      : null;
 
     return (
       <div
@@ -108,10 +115,10 @@ export const DigitalReceiptCard = React.forwardRef<HTMLDivElement, DigitalReceip
             <span className="text-[#6B7280]">Metode Pembayaran</span>
             <span className="font-bold text-[#6FA084]">{safePaymentMethod}</span>
           </div>
-          {safeCustomerPhone && (
+          {displayCustomerPhone && (
             <div className="flex justify-between items-center">
               <span className="text-[#6B7280]">No. Pelanggan</span>
-              <span className="font-medium text-[#1A1A1A]">{safeCustomerPhone}</span>
+              <span className="font-medium text-[#1A1A1A] font-mono">{displayCustomerPhone}</span>
             </div>
           )}
         </div>

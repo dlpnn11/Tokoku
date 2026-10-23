@@ -14,6 +14,7 @@ import {
   Image as ImageIcon,
   Send,
   Laptop,
+  ShieldCheck,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { formatRupiah, roundPrice500, cn } from "@/lib/utils";
@@ -25,6 +26,7 @@ import {
   sanitizeMultiLineText,
   sanitizePhoneNumber,
   buildSafeWhatsAppUrl,
+  maskPhoneNumber,
 } from "@/lib/security";
 
 interface ReceiptModalProps {
@@ -53,14 +55,10 @@ export function ReceiptModal({
   const [phoneInput, setPhoneInput] = React.useState("");
   const digitalReceiptRef = React.useRef<HTMLDivElement>(null);
 
-  // Sync phone from transactionData
+  // Reset custom phone input when new transaction modal opens
   React.useEffect(() => {
-    if (transactionData?.customerPhone) {
-      setPhoneInput(transactionData.customerPhone);
-    } else {
-      setPhoneInput("");
-    }
-  }, [transactionData]);
+    setPhoneInput("");
+  }, [transactionData?.invoiceNumber, isOpen]);
 
   React.useEffect(() => {
     const handleAfterPrint = () => {
@@ -138,10 +136,16 @@ export function ReceiptModal({
     );
   };
 
+  const targetPhone = phoneInput.trim() || transactionData?.customerPhone || "";
+
   // Direct WA to specific number (New Customer)
   const handleDirectWa = async () => {
+    if (!targetPhone) {
+      alert("Silakan masukkan nomor WhatsApp yang valid (contoh: 08123456789 atau 628123456789).");
+      return;
+    }
     const rawMsg = getWaTextMessage();
-    const safeUrl = buildSafeWhatsAppUrl(phoneInput, rawMsg);
+    const safeUrl = buildSafeWhatsAppUrl(targetPhone, rawMsg);
     if (!safeUrl) {
       alert("Silakan masukkan nomor WhatsApp yang valid (contoh: 08123456789 atau 628123456789).");
       return;
@@ -199,7 +203,7 @@ export function ReceiptModal({
       link.href = dataUrl;
       link.click();
 
-      const safeUrl = buildSafeWhatsAppUrl(phoneInput, safeMsg);
+      const safeUrl = buildSafeWhatsAppUrl(targetPhone, safeMsg);
       if (safeUrl) {
         window.open(safeUrl, "_blank", "noopener,noreferrer");
       } else {
@@ -312,6 +316,12 @@ export function ReceiptModal({
                 <span>Kasir:</span>
                 <span>{sanitizePlainText(transactionData.cashierName, 100)}</span>
               </div>
+              {transactionData.customerPhone && (
+                <div className="flex justify-between">
+                  <span>Pelanggan:</span>
+                  <span className="font-mono">{sanitizePlainText(maskPhoneNumber(transactionData.customerPhone), 25)}</span>
+                </div>
+              )}
             </div>
 
             {/* Itemized list */}
@@ -364,17 +374,52 @@ export function ReceiptModal({
             <span className="text-[10px] text-[#6B7280]">Foto PNG + Teks Transaksi</span>
           </div>
 
+          {/* Customer PII Contact Card with UU PDP Guard */}
+          {transactionData.customerPhone && (
+            <div className="p-2.5 bg-white border border-[#E5E5E0] rounded-xl flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-[#EAF3EC] border border-[#D5E5DC] flex items-center justify-center text-[#6FA084] shrink-0">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">
+                      Nomor Pelanggan
+                    </span>
+                    <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-[#F4F4F0] border border-[#E5E5E0] text-[#1A1A1A]">
+                      UU PDP
+                    </span>
+                  </div>
+                  <p className="font-mono text-xs font-bold text-[#1A1A1A] truncate">
+                    {maskPhoneNumber(transactionData.customerPhone)}
+                  </p>
+                </div>
+              </div>
+
+              <span
+                className="text-[10px] text-[#9E9E9E] italic shrink-0 px-2 py-1 rounded bg-[#FAFBF9] border border-[#E5E5E0]"
+                title="Nomor telepon pelanggan tersensor otomatis demi privasi sesuai UU PDP No. 27/2022"
+              >
+                Tersensor
+              </span>
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row gap-2">
             <div className="flex-1">
               <Input
-                placeholder="Nomor WA (opsional untuk chat langsung)"
+                placeholder={
+                  transactionData.customerPhone
+                    ? "Kirim ke nomor lain? Ketik nomor WA di sini..."
+                    : "Nomor WA pelanggan (contoh: 08123456789)"
+                }
                 value={phoneInput}
                 onChange={(e) => setPhoneInput(e.target.value)}
                 className="h-9 text-xs bg-white border-[#E5E5E0]"
               />
             </div>
 
-            {phoneInput.trim() && (
+            {targetPhone && (
               <Button
                 type="button"
                 onClick={handleDirectWa}
@@ -383,7 +428,9 @@ export function ReceiptModal({
                 title="Kirim Langsung ke Nomor WA Ini"
               >
                 <Send className="w-3.5 h-3.5 mr-1.5" />
-                Kirim ke No. Ini
+                {phoneInput.trim()
+                  ? "Kirim ke No. Ini"
+                  : `Kirim ke (${maskPhoneNumber(transactionData.customerPhone)})`}
               </Button>
             )}
 

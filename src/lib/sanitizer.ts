@@ -186,6 +186,161 @@ export function buildSafeWhatsAppUrl(phone: unknown, message: unknown): string {
 }
 
 /**
+ * Customer PII Masking & Data Privacy Guard (UU PDP No. 27/2022 - Modul 22)
+ *
+ * Implements legal compliance and data protection guidelines:
+ * 1. Minimization of personally identifiable information (PII) on screens and receipts.
+ * 2. Prevention of shoulder surfing in retail checkout lines.
+ * 3. Prevention of unauthorized customer data exfiltration / phone scraping by staff.
+ */
+
+export interface MaskPhoneOptions {
+  showPrefix?: number;
+  showSuffix?: number;
+  maskChar?: string;
+  formatWithHyphen?: boolean;
+}
+
+/**
+ * Masks a telephone number by replacing middle digits with asterisks or bullets.
+ * Standard output example: "0812****7890" or "+62812****7890".
+ *
+ * Idempotent: If the string is already masked (contains maskChar), it is returned untouched.
+ *
+ * @param phone Raw phone number input
+ * @param options Customization options for prefix/suffix length and mask character
+ * @returns Masked phone number string or "" if input is empty/invalid
+ */
+export function maskPhoneNumber(
+  phone: unknown,
+  options?: MaskPhoneOptions
+): string {
+  if (typeof phone !== "string" && typeof phone !== "number") return "";
+
+  const raw = String(phone).trim();
+  if (!raw) return "";
+
+  const maskChar = options?.maskChar || "*";
+
+  // If already masked, return as-is to avoid double masking
+  if (raw.includes("*") || raw.includes("•")) {
+    return raw;
+  }
+
+  // Check if starts with '+'
+  const hasPlus = raw.startsWith("+");
+
+  // Extract clean digits
+  const digits = raw.replace(/[^0-9]/g, "");
+  if (!digits) return "";
+
+  const len = digits.length;
+
+  // Short phone numbers (< 7 digits)
+  if (len < 7) {
+    if (len <= 2) return maskChar.repeat(len);
+    const suffix = digits.slice(-2);
+    return (hasPlus ? "+" : "") + maskChar.repeat(len - 2) + suffix;
+  }
+
+  // Medium phone numbers (7 to 9 digits)
+  if (len < 10) {
+    const prefixLen = options?.showPrefix ?? 3;
+    const suffixLen = options?.showSuffix ?? 2;
+    const prefix = digits.slice(0, prefixLen);
+    const suffix = digits.slice(-suffixLen);
+    const maskLen = Math.max(3, len - prefixLen - suffixLen);
+    return (hasPlus ? "+" : "") + `${prefix}${maskChar.repeat(maskLen)}${suffix}`;
+  }
+
+  // Standard phone numbers (10+ digits, e.g. Indonesian numbers 081234567890, +6281234567890)
+  let prefixLen = options?.showPrefix;
+  if (prefixLen === undefined) {
+    if (hasPlus) {
+      prefixLen = digits.startsWith("62") ? 5 : 4; // +62812...
+    } else if (digits.startsWith("62")) {
+      prefixLen = 5; // 62812...
+    } else {
+      prefixLen = 4; // 0812...
+    }
+  }
+
+  const suffixLen = options?.showSuffix ?? 4;
+  const safePrefixLen = Math.min(prefixLen, len - 3);
+  const safeSuffixLen = Math.min(suffixLen, len - safePrefixLen - 2);
+
+  const prefix = digits.slice(0, safePrefixLen);
+  const suffix = digits.slice(-safeSuffixLen);
+  const maskLen = Math.max(4, len - safePrefixLen - safeSuffixLen);
+  const maskString = maskChar.repeat(maskLen);
+
+  if (options?.formatWithHyphen) {
+    return (hasPlus ? "+" : "") + `${prefix}-${maskString}-${suffix}`;
+  }
+
+  return (hasPlus ? "+" : "") + `${prefix}${maskString}${suffix}`;
+}
+
+/**
+ * Masks a customer full name according to UU PDP data minimization principles.
+ * E.g. "Budi Santoso" -> "Budi S***"
+ * E.g. "Alexander" -> "A***r"
+ */
+export function maskCustomerName(name: unknown, maskChar = "*"): string {
+  if (typeof name !== "string") return "";
+  const cleaned = sanitizePlainText(name, 100);
+  if (!cleaned) return "";
+
+  if (cleaned.includes("*") || cleaned.includes("•")) {
+    return cleaned;
+  }
+
+  const parts = cleaned.split(/\s+/);
+  if (parts.length === 1) {
+    const single = parts[0];
+    if (single.length <= 2) return single;
+    return `${single[0]}${maskChar.repeat(3)}${single[single.length - 1]}`;
+  }
+
+  // First name displayed, subsequent names masked with initial + ***
+  const firstName = parts[0];
+  const restMasked = parts
+    .slice(1)
+    .map((p) => `${p[0]}${maskChar.repeat(3)}`)
+    .join(" ");
+
+  return `${firstName} ${restMasked}`;
+}
+
+/**
+ * Masks an email address according to UU PDP principles.
+ * E.g. "customer@example.com" -> "c***r@example.com"
+ */
+export function maskEmail(email: unknown, maskChar = "*"): string {
+  if (typeof email !== "string") return "";
+  const cleaned = email.trim();
+  const atIndex = cleaned.indexOf("@");
+  if (atIndex <= 1) return cleaned;
+
+  const username = cleaned.slice(0, atIndex);
+  const domain = cleaned.slice(atIndex);
+
+  if (username.length <= 2) {
+    return `${username[0]}${maskChar.repeat(3)}${domain}`;
+  }
+
+  return `${username[0]}${maskChar.repeat(3)}${username[username.length - 1]}${domain}`;
+}
+
+/**
+ * Checks whether a given string is already masked with privacy characters.
+ */
+export function isPIIMasked(text: unknown): boolean {
+  if (typeof text !== "string") return false;
+  return text.includes("*") || text.includes("•");
+}
+
+/**
  * Sanitizes entire receipt item list and details to guarantee zero unescaped/malicious
  * user inputs reach thermal printing or digital image generation canvases.
  */

@@ -18,6 +18,9 @@ import {
   Image as ImageIcon,
   Send,
   Laptop,
+  Eye,
+  EyeOff,
+  ShieldCheck,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { formatRupiah, roundPrice500, cn } from "@/lib/utils";
@@ -30,6 +33,8 @@ import {
   sanitizeMultiLineText,
   sanitizePhoneNumber,
   buildSafeWhatsAppUrl,
+  maskPhoneNumber,
+  auditService,
 } from "@/lib/security";
 
 interface TransactionDetailModalProps {
@@ -53,15 +58,14 @@ export function TransactionDetailModal({
   const [copiedInvoice, setCopiedInvoice] = React.useState(false);
   const [downloadingImage, setDownloadingImage] = React.useState(false);
   const [phoneInput, setPhoneInput] = React.useState("");
+  const [isPhoneRevealed, setIsPhoneRevealed] = React.useState(false);
   const digitalReceiptRef = React.useRef<HTMLDivElement>(null);
 
+  // Reset reveal and custom phone input whenever modal opens or transaction changes
   React.useEffect(() => {
-    if (transaction?.customer_phone) {
-      setPhoneInput(transaction.customer_phone);
-    } else {
-      setPhoneInput("");
-    }
-  }, [transaction?.customer_phone]);
+    setIsPhoneRevealed(false);
+    setPhoneInput("");
+  }, [transaction?.id, isOpen]);
 
   React.useEffect(() => {
     const handleAfterPrint = () => {
@@ -150,11 +154,40 @@ export function TransactionDetailModal({
     );
   };
 
+  const targetPhone = phoneInput.trim() || transaction.customer_phone || "";
+
+  const handleToggleRevealPhone = async () => {
+    if (!isOwner) return;
+    const nextState = !isPhoneRevealed;
+    setIsPhoneRevealed(nextState);
+
+    // If unmasking customer PII, record in immutable audit log (UU PDP compliance)
+    if (nextState && transaction) {
+      try {
+        await auditService.recordAuditEvent({
+          action: "CUSTOMER_PII_REVEALED",
+          entity: "transactions",
+          entityId: transaction.id,
+          newValues: {
+            invoice_number: transaction.invoice_number,
+            audit_note: "Pemilik membuka sensor nomor WhatsApp pelanggan (UU PDP No. 27/2022)",
+          },
+        });
+      } catch (err) {
+        console.error("Gagal mencatat audit log pembukaan PII:", err);
+      }
+    }
+  };
+
   const handleDirectWa = async () => {
-    const rawMsg = getWaTextMessage();
-    const safeUrl = buildSafeWhatsAppUrl(phoneInput, rawMsg);
-    if (!safeUrl) {
+    if (!targetPhone) {
       alert("Silakan masukkan nomor WhatsApp yang valid (contoh: 08123456789 atau 628123456789).");
+      return;
+    }
+    const rawMsg = getWaTextMessage();
+    const safeUrl = buildSafeWhatsAppUrl(targetPhone, rawMsg);
+    if (!safeUrl) {
+      alert("Format nomor WhatsApp tidak valid. Pastikan nomor diawali 08 atau 62.");
       return;
     }
 
@@ -217,7 +250,7 @@ export function TransactionDetailModal({
       link.href = dataUrl;
       link.click();
 
-      const safeUrl = buildSafeWhatsAppUrl(phoneInput, safeMsg);
+      const safeUrl = buildSafeWhatsAppUrl(targetPhone, safeMsg);
       if (safeUrl) {
         window.open(safeUrl, "_blank", "noopener,noreferrer");
       } else {
@@ -346,6 +379,7 @@ export function TransactionDetailModal({
               cashReceived={Number(transaction.cash_received || transaction.total_amount)}
               cashChange={Number(transaction.cash_change || 0)}
               customerPhone={transaction.customer_phone}
+              maskCustomerPII={!isPhoneRevealed}
               items={(transaction.details || []).map((d) => ({
                 name: d.product?.name || "Produk",
                 quantity: d.quantity,
@@ -390,7 +424,14 @@ export function TransactionDetailModal({
               {transaction.customer_phone && (
                 <div className="flex justify-between">
                   <span>Pelanggan:</span>
-                  <span>{sanitizePlainText(transaction.customer_phone, 25)}</span>
+                  <span className="font-mono">
+                    {sanitizePlainText(
+                      isPhoneRevealed
+                        ? transaction.customer_phone
+                        : maskPhoneNumber(transaction.customer_phone),
+                      25
+                    )}
+                  </span>
                 </div>
               )}
             </div>
@@ -516,17 +557,81 @@ export function TransactionDetailModal({
             <span className="text-[10px] text-[#6B7280]">Foto PNG + Teks Ringkasan</span>
           </div>
 
+          {/* Customer PII Contact Card with UU PDP Guard */}
+          {transaction.customer_phone && (
+            <div className="p-2.5 bg-white border border-[#E5E5E0] rounded-xl flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-[#EAF3EC] border border-[#D5E5DC] flex items-center justify-center text-[#6FA084] shrink-0">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">
+                      Nomor Pelanggan
+                    </span>
+                    <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-[#F4F4F0] border border-[#E5E5E0] text-[#1A1A1A]">
+                      UU PDP
+                    </span>
+                  </div>
+                  <p className="font-mono text-xs font-bold text-[#1A1A1A] truncate">
+                    {isPhoneRevealed
+                      ? transaction.customer_phone
+                      : maskPhoneNumber(transaction.customer_phone)}
+                  </p>
+                </div>
+              </div>
+
+              {isOwner ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={handleToggleRevealPhone}
+                  className="h-7 px-2.5 text-[11px] gap-1.5 border-[#E5E5E0] hover:bg-[#F4F4F0] text-[#1A1A1A] shrink-0"
+                  title={
+                    isPhoneRevealed
+                      ? "Tutup sensor nomor telepon"
+                      : "Buka sensor nomor telepon (Dicatat di Audit Trail)"
+                  }
+                >
+                  {isPhoneRevealed ? (
+                    <>
+                      <EyeOff className="w-3.5 h-3.5 text-[#6B7280]" />
+                      <span>Sensor</span>
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="w-3.5 h-3.5 text-[#6FA084]" />
+                      <span>Buka Sensor</span>
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <span
+                  className="text-[10px] text-[#9E9E9E] italic shrink-0 px-2 py-1 rounded bg-[#FAFBF9] border border-[#E5E5E0]"
+                  title="Hanya Pemilik Toko yang berwenang membuka sensor data pribadi pelanggan sesuai UU PDP"
+                >
+                  Tersensor
+                </span>
+              )}
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row gap-2">
             <div className="flex-1">
               <Input
-                placeholder="Nomor WA (opsional untuk chat langsung)"
+                placeholder={
+                  transaction.customer_phone
+                    ? "Kirim ke nomor lain? Ketik nomor WA di sini..."
+                    : "Nomor WA pelanggan (contoh: 08123456789)"
+                }
                 value={phoneInput}
                 onChange={(e) => setPhoneInput(e.target.value)}
                 className="h-9 text-xs bg-white border-[#E5E5E0]"
               />
             </div>
 
-            {phoneInput.trim() && (
+            {targetPhone && (
               <Button
                 type="button"
                 onClick={handleDirectWa}
@@ -535,7 +640,9 @@ export function TransactionDetailModal({
                 title="Kirim Langsung ke Nomor WA Ini"
               >
                 <Send className="w-3.5 h-3.5 mr-1.5" />
-                Kirim ke No. Ini
+                {phoneInput.trim()
+                  ? "Kirim ke No. Ini"
+                  : `Kirim ke (${isPhoneRevealed ? transaction.customer_phone : maskPhoneNumber(transaction.customer_phone)})`}
               </Button>
             )}
 

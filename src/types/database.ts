@@ -92,7 +92,9 @@ export type AuditAction =
   | "TERMINAL_DIKUNCI"
   | "TERMINAL_DIBUKA"
   | "TAMPERING_DETECTED"
-  | "CUSTOMER_PII_REVEALED";
+  | "CUSTOMER_PII_REVEALED"
+  | "SUPERVISOR_OVERRIDE_APPROVED"
+  | "SUPERVISOR_OVERRIDE_REJECTED";
 
 export interface AuditLog {
   id: string;

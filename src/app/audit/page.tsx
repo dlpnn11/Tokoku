@@ -49,6 +49,8 @@ const ACTION_OPTIONS = [
   { value: "TAMPERING_DETECTED", label: "Tampering / Manipulasi Sesi" },
   { value: "TERMINAL_DIKUNCI", label: "Terminal Kasir Terkunci" },
   { value: "TERMINAL_DIBUKA", label: "Terminal Kasir Dibuka" },
+  { value: "SUPERVISOR_OVERRIDE_APPROVED", label: "Otorisasi Supervisor Disetujui" },
+  { value: "SUPERVISOR_OVERRIDE_REJECTED", label: "Otorisasi Supervisor Ditolak" },
 ];
 
 const ENTITY_OPTIONS = [
@@ -195,10 +197,17 @@ export default function AuditPage() {
       case "LOGIN_GAGAL":
       case "RATE_LIMIT_EXCEEDED":
       case "PRODUK_DIHAPUS":
+      case "SUPERVISOR_OVERRIDE_REJECTED":
         return <Badge variant="danger">{action}</Badge>;
       case "HARGA_DIUBAH":
       case "TRANSAKSI_DIBATALKAN":
         return <Badge variant="warning">{action}</Badge>;
+      case "SUPERVISOR_OVERRIDE_APPROVED":
+        return (
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-[#E8F5E9] text-[#2E7D32] border border-[#C8E6C9]">
+            OVERRIDE DISETUJUI
+          </span>
+        );
       case "STOK_DISESUAIKAN":
       case "PRODUK_DIUBAH":
         return (
@@ -218,6 +227,22 @@ export default function AuditPage() {
 
   // Inline diff preview generator
   const renderInlineDiff = (log: AuditLog) => {
+    if (log.action === "SUPERVISOR_OVERRIDE_APPROVED") {
+      return (
+        <span className="text-xs text-[#2E7D32] font-semibold">
+          {log.new_values?.actionName || "Aksi diotorisasi"}: {log.new_values?.reason || "Disetujui"}
+        </span>
+      );
+    }
+
+    if (log.action === "SUPERVISOR_OVERRIDE_REJECTED") {
+      return (
+        <span className="text-xs text-[#C62828] font-semibold">
+          {log.new_values?.actionName || "Aksi ditolak"}: {log.new_values?.reason || "PIN Salah"}
+        </span>
+      );
+    }
+
     if (log.action === "HARGA_DIUBAH" && log.old_values && log.new_values) {
       const oldPrice = log.old_values.sell_price;
       const newPrice = log.new_values.sell_price;

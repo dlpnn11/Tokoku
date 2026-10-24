@@ -37,6 +37,8 @@ import { SupplierModal } from "@/components/inventory/SupplierModal";
 import { SupplierProductsModal } from "@/components/inventory/SupplierProductsModal";
 import { CategoryProductsModal } from "@/components/inventory/CategoryProductsModal";
 import { CustomSelect } from "@/components/ui/select";
+import { useAuthStore } from "@/stores/authStore";
+import { SupervisorOverrideModal } from "@/components/security/SupervisorOverrideModal";
 
 type ActiveTab = "produk" | "kategori" | "supplier";
 
@@ -86,6 +88,23 @@ export default function InventarisPage() {
   const [categoryToEdit, setCategoryToEdit] = React.useState<Category | null>(null);
   const [supplierToEdit, setSupplierToEdit] = React.useState<(Supplier & { product_count?: number }) | null>(null);
 
+  // Supervisor Override State for Cashiers (High-Risk Inventory Mutations)
+  const { currentUser } = useAuthStore();
+  const isCashier = currentUser?.role === "kasir";
+  const [supervisorModalState, setSupervisorModalState] = React.useState<{
+    isOpen: boolean;
+    actionTitle: string;
+    actionDescription?: string;
+    entity: string;
+    entityId?: string;
+    onApproved: () => Promise<void> | void;
+  }>({
+    isOpen: false,
+    actionTitle: "",
+    entity: "products",
+    onApproved: () => {},
+  });
+
   // Initial load
   const loadData = React.useCallback(async () => {
     try {
@@ -126,8 +145,8 @@ export default function InventarisPage() {
     await loadData();
   };
 
-  const handleDeleteProduct = async (id: string, name: string) => {
-    if (confirm(`Apakah kamu yakin ingin menghapus produk "${name}"?`)) {
+  const handleDeleteProduct = (id: string, name: string) => {
+    const executeDelete = async () => {
       try {
         await inventoryService.deleteProduct(id);
         await loadData();
@@ -139,15 +158,52 @@ export default function InventarisPage() {
           })
         );
       }
+    };
+
+    if (isCashier) {
+      setSupervisorModalState({
+        isOpen: true,
+        actionTitle: `Hapus Produk: ${name}`,
+        actionDescription: `Kasir mengajukan penghapusan produk "${name}" dari inventaris toko.`,
+        entity: "products",
+        entityId: id,
+        onApproved: executeDelete,
+      });
+    } else {
+      if (confirm(`Apakah kamu yakin ingin menghapus produk "${name}"?`)) {
+        executeDelete();
+      }
     }
   };
 
-  // Stock Opname Handler
+  // Stock Opname Handler (Requires Supervisor PIN if Cashier decreases large stock)
   const handleSaveOpname = async (adjustments: { productId: string; newStock: number }[]) => {
-    for (const adj of adjustments) {
-      await inventoryService.adjustStock(adj.productId, adj.newStock);
+    const executeOpname = async () => {
+      for (const adj of adjustments) {
+        await inventoryService.adjustStock(adj.productId, adj.newStock);
+      }
+      await loadData();
+    };
+
+    // Check if there is any high-risk adjustment (decrease of >= 5 items or set to 0)
+    const isHighRisk = adjustments.some((adj) => {
+      const originalProd = products.find((p) => p.id === adj.productId);
+      if (!originalProd) return false;
+      const diff = originalProd.current_stock - adj.newStock;
+      return diff >= 5 || (originalProd.current_stock > 0 && adj.newStock === 0);
+    });
+
+    if (isCashier && isHighRisk) {
+      setSupervisorModalState({
+        isOpen: true,
+        actionTitle: "Otorisasi Penyesuaian Stok Opname (Minus Besar)",
+        actionDescription: `Kasir mengajukan penyesuaian stok ${adjustments.length} produk dengan penurunan stok signifikan.`,
+        entity: "products",
+        onApproved: executeOpname,
+      });
+    } else {
+      await executeOpname();
     }
-    await loadData();
   };
 
   // Category Handlers
@@ -161,8 +217,8 @@ export default function InventarisPage() {
     await loadData();
   };
 
-  const handleDeleteCategory = async (id: string, name: string) => {
-    if (confirm(`Hapus kategori "${name}"? Produk dengan kategori ini mungkin perlu disesuaikan.`)) {
+  const handleDeleteCategory = (id: string, name: string) => {
+    const executeDelete = async () => {
       try {
         await inventoryService.deleteCategory(id);
         await loadData();
@@ -173,6 +229,21 @@ export default function InventarisPage() {
             context: "handleDeleteCategory",
           })
         );
+      }
+    };
+
+    if (isCashier) {
+      setSupervisorModalState({
+        isOpen: true,
+        actionTitle: `Hapus Kategori: ${name}`,
+        actionDescription: `Kasir mengajukan penghapusan kategori "${name}".`,
+        entity: "categories",
+        entityId: id,
+        onApproved: executeDelete,
+      });
+    } else {
+      if (confirm(`Hapus kategori "${name}"? Produk dengan kategori ini mungkin perlu disesuaikan.`)) {
+        executeDelete();
       }
     }
   };
@@ -867,6 +938,17 @@ export default function InventarisPage() {
           setActiveTab("produk");
           setSelectedCategory(catId);
         }}
+      />
+
+      {/* Supervisor Security Override Modal for High-Risk Inventory Mutations */}
+      <SupervisorOverrideModal
+        isOpen={supervisorModalState.isOpen}
+        onClose={() => setSupervisorModalState((prev) => ({ ...prev, isOpen: false }))}
+        actionTitle={supervisorModalState.actionTitle}
+        actionDescription={supervisorModalState.actionDescription}
+        entity={supervisorModalState.entity}
+        entityId={supervisorModalState.entityId}
+        onApproved={supervisorModalState.onApproved}
       />
     </AppShell>
   );

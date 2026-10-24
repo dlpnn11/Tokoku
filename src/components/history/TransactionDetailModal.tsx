@@ -36,6 +36,7 @@ import {
   maskPhoneNumber,
   auditService,
 } from "@/lib/security";
+import { SupervisorOverrideModal } from "@/components/security/SupervisorOverrideModal";
 
 interface TransactionDetailModalProps {
   isOpen: boolean;
@@ -55,6 +56,7 @@ export function TransactionDetailModal({
   const [viewMode, setViewMode] = React.useState<"digital" | "thermal">("digital");
   const [cancelling, setCancelling] = React.useState(false);
   const [showConfirmCancel, setShowConfirmCancel] = React.useState(false);
+  const [isSupervisorModalOpen, setIsSupervisorModalOpen] = React.useState(false);
   const [copiedInvoice, setCopiedInvoice] = React.useState(false);
   const [downloadingImage, setDownloadingImage] = React.useState(false);
   const [phoneInput, setPhoneInput] = React.useState("");
@@ -497,23 +499,33 @@ export function TransactionDetailModal({
           </div>
         )}
 
-        {/* Cancellation Box for Owner */}
-        {isOwner && !isCancelled && (
+        {/* Cancellation Box (Direct for Owner, Supervisor PIN for Cashier) */}
+        {!isCancelled && (
           <div className="p-3 bg-[#FFF9F9] border border-[#F8BEBE] rounded-xl space-y-2">
             {!showConfirmCancel ? (
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-xs text-[#D64545] font-semibold">
                   <AlertTriangle className="w-4 h-4 shrink-0" />
-                  <span>Ingin membatalkan transaksi ini?</span>
+                  <span>
+                    {isOwner
+                      ? "Ingin membatalkan transaksi ini?"
+                      : "Batalkan transaksi kasir? Memerlukan izin PIN Supervisor."}
+                  </span>
                 </div>
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => setShowConfirmCancel(true)}
-                  className="h-8 text-xs text-[#D64545] border-[#F8BEBE] hover:bg-[#FDEAEA]"
+                  onClick={() => {
+                    if (isOwner) {
+                      setShowConfirmCancel(true);
+                    } else {
+                      setIsSupervisorModalOpen(true);
+                    }
+                  }}
+                  className="h-8 text-xs text-[#D64545] border-[#F8BEBE] hover:bg-[#FDEAEA] shrink-0"
                 >
                   <RotateCcw className="w-3.5 h-3.5 mr-1" />
-                  Batalkan Transaksi
+                  {isOwner ? "Batalkan Transaksi" : "Batalkan (PIN Supervisor)"}
                 </Button>
               </div>
             ) : (
@@ -697,6 +709,23 @@ export function TransactionDetailModal({
           </Button>
         </div>
       </div>
+
+      {/* Supervisor PIN Override Modal for Void Transaction */}
+      <SupervisorOverrideModal
+        isOpen={isSupervisorModalOpen}
+        onClose={() => setIsSupervisorModalOpen(false)}
+        actionTitle={`Pembatalan Faktur #${transaction.invoice_number}`}
+        actionDescription={`Kasir mengajukan pembatalan transaksi senilai ${formatRupiah(transaction.total_amount)} dan pengembalian stok ${transaction.details?.length || 0} barang.`}
+        entity="transactions"
+        entityId={transaction.id}
+        metadata={{
+          invoice_number: transaction.invoice_number,
+          total_amount: transaction.total_amount,
+          item_count: transaction.details?.length || 0,
+        }}
+        onApproved={handleConfirmCancel}
+      />
     </Modal>
   );
 }
+

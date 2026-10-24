@@ -49,10 +49,17 @@ export function AuditDetailModal({
       case "LOGIN_GAGAL":
       case "RATE_LIMIT_EXCEEDED":
       case "PRODUK_DIHAPUS":
+      case "SUPERVISOR_OVERRIDE_REJECTED":
         return <Badge variant="danger" className="text-xs">{action}</Badge>;
       case "HARGA_DIUBAH":
       case "TRANSAKSI_DIBATALKAN":
         return <Badge variant="warning" className="text-xs">{action}</Badge>;
+      case "SUPERVISOR_OVERRIDE_APPROVED":
+        return (
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-[#E8F5E9] text-[#2E7D32] border border-[#C8E6C9]">
+            OVERRIDE DISETUJUI
+          </span>
+        );
       case "STOK_DISESUAIKAN":
       case "PRODUK_DIUBAH":
         return (

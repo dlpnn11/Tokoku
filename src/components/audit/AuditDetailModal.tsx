@@ -68,6 +68,18 @@ export function AuditDetailModal({
             REKONSILIASI SHIFT
           </span>
         );
+      case "DATABASE_BACKUP_EXPORTED":
+        return (
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-[#EBF3EE] text-[#6FA084] border border-[#C8E6C9]">
+            BACKUP SNAPSHOT
+          </span>
+        );
+      case "DATABASE_RESTORE_INITIATED":
+        return (
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-[#FFF8ED] text-[#D97706] border border-[#FDE68A]">
+            RESTORE DATABASE
+          </span>
+        );
       case "STOK_DISESUAIKAN":
       case "PRODUK_DIUBAH":
         return (

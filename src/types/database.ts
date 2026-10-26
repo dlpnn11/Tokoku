@@ -96,13 +96,15 @@ export type AuditAction =
   | "SUPERVISOR_OVERRIDE_APPROVED"
   | "SUPERVISOR_OVERRIDE_REJECTED"
   | "SHIFT_OPENED"
-  | "SHIFT_CLOSED_RECONCILIATION";
+  | "SHIFT_CLOSED_RECONCILIATION"
+  | "DATABASE_BACKUP_EXPORTED"
+  | "DATABASE_RESTORE_INITIATED";
 
 export interface AuditLog {
   id: string;
   user_id?: string | null;
   action: AuditAction | string;
-  entity: "products" | "transactions" | "auth" | "system" | "shifts" | string;
+  entity: "products" | "transactions" | "auth" | "system" | "shifts" | "backup" | string;
   entity_id?: string | null;
   old_values?: Record<string, any> | null;
   new_values?: Record<string, any> | null;

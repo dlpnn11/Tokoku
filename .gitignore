@@ -46,3 +46,8 @@ Thumbs.db
 
 # AI Agents & IDE Workspace Config
 .agents/
+
+# Database Backups & Snapshots (Avoid committing sensitive customer data)
+/backups/*.json
+!/backups/.gitkeep
+

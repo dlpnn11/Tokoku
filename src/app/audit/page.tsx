@@ -53,6 +53,8 @@ const ACTION_OPTIONS = [
   { value: "SUPERVISOR_OVERRIDE_REJECTED", label: "Otorisasi Supervisor Ditolak" },
   { value: "SHIFT_OPENED", label: "Buka Shift Kasir (Modal Awal)" },
   { value: "SHIFT_CLOSED_RECONCILIATION", label: "Tutup Shift & Rekonsiliasi Kas" },
+  { value: "DATABASE_BACKUP_EXPORTED", label: "Cadangan Database Diekspor (Snapshot)" },
+  { value: "DATABASE_RESTORE_INITIATED", label: "Pemulihan Database Dijalankan (Restore)" },
 ];
 
 const ENTITY_OPTIONS = [
@@ -60,6 +62,7 @@ const ENTITY_OPTIONS = [
   { value: "products", label: "Produk / Inventaris" },
   { value: "transactions", label: "Transaksi POS" },
   { value: "shifts", label: "Shift & Rekonsiliasi Kas" },
+  { value: "backup", label: "Cadangan & Pemulihan (Disaster Recovery)" },
   { value: "auth", label: "Autentikasi & Sesi" },
   { value: "system", label: "Sistem / Trigger" },
 ];

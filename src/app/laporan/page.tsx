@@ -18,6 +18,8 @@ import {
   ShieldAlert,
   ChevronDown,
   Download,
+  Database,
+  ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +29,7 @@ import {
   reportService,
   FinancialReportSummary,
 } from "@/services/reportService";
+import { backupService } from "@/services/backupService";
 import { DailyRevenueChart } from "@/components/report/DailyRevenueChart";
 import { BestSellersList } from "@/components/report/BestSellersList";
 import { CategoryBreakdown } from "@/components/report/CategoryBreakdown";
@@ -44,6 +47,7 @@ export default function LaporanPage() {
   const [customEndDate, setCustomEndDate] = React.useState("");
   const [loading, setLoading] = React.useState(true);
   const [exportingExcel, setExportingExcel] = React.useState(false);
+  const [downloadingBackup, setDownloadingBackup] = React.useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = React.useState(false);
   const exportMenuRef = React.useRef<HTMLDivElement>(null);
   const [report, setReport] = React.useState<FinancialReportSummary | null>(null);
@@ -147,6 +151,20 @@ export default function LaporanPage() {
       alert("Terjadi kesalahan saat memproses file Excel.");
     } finally {
       setExportingExcel(false);
+    }
+  };
+
+  const handleExportBackup = async () => {
+    try {
+      setDownloadingBackup(true);
+      const res = await backupService.downloadBackupSnapshot(currentUser?.role || "pemilik");
+      alert(
+        `✅ Cadangan Database (Disaster Recovery) Berhasil Diunduh!\n\nFile: ${res.filename}\nTotal Record: ${res.totalRecords} data\nIntegritas SHA-256: ${res.checksum}`
+      );
+    } catch (err: any) {
+      alert(`Gagal mengunduh cadangan database: ${err?.message || "Terjadi kesalahan"}`);
+    } finally {
+      setDownloadingBackup(false);
     }
   };
 
@@ -394,6 +412,36 @@ export default function LaporanPage() {
                       </div>
                       <p className="text-[11px] text-[#6B7280] leading-tight mt-0.5">
                         Data teks murni tanpa format warna / styling tabel
+                      </p>
+                    </div>
+                  </button>
+
+                  {/* Option 3: .json (Snapshot Database) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsExportMenuOpen(false);
+                      handleExportBackup();
+                    }}
+                    disabled={downloadingBackup}
+                    className="w-full text-left p-2.5 rounded-lg hover:bg-[#FAFBF9] transition-colors flex items-start gap-2.5 cursor-pointer group border-t border-[#E5E5E0] mt-1"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-[#2C2C2C] text-[#6FA084] flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                      <Database className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-xs text-[#1A1A1A] group-hover:text-[#6FA084]">
+                          .json (Snapshot Database)
+                        </span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-[#EBF3EE] text-[#6FA084]">
+                          SHA-256
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#6B7280] leading-tight mt-0.5">
+                        {downloadingBackup
+                          ? "Mengekstrak snapshot data..."
+                          : "Cadangan data transaksi & produk terenkripsi integritas"}
                       </p>
                     </div>
                   </button>

@@ -293,14 +293,14 @@ export function SupervisorOverrideModal({
                 id="supervisor-pin"
                 ref={inputRef}
                 type={showPin ? "text" : "password"}
-                maxLength={8}
+                maxLength={32}
                 value={pin}
                 disabled={lockoutSeconds > 0 || loading || success}
                 onChange={(e) => {
                   setPin(e.target.value);
                   setErrorMsg("");
                 }}
-                placeholder="Ketik PIN atau gunakan tombol di bawah"
+                placeholder="Ketik password 2FA (tokodaus)"
                 className={cn(
                   "w-full h-11 px-3 text-center text-lg font-mono tracking-widest bg-white border rounded-xl focus:outline-none transition-all",
                   errorMsg
@@ -332,7 +332,7 @@ export function SupervisorOverrideModal({
             </div>
           ) : (
             <div className="text-[11px] text-[#6B7280] text-center">
-              Default Supervisor PIN: <code className="bg-[#E5E5E0] px-1.5 py-0.5 rounded font-mono text-[#2C2C2C]">123456</code> atau kata sandi pemilik.
+              Password 2FA Supervisor: <code className="bg-[#E5E5E0] px-1.5 py-0.5 rounded font-mono text-[#2C2C2C]">tokodaus</code>
             </div>
           )}
 

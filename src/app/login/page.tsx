@@ -10,9 +10,6 @@ import {
   EyeOff,
   ArrowRight,
   ShieldAlert,
-  Crown,
-  ShoppingBag,
-  CheckCircle2,
   Clock,
   AlertTriangle,
 } from "lucide-react";
@@ -152,27 +149,6 @@ function LoginForm() {
     }
   };
 
-  const handleQuickSelect = (role: "pemilik" | "kasir") => {
-    setTamperDetected(false);
-    const targetUser = role === "pemilik" ? "pemilik" : "kasir";
-    const targetPass = role === "pemilik" ? "pemilik123" : "kasir123";
-    setUsername(targetUser);
-    setPassword(targetPass);
-    setErrorMsg("");
-
-    // Check rate limit status for selected demo user
-    const status = checkRateLimit(targetUser);
-    if (status.isLocked) {
-      setIsLockedOut(true);
-      setLockCountdown(status.retryAfterSeconds);
-      setRemainingAttempts(0);
-      setErrorMsg(`Akun ${targetUser} saat ini sedang dikunci sementara.`);
-    } else {
-      setIsLockedOut(false);
-      setLockCountdown(0);
-      setRemainingAttempts(status.failedAttemptsCount > 0 ? status.remainingAttempts : null);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-[#F4F4F0] flex flex-col items-center justify-center p-4 sm:p-6 text-[#1A1A1A] select-none">
@@ -344,60 +320,7 @@ function LoginForm() {
           </Button>
         </form>
 
-        {/* 1-Click Demo Accounts Selector */}
-        <div className="pt-2 border-t border-[#E5E5E0] space-y-2.5">
-          <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider block text-center">
-            Pilih Cepat Akun Demo (1-Klik)
-          </span>
 
-          <div className="grid grid-cols-2 gap-2">
-            {/* Pemilik Demo */}
-            <button
-              type="button"
-              onClick={() => handleQuickSelect("pemilik")}
-              className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                username === "pemilik"
-                  ? "bg-[#F4F8F5] border-[#6FA084]"
-                  : "bg-[#FAFBF9] border-[#E5E5E0] hover:border-[#6FA084]"
-              }`}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <Crown className="w-4 h-4 text-[#6FA084]" />
-                {username === "pemilik" && (
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#6FA084]" />
-                )}
-              </div>
-              <p className="font-bold text-xs text-[#1A1A1A]">Pemilik Toko</p>
-              <p className="text-[10px] text-[#6B7280]">Firdaus Ubaidillah</p>
-              <span className="text-[9px] text-[#6FA084] font-semibold mt-1 block">
-                Akses Penuh Semua Menu
-              </span>
-            </button>
-
-            {/* Kasir Demo */}
-            <button
-              type="button"
-              onClick={() => handleQuickSelect("kasir")}
-              className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                username === "kasir"
-                  ? "bg-[#F4F8F5] border-[#6FA084]"
-                  : "bg-[#FAFBF9] border-[#E5E5E0] hover:border-[#6FA084]"
-              }`}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <ShoppingBag className="w-4 h-4 text-[#6FA084]" />
-                {username === "kasir" && (
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#6FA084]" />
-                )}
-              </div>
-              <p className="font-bold text-xs text-[#1A1A1A]">Kasir Toko</p>
-              <p className="text-[10px] text-[#6B7280]">Ani Rahayu</p>
-              <span className="text-[9px] text-[#6B7280] font-semibold mt-1 block">
-                Akses Kasir & Riwayat
-              </span>
-            </button>
-          </div>
-        </div>
 
         {/* Security / No-Registration Notice */}
         <div className="text-center pt-2">

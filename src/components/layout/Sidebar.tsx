@@ -53,12 +53,13 @@ const NAV_ITEMS: NavItem[] = [
     icon: BarChart3,
     roles: ["pemilik"],
   },
-  {
-    label: "Audit Keamanan",
-    href: "/audit",
-    icon: ShieldCheck,
-    roles: ["pemilik"],
-  },
+  // Audit Keamanan di-hide sementara dari navigasi (halaman /audit tetap utuh di codebase)
+  // {
+  //   label: "Audit Keamanan",
+  //   href: "/audit",
+  //   icon: ShieldCheck,
+  //   roles: ["pemilik"],
+  // },
 ];
 
 interface SidebarProps {

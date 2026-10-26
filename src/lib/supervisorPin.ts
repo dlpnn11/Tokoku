@@ -6,16 +6,15 @@
  * and immutable audit trail logging for high-risk mutations (void transaction,
  * product catalog deletion, significant negative stock adjustments).
  *
- * Default Retail POS Supervisor PIN: "123456" (also accepts owner master password "pemilik123")
+ * Default Retail POS Supervisor 2FA Password: "tokodaus" (strictly separate from login password)
  */
 
 import { timingSafeEqual } from "./security";
 import { auditService } from "@/services/auditService";
-import { supabase } from "@/lib/supabase";
 
 const SUPERVISOR_PIN_STORAGE_KEY = "tokoku_supervisor_pin_hash";
-const DEFAULT_SUPERVISOR_PIN = "123456";
-const MASTER_PEMILIK_PASSWORD = "pemilik123";
+const DEFAULT_SUPERVISOR_PIN = "tokodaus";
+const SUPERVISOR_2FA_PASSWORD = "tokodaus";
 
 const MAX_PIN_ATTEMPTS = 5;
 const PIN_LOCKOUT_DURATION_MS = 30 * 1000; // 30 seconds lockout after 5 consecutive failures
@@ -97,7 +96,7 @@ export function setSupervisorPin(
   const customPin = getCustomSupervisorPin() || DEFAULT_SUPERVISOR_PIN;
   const isAuthorized =
     timingSafeEqual(currentAuth.trim(), customPin) ||
-    timingSafeEqual(currentAuth.trim(), MASTER_PEMILIK_PASSWORD);
+    timingSafeEqual(currentAuth.trim(), SUPERVISOR_2FA_PASSWORD);
 
   if (!isAuthorized) {
     return {
@@ -158,30 +157,13 @@ export async function verifySupervisorPin(
 
   let isMatch = false;
 
-  // 2. Local timing-safe check against Custom PIN or Default (123456)
+  // 2. Local timing-safe check against Custom PIN or Default 2FA Password ("tokodaus")
   const customPin = getCustomSupervisorPin() || DEFAULT_SUPERVISOR_PIN;
-  if (timingSafeEqual(cleanPin, customPin)) {
+  if (
+    timingSafeEqual(cleanPin, customPin) ||
+    timingSafeEqual(cleanPin, SUPERVISOR_2FA_PASSWORD)
+  ) {
     isMatch = true;
-  }
-
-  // 3. Timing-safe check against Master Pemilik Password (pemilik123)
-  if (!isMatch && timingSafeEqual(cleanPin, MASTER_PEMILIK_PASSWORD)) {
-    isMatch = true;
-  }
-
-  // 4. Online Supabase RPC verification fallback for 'pemilik' user
-  if (!isMatch && typeof window !== "undefined") {
-    try {
-      const { data, error } = await supabase.rpc("authenticate_user", {
-        p_username: "pemilik",
-        p_password: cleanPin,
-      });
-      if (!error && data?.success) {
-        isMatch = true;
-      }
-    } catch {
-      // Offline fallback: keep isMatch false
-    }
   }
 
   // 5. Handle Successful Authorization

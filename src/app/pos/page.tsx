@@ -16,10 +16,16 @@ import { supabase } from "@/lib/supabase";
 import { playBeep, playErrorSound, playCashChime } from "@/lib/audio";
 import { formatRupiah } from "@/lib/utils";
 import { getSafeErrorMessage } from "@/lib/errorHandler";
+import { ShiftStatusBar } from "@/components/pos/ShiftStatusBar";
+import { OpenShiftModal } from "@/components/pos/OpenShiftModal";
+import { CloseShiftModal } from "@/components/pos/CloseShiftModal";
+import { ShiftSummaryModal } from "@/components/pos/ShiftSummaryModal";
+import { useShiftStore } from "@/stores/shiftStore";
 import { ArrowRight } from "lucide-react";
 
 export default function PosPage() {
   const { currentUser } = useAuthStore();
+  const { activeShift, setOpenModalOpen, refreshActiveShift } = useShiftStore();
   const {
     items,
     invoiceNumber,
@@ -167,6 +173,13 @@ export default function PosPage() {
   // 4. Handle Checkout Execution
   const handleCheckout = async () => {
     if (items.length === 0) return;
+
+    if (!activeShift) {
+      setOpenModalOpen(true);
+      alert("Harap buka shift kasir (input modal awal) terlebih dahulu sebelum memproses transaksi.");
+      return;
+    }
+
     const total = getTotalAmount();
     const change = getChangeAmount();
 
@@ -247,6 +260,9 @@ export default function PosPage() {
           </div>
         )}
 
+        {/* Cashier Shift Status Bar */}
+        <ShiftStatusBar />
+
         {/* 60 / 40 Split Screen Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:h-full flex-1">
           {/* Left Column: 60% (7 cols on lg, 8 cols on xl) Catalog */}
@@ -314,6 +330,11 @@ export default function PosPage() {
           onClose={() => setIsReceiptModalOpen(false)}
           transactionData={completedTransaction}
         />
+
+        {/* Shift Management Modals */}
+        <OpenShiftModal />
+        <CloseShiftModal />
+        <ShiftSummaryModal />
       </div>
     </AppShell>
   );

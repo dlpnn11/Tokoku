@@ -51,12 +51,15 @@ const ACTION_OPTIONS = [
   { value: "TERMINAL_DIBUKA", label: "Terminal Kasir Dibuka" },
   { value: "SUPERVISOR_OVERRIDE_APPROVED", label: "Otorisasi Supervisor Disetujui" },
   { value: "SUPERVISOR_OVERRIDE_REJECTED", label: "Otorisasi Supervisor Ditolak" },
+  { value: "SHIFT_OPENED", label: "Buka Shift Kasir (Modal Awal)" },
+  { value: "SHIFT_CLOSED_RECONCILIATION", label: "Tutup Shift & Rekonsiliasi Kas" },
 ];
 
 const ENTITY_OPTIONS = [
   { value: "Semua", label: "Semua Entitas" },
   { value: "products", label: "Produk / Inventaris" },
   { value: "transactions", label: "Transaksi POS" },
+  { value: "shifts", label: "Shift & Rekonsiliasi Kas" },
   { value: "auth", label: "Autentikasi & Sesi" },
   { value: "system", label: "Sistem / Trigger" },
 ];

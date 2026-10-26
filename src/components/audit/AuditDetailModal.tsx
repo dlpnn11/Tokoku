@@ -60,6 +60,14 @@ export function AuditDetailModal({
             OVERRIDE DISETUJUI
           </span>
         );
+      case "SHIFT_OPENED":
+        return <Badge variant="success" className="text-xs">SHIFT DIBUKA</Badge>;
+      case "SHIFT_CLOSED_RECONCILIATION":
+        return (
+          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-[#E8F5E9] text-[#2C6246] border border-[#A5D6A7]">
+            REKONSILIASI SHIFT
+          </span>
+        );
       case "STOK_DISESUAIKAN":
       case "PRODUK_DIUBAH":
         return (

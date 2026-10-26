@@ -31,6 +31,7 @@ import { DailyRevenueChart } from "@/components/report/DailyRevenueChart";
 import { BestSellersList } from "@/components/report/BestSellersList";
 import { CategoryBreakdown } from "@/components/report/CategoryBreakdown";
 import { MonthlyTrendChart } from "@/components/report/MonthlyTrendChart";
+import { ShiftReconciliationHistory } from "@/components/report/ShiftReconciliationHistory";
 
 type PeriodFilter = "today" | "week" | "month" | "custom";
 
@@ -629,6 +630,11 @@ export default function LaporanPage() {
               )}
             </div>
           </div>
+        </div>
+
+        {/* REKONSILIASI SHIFT KASIR (BLIND BALANCING) OVERVIEW */}
+        <div className="print:hidden">
+          <ShiftReconciliationHistory />
         </div>
 
         {/* OFFICIAL PRINT FOOTER (Paper only) */}

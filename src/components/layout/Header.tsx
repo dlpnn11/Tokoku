@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Menu, QrCode, ChevronDown, UserCheck, LogOut, ShieldCheck, Lock } from "lucide-react";
+import { Menu, QrCode, ChevronDown, UserCheck, LogOut, ShieldCheck, Lock, Coins } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
+import { useShiftStore } from "@/stores/shiftStore";
 import { cn } from "@/lib/utils";
 
 interface HeaderProps {
@@ -118,6 +119,7 @@ export function Header({
 function UserProfileDropdown() {
   const router = useRouter();
   const { currentUser, switchRole, logout, lockTerminal } = useAuthStore();
+  const { activeShift, setOpenModalOpen, setCloseModalOpen } = useShiftStore();
   const [isOpen, setIsOpen] = React.useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
 
@@ -293,6 +295,32 @@ function UserProfileDropdown() {
 
           {/* Lock Screen & Logout Actions */}
           <div className="px-2 pt-1 space-y-1">
+            {activeShift ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOpen(false);
+                  setCloseModalOpen(true);
+                }}
+                className="w-full px-3 py-2 rounded-xl text-xs font-semibold text-[#1A1A1A] hover:bg-[#F4F8F5] flex items-center gap-2 transition-colors cursor-pointer"
+              >
+                <Coins className="w-4 h-4 text-[#6FA084]" />
+                Tutup Shift (Rekonsiliasi Kas)
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOpen(false);
+                  setOpenModalOpen(true);
+                }}
+                className="w-full px-3 py-2 rounded-xl text-xs font-semibold text-[#1A1A1A] hover:bg-[#F4F8F5] flex items-center gap-2 transition-colors cursor-pointer"
+              >
+                <Coins className="w-4 h-4 text-[#6FA084]" />
+                Buka Shift Kasir Baru
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => {

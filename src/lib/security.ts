@@ -179,4 +179,7 @@ export {
   setSupervisorPin,
 } from "./supervisorPin";
 export type { SupervisorPinVerifyResult, SupervisorOverrideContext } from "./supervisorPin";
+export { shiftService, calculateDenominationTotal, CASH_DENOMINATIONS } from "@/services/shiftService";
+export type { OpenShiftParams, CloseShiftParams, CloseShiftResult } from "@/services/shiftService";
+
 

@@ -8,6 +8,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- 2. DROP EXISTING TABLES (FOR CLEAN SLATE RE-RUNS)
+DROP TABLE IF EXISTS pos_shifts CASCADE;
 DROP TABLE IF EXISTS audit_logs CASCADE;
 DROP TABLE IF EXISTS transaction_details CASCADE;
 DROP TABLE IF EXISTS transactions CASCADE;
@@ -96,6 +97,26 @@ CREATE TABLE transaction_details (
     subtotal NUMERIC(12, 2) NOT NULL CHECK (subtotal >= 0)
 );
 
+-- Table: pos_shifts (POS Cashier Shifts & Cash Drawer Tracking)
+CREATE TABLE pos_shifts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    cashier_name TEXT NOT NULL,
+    start_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    end_time TIMESTAMPTZ,
+    starting_cash NUMERIC(12, 2) NOT NULL DEFAULT 0 CHECK (starting_cash >= 0),
+    expected_cash NUMERIC(12, 2),
+    actual_cash NUMERIC(12, 2),
+    discrepancy NUMERIC(12, 2),
+    total_cash_sales NUMERIC(12, 2) NOT NULL DEFAULT 0 CHECK (total_cash_sales >= 0),
+    total_qris_sales NUMERIC(12, 2) NOT NULL DEFAULT 0 CHECK (total_qris_sales >= 0),
+    total_sales NUMERIC(12, 2) NOT NULL DEFAULT 0 CHECK (total_sales >= 0),
+    transactions_count INTEGER NOT NULL DEFAULT 0 CHECK (transactions_count >= 0),
+    status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Table: audit_logs (Immutable Security Audit Trail)
 CREATE TABLE audit_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -117,6 +138,10 @@ CREATE INDEX idx_products_category ON products(category_id);
 CREATE INDEX idx_transactions_invoice ON transactions(invoice_number);
 CREATE INDEX idx_transactions_created_at ON transactions(created_at DESC);
 CREATE INDEX idx_transaction_details_tx ON transaction_details(transaction_id);
+CREATE INDEX idx_pos_shifts_user_id ON pos_shifts(user_id);
+CREATE INDEX idx_pos_shifts_status ON pos_shifts(status);
+CREATE INDEX idx_pos_shifts_created_at ON pos_shifts(created_at DESC);
+CREATE INDEX idx_pos_shifts_start_time ON pos_shifts(start_time DESC);
 CREATE INDEX idx_audit_logs_action ON audit_logs(action);
 CREATE INDEX idx_audit_logs_entity ON audit_logs(entity);
 CREATE INDEX idx_audit_logs_entity_id ON audit_logs(entity_id);
@@ -126,6 +151,7 @@ CREATE INDEX idx_audit_logs_user_id ON audit_logs(user_id);
 -- 5. ENABLE SUPABASE REALTIME REPLICATION
 ALTER PUBLICATION supabase_realtime ADD TABLE products;
 ALTER PUBLICATION supabase_realtime ADD TABLE transactions;
+ALTER PUBLICATION supabase_realtime ADD TABLE pos_shifts;
 ALTER PUBLICATION supabase_realtime ADD TABLE audit_logs;
 
 -- 5B. ROW LEVEL SECURITY (RLS) POLICIES
@@ -135,6 +161,7 @@ ALTER TABLE suppliers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transaction_details ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pos_shifts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 
 -- 1. USERS TABLE POLICIES (Read-only for public profiles, direct mutations blocked)
@@ -180,6 +207,12 @@ CREATE POLICY "audit_logs_select_policy" ON audit_logs FOR SELECT USING (true);
 CREATE POLICY "audit_logs_insert_policy" ON audit_logs FOR INSERT WITH CHECK (true);
 CREATE POLICY "audit_logs_update_policy" ON audit_logs FOR UPDATE USING (false);
 CREATE POLICY "audit_logs_delete_policy" ON audit_logs FOR DELETE USING (false);
+
+-- 6. POS SHIFTS POLICIES (Cashier Shift Reconciliation)
+CREATE POLICY "pos_shifts_select_policy" ON pos_shifts FOR SELECT USING (true);
+CREATE POLICY "pos_shifts_insert_policy" ON pos_shifts FOR INSERT WITH CHECK (true);
+CREATE POLICY "pos_shifts_update_policy" ON pos_shifts FOR UPDATE USING (true);
+CREATE POLICY "pos_shifts_delete_policy" ON pos_shifts FOR DELETE USING (false);
 
 -- 6. ATOMIC TRANSACTION CHECKOUT RPC FUNCTION (ACID)
 CREATE OR REPLACE FUNCTION create_pos_transaction(

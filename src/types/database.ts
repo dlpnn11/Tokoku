@@ -94,13 +94,15 @@ export type AuditAction =
   | "TAMPERING_DETECTED"
   | "CUSTOMER_PII_REVEALED"
   | "SUPERVISOR_OVERRIDE_APPROVED"
-  | "SUPERVISOR_OVERRIDE_REJECTED";
+  | "SUPERVISOR_OVERRIDE_REJECTED"
+  | "SHIFT_OPENED"
+  | "SHIFT_CLOSED_RECONCILIATION";
 
 export interface AuditLog {
   id: string;
   user_id?: string | null;
   action: AuditAction | string;
-  entity: "products" | "transactions" | "auth" | "system" | string;
+  entity: "products" | "transactions" | "auth" | "system" | "shifts" | string;
   entity_id?: string | null;
   old_values?: Record<string, any> | null;
   new_values?: Record<string, any> | null;
@@ -109,4 +111,37 @@ export interface AuditLog {
   created_at: string;
   user?: User | null;
 }
+
+export type ShiftReconciliationStatus = "BALANCED" | "OVER" | "SHORT";
+
+export interface PosShift {
+  id: string;
+  user_id: string;
+  cashier_name: string;
+  start_time: string;
+  end_time?: string | null;
+  starting_cash: number;
+  expected_cash?: number | null;
+  actual_cash?: number | null;
+  discrepancy?: number | null;
+  total_cash_sales: number;
+  total_qris_sales: number;
+  total_sales: number;
+  transactions_count: number;
+  status: "open" | "closed";
+  notes?: string | null;
+  created_at: string;
+  user?: User;
+}
+
+export interface ShiftSummaryCalculation {
+  shiftId: string;
+  startingCash: number;
+  totalCashSales: number;
+  totalQrisSales: number;
+  totalSales: number;
+  transactionsCount: number;
+  expectedCash: number;
+}
+
 

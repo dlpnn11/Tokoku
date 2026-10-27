@@ -153,11 +153,11 @@ function UserProfileDropdown() {
       .toUpperCase();
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (confirm("Apakah Anda yakin ingin keluar dari sistem TokoKu?")) {
-      logout();
       setIsOpen(false);
-      router.push("/login");
+      await logout();
+      window.location.href = "/login?action=logout";
     }
   };
 

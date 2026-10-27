@@ -62,14 +62,14 @@ export function TerminalLockOverlay() {
     }
   };
 
-  const handleSwitchAccount = () => {
+  const handleSwitchAccount = async () => {
     if (
       confirm(
         "Apakah Anda ingin keluar ke halaman login? Data keranjang aktif di terminal ini akan direset."
       )
     ) {
-      logout();
-      router.push("/login");
+      await logout();
+      window.location.href = "/login?action=logout";
     }
   };
 

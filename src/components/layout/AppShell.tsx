@@ -26,6 +26,7 @@ export function AppShell({
   const {
     currentUser,
     isAuthenticated,
+    isHydrated,
     isTerminalLocked,
     lockTerminal,
     validateSessionIntegrity,
@@ -160,6 +161,18 @@ export function AppShell({
       window.removeEventListener("touchend", handleTouchEnd);
     };
   }, [isMobileMenuOpen, isScannerModalOpen]);
+
+  // Prevent ghost rendering of protected layout while unauthenticated or hydrating
+  if (!isHydrated || !isAuthenticated || !currentUser) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-[#F4F4F0] select-none">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 rounded-full border-2 border-[#6FA084] border-t-transparent animate-spin" />
+          <p className="text-xs font-semibold text-[#6B7280]">Memeriksa sesi...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#F4F4F0] text-[#1A1A1A] print:h-auto print:w-auto print:overflow-visible print:bg-white print:block">

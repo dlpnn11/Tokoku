@@ -53,10 +53,10 @@ export function ShiftSummaryModal() {
     window.print();
   };
 
-  const handleFinishAndLogout = () => {
+  const handleFinishAndLogout = async () => {
     setSummaryModalOpen(false);
-    logout();
-    router.push("/login");
+    await logout();
+    window.location.href = "/login?action=logout";
   };
 
   return (

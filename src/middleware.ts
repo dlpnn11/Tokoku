@@ -81,6 +81,16 @@ export async function middleware(req: NextRequest) {
 
   // 3. Handle Login Page (/login)
   if (pathname === "/login") {
+    // If explicit logout action requested, purge session cookie and allow login page access
+    if (
+      req.nextUrl.searchParams.get("action") === "logout" ||
+      req.nextUrl.searchParams.has("logout")
+    ) {
+      const res = NextResponse.next();
+      res.cookies.delete(SESSION_COOKIE_NAME);
+      return res;
+    }
+
     // If user already has a valid session, redirect away to their respective workspace
     if (session) {
       const destination = session.role === "pemilik" ? "/dashboard" : "/pos";

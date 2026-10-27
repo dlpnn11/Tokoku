@@ -35,12 +35,21 @@ interface AuthState {
     password_input: string
   ) => Promise<{
     success: boolean;
+    requires2FA?: boolean;
+    tempUser?: User;
     message?: string;
     isLocked?: boolean;
     retryAfterSeconds?: number;
     remainingAttempts?: number;
   }>;
-  logout: () => void;
+  verify2FALogin: (
+    tempUser: User,
+    pinOrPassword: string
+  ) => Promise<{
+    success: boolean;
+    message?: string;
+  }>;
+  logout: () => Promise<void>;
   switchRole: (role: UserRole) => void;
   setUser: (user: User) => void;
   validateSessionIntegrity: () => Promise<boolean>;
@@ -246,8 +255,18 @@ export const useAuthStore = create<AuthState>()(
           });
 
           if (!error && data?.success && data?.user) {
-            recordSuccessfulLogin(cleanUser);
             const authedUser = data.user as User;
+            // Owner / Admin role requires 2FA challenge before completing authentication
+            if (authedUser.role === "pemilik") {
+              return {
+                success: true,
+                requires2FA: true,
+                tempUser: authedUser,
+              };
+            }
+
+            // Cashier role proceeds directly
+            recordSuccessfulLogin(cleanUser);
             set({
               currentUser: authedUser,
               isAuthenticated: true,
@@ -275,16 +294,12 @@ export const useAuthStore = create<AuthState>()(
           timingSafeEqual(cleanPass, "pemilik123");
 
         if (isPemilik) {
-          recordSuccessfulLogin(cleanUser);
-          set({ currentUser: DEFAULT_PEMILIK, isAuthenticated: true });
-          await syncServerCookie(DEFAULT_PEMILIK);
-          auditService.recordAuditEvent({
-            userId: DEFAULT_PEMILIK.id,
-            action: "LOGIN_SUKSES",
-            entity: "auth",
-            newValues: { username: cleanUser, role: "pemilik", method: "local_fallback" },
-          });
-          return { success: true };
+          // Owner credential matches first factor -> open 2FA popup
+          return {
+            success: true,
+            requires2FA: true,
+            tempUser: DEFAULT_PEMILIK,
+          };
         }
 
         const isKasir =
@@ -308,7 +323,71 @@ export const useAuthStore = create<AuthState>()(
         return handleFailure("Username atau password yang Anda masukkan salah.");
       },
 
-      logout: () => {
+      /**
+       * Completes Two-Factor Authentication (2FA) for Owner / Supervisor access.
+       * Requires dedicated 2FA password "tokodaus" (strictly decoupled from login password).
+       */
+      verify2FALogin: async (tempUser: User, pinOrPassword: string) => {
+        const cleanAuth = (pinOrPassword || "").trim();
+        if (!cleanAuth) {
+          return {
+            success: false,
+            message: "Harap masukkan password 2FA.",
+          };
+        }
+
+        // 1. Strict guard: Reject login password if accidentally entered in 2FA modal
+        if (timingSafeEqual(cleanAuth, "pemilik123")) {
+          return {
+            success: false,
+            message:
+              "Password login ('pemilik123') tidak dapat digunakan untuk 2FA. Gunakan password khusus 2FA ('tokodaus').",
+          };
+        }
+
+        // 2. Timing-safe verification against dedicated 2FA password ("tokodaus")
+        const isMatch = timingSafeEqual(cleanAuth, "tokodaus");
+
+        if (isMatch) {
+          recordSuccessfulLogin(tempUser.username);
+          set({
+            currentUser: tempUser,
+            isAuthenticated: true,
+            isTerminalLocked: false,
+          });
+          await syncServerCookie(tempUser);
+          auditService.recordAuditEvent({
+            userId: tempUser.id,
+            action: "LOGIN_SUKSES",
+            entity: "auth",
+            newValues: {
+              username: tempUser.username,
+              role: tempUser.role,
+              method: "2fa_tokodaus_verified",
+            },
+          });
+          return { success: true };
+        }
+
+        // Failed 2FA attempt logging
+        auditService.recordAuditEvent({
+          userId: tempUser.id,
+          action: "LOGIN_GAGAL",
+          entity: "auth",
+          newValues: {
+            username: tempUser.username,
+            role: tempUser.role,
+            reason: "Invalid 2FA password",
+          },
+        });
+
+        return {
+          success: false,
+          message: "Password 2FA yang Anda masukkan salah. Silakan coba lagi.",
+        };
+      },
+
+      logout: async () => {
         const { currentUser } = get();
         if (currentUser) {
           auditService.recordAuditEvent({
@@ -327,7 +406,7 @@ export const useAuthStore = create<AuthState>()(
           try {
             localStorage.removeItem(SESSION_STORAGE_KEY);
             sessionStorage.removeItem("tokoku_terminal_locked");
-            syncServerCookie(null);
+            await syncServerCookie(null);
           } catch {
             // Ignore in restricted environments
           }

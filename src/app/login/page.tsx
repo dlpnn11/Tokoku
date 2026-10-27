@@ -471,7 +471,7 @@ function LoginForm() {
                       setTwoFAPassword(e.target.value);
                       if (twoFAError) setTwoFAError("");
                     }}
-                    placeholder="Ketik password 2FA (tokodaus)"
+                    placeholder="Masukkan password 2FA Pemilik"
                     autoFocus
                     className="pl-9 pr-10 h-11 border-[#E5E5E0] focus-visible:ring-1 focus-visible:ring-[#6FA084] text-xs font-mono"
                   />
@@ -488,7 +488,7 @@ function LoginForm() {
                   </button>
                 </div>
                 <p className="text-[10px] text-[#6B7280]">
-                  Gunakan password 2FA resmi: <code className="bg-[#E5E5E0] px-1 py-0.2 rounded font-mono font-bold text-[#2C2C2C]">tokodaus</code> (Bukan &apos;pemilik123&apos;).
+                  Masukkan password rahasia 2FA yang hanya diketahui oleh Pemilik Toko.
                 </p>
               </div>
 

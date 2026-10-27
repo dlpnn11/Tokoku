@@ -300,7 +300,7 @@ export function SupervisorOverrideModal({
                   setPin(e.target.value);
                   setErrorMsg("");
                 }}
-                placeholder="Ketik password 2FA (tokodaus)"
+                placeholder="Masukkan PIN / Password 2FA"
                 className={cn(
                   "w-full h-11 px-3 text-center text-lg font-mono tracking-widest bg-white border rounded-xl focus:outline-none transition-all",
                   errorMsg
@@ -332,7 +332,7 @@ export function SupervisorOverrideModal({
             </div>
           ) : (
             <div className="text-[11px] text-[#6B7280] text-center">
-              Password 2FA Supervisor: <code className="bg-[#E5E5E0] px-1.5 py-0.5 rounded font-mono text-[#2C2C2C]">tokodaus</code>
+              Otorisasi memerlukan PIN atau Password 2FA resmi Supervisor.
             </div>
           )}
 

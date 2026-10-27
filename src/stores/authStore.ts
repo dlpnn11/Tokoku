@@ -341,7 +341,7 @@ export const useAuthStore = create<AuthState>()(
           return {
             success: false,
             message:
-              "Password login ('pemilik123') tidak dapat digunakan untuk 2FA. Gunakan password khusus 2FA ('tokodaus').",
+              "Password login tidak dapat digunakan untuk 2FA. Masukkan password khusus 2FA Pemilik.",
           };
         }
 

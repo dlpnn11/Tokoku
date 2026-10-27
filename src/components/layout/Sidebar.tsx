@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { cn } from "@/lib/utils";
+import { TokoKuLogo } from "@/components/ui/TokoKuLogo";
 
 interface NavItem {
   label: string;
@@ -95,13 +96,8 @@ export function Sidebar({ onNavClick, className }: SidebarProps) {
       {/* Top Section */}
       <div>
         {/* Brand Area */}
-        <div className="h-16 px-5 border-b border-[#3D3D3D] flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[#6FA084] flex items-center justify-center text-white">
-            <Store className="w-5 h-5" />
-          </div>
-          <span className="font-bold text-lg text-white tracking-wide">
-            TokoKu
-          </span>
+        <div className="h-16 px-5 border-b border-[#3D3D3D] flex items-center">
+          <TokoKuLogo size={32} showText textClassName="text-white tracking-wide text-lg font-bold" />
         </div>
 
         {/* Navigation Items */}

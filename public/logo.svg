@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <!-- TokoKu Signature Sage Green Background -->
+  <rect width="100" height="100" rx="22" fill="#6FA084"/>
+  
+  <!-- White Shopping Cart Icon -->
+  <g stroke="#FFFFFF" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Handle & Spine & Base Frame -->
+    <path d="M24 31c.7-2.2 2.7-3.8 5-3.8h2.8c1.8 0 3.3 1.2 3.8 3l6.8 27.2c.5 1.4 1.8 2.4 3.3 2.4h26.3" stroke-width="6.5" fill="none"/>
+    <!-- Top Speed Bar -->
+    <line x1="43" y1="38" x2="74" y2="38" stroke-width="6.5"/>
+    <!-- Middle Speed Bar -->
+    <line x1="46" y1="47" x2="70" y2="47" stroke-width="6.5"/>
+  </g>
+  <!-- Two Wheels Underneath -->
+  <circle cx="45" cy="71" r="5.5" fill="#FFFFFF"/>
+  <circle cx="64" cy="71" r="5.5" fill="#FFFFFF"/>
+</svg>

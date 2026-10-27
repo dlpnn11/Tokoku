@@ -11,6 +11,11 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "TokoKu — Terminal POS & Inventory",
   description: "Sistem Manajemen Kasir & Inventaris Warung Kelontong Modern",
+  icons: {
+    icon: "/logo.svg",
+    shortcut: "/logo.svg",
+    apple: "/logo.svg",
+  },
 };
 
 export default function RootLayout({

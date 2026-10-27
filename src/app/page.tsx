@@ -2,10 +2,11 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Store, ShoppingCart, LayoutGrid, Package, ArrowRight, ShieldCheck } from "lucide-react";
+import { ShoppingCart, LayoutGrid, Package, ArrowRight, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuthStore } from "@/stores/authStore";
+import { TokoKuLogo } from "@/components/ui/TokoKuLogo";
 
 export default function HomePage() {
   const router = useRouter();
@@ -24,8 +25,8 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-[#F4F4F0] flex flex-col items-center justify-center p-6 text-[#1A1A1A] select-none">
       <div className="max-w-md w-full bg-white border border-[#E5E5E0] rounded-2xl p-8 shadow-sm text-center space-y-6">
-        <div className="w-16 h-16 rounded-2xl bg-[#6FA084] flex items-center justify-center text-white mx-auto shadow-sm">
-          <Store className="w-8 h-8" />
+        <div className="flex justify-center">
+          <TokoKuLogo size={64} />
         </div>
 
         <div className="space-y-1.5">

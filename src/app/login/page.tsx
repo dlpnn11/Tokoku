@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  Store,
   User,
   Lock,
   Eye,
@@ -18,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/stores/authStore";
 import { hasTamperAlert, clearTamperAlert } from "@/lib/sessionSecurity";
 import { checkRateLimit, formatCountdown } from "@/lib/rateLimiter";
+import { TokoKuLogo } from "@/components/ui/TokoKuLogo";
 
 function LoginForm() {
   const router = useRouter();
@@ -155,8 +155,8 @@ function LoginForm() {
       <div className="w-full max-w-md bg-white border border-[#E5E5E0] rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
         {/* Branding Header */}
         <div className="text-center space-y-2">
-          <div className="w-14 h-14 rounded-2xl bg-[#6FA084] flex items-center justify-center text-white mx-auto shadow-2xs">
-            <Store className="w-7 h-7" />
+          <div className="flex justify-center">
+            <TokoKuLogo size={56} />
           </div>
           <div>
             <h1 className="text-2xl font-black text-[#1A1A1A] tracking-tight">

@@ -14,13 +14,10 @@ import {
   Send,
   RefreshCw,
   ShieldCheck,
-  ShieldAlert,
-  Lock,
   Zap,
   SwitchCamera,
   Focus,
   Crosshair,
-  AlertTriangle,
   Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,8 +25,9 @@ import { Input } from "@/components/ui/input";
 
 function MobileScannerContent() {
   const searchParams = useSearchParams();
+  // Default to permanent room and token so camera is always active without expiration
   const roomId = searchParams.get("room") || "tokoku-main-pos";
-  const token = searchParams.get("token") || "";
+  const token = searchParams.get("token") || "tokoku-permanent-scanner-key";
 
   const [isScanning, setIsScanning] = React.useState(false);
   const [isConnected, setIsConnected] = React.useState(false);
@@ -47,7 +45,6 @@ function MobileScannerContent() {
   const [showFocusRing, setShowFocusRing] = React.useState(false);
   const [focusStatus, setFocusStatus] = React.useState<string | null>(null);
   const [hasAfSupport, setHasAfSupport] = React.useState<boolean>(true);
-  const [hasMacroSupport, setHasMacroSupport] = React.useState(false);
   const [macroRange, setMacroRange] = React.useState<{ min?: number; max?: number } | null>(null);
   const [isMacroMode, setIsMacroMode] = React.useState(false);
 
@@ -55,12 +52,8 @@ function MobileScannerContent() {
   const channelRef = React.useRef<any>(null);
   const lastScanTimeRef = React.useRef<number>(0);
 
-  const hasValidToken = Boolean(token && token.trim().length >= 8);
-
-  // Setup Supabase Realtime Channel for pairing
+  // Setup Supabase Realtime Channel for permanent pairing
   React.useEffect(() => {
-    if (!hasValidToken) return;
-
     const channel = supabase.channel(`pos-room-${roomId}`);
 
     channel.subscribe((status) => {
@@ -76,12 +69,12 @@ function MobileScannerContent() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [roomId, hasValidToken]);
+  }, [roomId]);
 
   // Broadcast barcode with authentication token to desktop POS
   const broadcastSku = React.useCallback(
     async (sku: string) => {
-      if (!channelRef.current || !hasValidToken) return;
+      if (!channelRef.current) return;
       playBeep();
       if (typeof navigator !== "undefined" && navigator.vibrate) {
         navigator.vibrate(100);
@@ -109,13 +102,40 @@ function MobileScannerContent() {
         setLastScannedSku((curr) => (curr === sku ? null : curr));
       }, 2500);
     },
-    [hasValidToken, token]
+    [token]
+  );
+
+  // Handle zoom changes (Hardware zoom or CSS scale fallback)
+  const handleSetZoom = React.useCallback(
+    async (newZoom: number) => {
+      setZoomLevel(newZoom);
+      if (scannerRef.current && hasHardwareZoom) {
+        try {
+          const caps = scannerRef.current.getRunningTrackCameraCapabilities();
+          const zoomCap = caps?.zoomFeature?.();
+          if (zoomCap && zoomCap.isSupported()) {
+            await zoomCap.apply(newZoom);
+            return;
+          }
+        } catch (e) {
+          console.warn("Hardware zoom apply error:", e);
+        }
+      }
+
+      // Digital CSS scale zoom fallback
+      const videoElem = document.querySelector("#reader video") as HTMLVideoElement | null;
+      if (videoElem) {
+        videoElem.style.transform = `scale(${newZoom})`;
+        videoElem.style.transformOrigin = "center center";
+        videoElem.style.transition = "transform 0.2s ease-out";
+      }
+    },
+    [hasHardwareZoom]
   );
 
   // Start scanner with specific camera & autofocus constraints
   const startScannerWithCamera = React.useCallback(
     async (cameraIdToUse?: string | null) => {
-      if (!hasValidToken) return;
       setCameraError(null);
 
       try {
@@ -167,7 +187,7 @@ function MobileScannerContent() {
 
         setIsScanning(true);
 
-        // After stream is running and permissions are granted, query actual camera capabilities & full labels
+        // After stream is running, query actual camera capabilities & full labels
         try {
           const freshDevices = await Html5Qrcode.getCameras();
           if (freshDevices && freshDevices.length > 0) {
@@ -180,7 +200,6 @@ function MobileScannerContent() {
           setHasAfSupport(afSupported);
 
           if ((trackCaps as any)?.focusDistance) {
-            setHasMacroSupport(true);
             setMacroRange((trackCaps as any).focusDistance);
           }
 
@@ -205,13 +224,11 @@ function MobileScannerContent() {
         setIsScanning(false);
       }
     },
-    [broadcastSku, hasValidToken]
+    [broadcastSku]
   );
 
   // Initialize camera enumeration and smart 1x selection
   React.useEffect(() => {
-    if (!hasValidToken) return;
-
     let isMounted = true;
     const initialize = async () => {
       let chosenCamId: string | null = null;
@@ -261,10 +278,10 @@ function MobileScannerContent() {
             if (mainCam) {
               chosenCamId = mainCam.id;
             } else if (nonUltra.length > 0) {
-              // If there are multiple back cameras, pick the one with higher index if 0 is ultra
+              // Prefer index 1 on phones where index 0 is ultra-wide
               chosenCamId = nonUltra[nonUltra.length > 1 ? 1 : 0].id;
             } else if (backCameras.length > 0) {
-              chosenCamId = backCameras[0].id;
+              chosenCamId = backCameras[backCameras.length > 1 ? 1 : 0].id;
             } else {
               chosenCamId = devices[0].id;
             }
@@ -288,7 +305,7 @@ function MobileScannerContent() {
         scannerRef.current.stop().catch(() => {});
       }
     };
-  }, [hasValidToken, startScannerWithCamera]);
+  }, [startScannerWithCamera]);
 
   // Handle camera switch (e.g. toggle between physical lenses)
   const handleSwitchCamera = async () => {
@@ -316,31 +333,6 @@ function MobileScannerContent() {
     }, 200);
   };
 
-  // Handle zoom changes (Hardware zoom or CSS scale fallback)
-  const handleSetZoom = async (newZoom: number) => {
-    setZoomLevel(newZoom);
-    if (scannerRef.current && hasHardwareZoom) {
-      try {
-        const caps = scannerRef.current.getRunningTrackCameraCapabilities();
-        const zoomCap = caps?.zoomFeature?.();
-        if (zoomCap && zoomCap.isSupported()) {
-          await zoomCap.apply(newZoom);
-          return;
-        }
-      } catch (e) {
-        console.warn("Hardware zoom apply error:", e);
-      }
-    }
-
-    // Digital CSS scale zoom fallback
-    const videoElem = document.querySelector("#reader video") as HTMLVideoElement | null;
-    if (videoElem) {
-      videoElem.style.transform = `scale(${newZoom})`;
-      videoElem.style.transformOrigin = "center center";
-      videoElem.style.transition = "transform 0.2s ease-out";
-    }
-  };
-
   // Handle flashlight/torch toggle
   const handleToggleTorch = async () => {
     if (!scannerRef.current) return;
@@ -355,6 +347,55 @@ function MobileScannerContent() {
     } catch (e) {
       console.warn("Torch apply error:", e);
     }
+  };
+
+  // Mode Makro: Always available right from the start!
+  // Combines hardware focusDistance (if supported) with automatic 2.0x macro close-up zoom.
+  const handleToggleMacro = async () => {
+    const nextMacro = !isMacroMode;
+    setIsMacroMode(nextMacro);
+
+    if (nextMacro) {
+      let appliedHardware = false;
+      try {
+        const trackCaps = scannerRef.current?.getRunningTrackCapabilities();
+        if ((trackCaps as any)?.focusDistance) {
+          const minDistance = (trackCaps as any).focusDistance.min ?? 0.1;
+          await scannerRef.current?.applyVideoConstraints({
+            advanced: [
+              {
+                focusMode: "manual",
+                focusDistance: minDistance,
+              } as any,
+            ],
+          });
+          appliedHardware = true;
+        } else {
+          await scannerRef.current?.applyVideoConstraints({
+            advanced: [{ focusMode: "continuous" } as any],
+          });
+        }
+      } catch (e) {
+        console.warn("Macro hardware focus failed:", e);
+      }
+
+      // Automatically engage 2.0x zoom for instant close-up sharpness
+      await handleSetZoom(2.0);
+      setFocusStatus(
+        appliedHardware ? "Mode Makro Aktif (Jarak Dekat)" : "Mode Makro Aktif (Zoom 2.0x)"
+      );
+    } else {
+      // Revert to normal continuous focus and 1.0x
+      try {
+        await scannerRef.current?.applyVideoConstraints({
+          advanced: [{ focusMode: "continuous" } as any],
+        });
+      } catch {}
+      await handleSetZoom(1.0);
+      setFocusStatus("Fokus Normal (1.0x)");
+    }
+
+    setTimeout(() => setFocusStatus(null), 1800);
   };
 
   // Hardware Autofocus Trigger: physically cycles focus modes to sweep contrast
@@ -407,10 +448,8 @@ function MobileScannerContent() {
         await scannerRef.current.applyVideoConstraints({
           advanced: [{ focusMode: "continuous" } as any],
         });
-        setFocusStatus(
-          hasAfSupport ? "Autofokus Diperbarui" : "Lensa Fixed-Focus (Gunakan Zoom 2x)"
-        );
-        setTimeout(() => setFocusStatus(null), 2000);
+        setFocusStatus("Autofokus Diperbarui");
+        setTimeout(() => setFocusStatus(null), 1800);
       }
     } catch (err) {
       console.warn("Autofocus apply error:", err);
@@ -418,34 +457,6 @@ function MobileScannerContent() {
       setTimeout(() => setFocusStatus(null), 1800);
     } finally {
       setTimeout(() => setShowFocusRing(false), 1200);
-    }
-  };
-
-  // Mode Makro toggle (if focusDistance is supported by hardware)
-  const handleToggleMacro = async () => {
-    if (!scannerRef.current || !hasMacroSupport || !macroRange) return;
-    const nextMacro = !isMacroMode;
-    setIsMacroMode(nextMacro);
-    try {
-      if (nextMacro) {
-        await scannerRef.current.applyVideoConstraints({
-          advanced: [
-            {
-              focusMode: "manual",
-              focusDistance: macroRange.min ?? 0.1,
-            } as any,
-          ],
-        });
-        setFocusStatus("Mode Makro Aktif (Jarak Dekat)");
-      } else {
-        await scannerRef.current.applyVideoConstraints({
-          advanced: [{ focusMode: "continuous" } as any],
-        });
-        setFocusStatus("Autofokus Normal");
-      }
-      setTimeout(() => setFocusStatus(null), 1800);
-    } catch (e) {
-      console.warn("Macro toggle error:", e);
     }
   };
 
@@ -461,27 +472,6 @@ function MobileScannerContent() {
   const activeCameraLabel = activeCameraObj
     ? activeCameraObj.label.slice(0, 24)
     : "Kamera Utama (1x)";
-
-  // If token is missing, reject unauthorized access
-  if (!hasValidToken) {
-    return (
-      <div className="min-h-screen bg-[#1F1F1F] text-white flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-16 h-16 rounded-2xl bg-[#E05252]/10 border border-[#E05252]/30 flex items-center justify-center text-[#E05252] mb-4">
-          <ShieldAlert className="w-8 h-8" />
-        </div>
-        <h1 className="text-lg font-bold mb-2">Token Otentikasi Diperlukan</h1>
-        <p className="text-xs text-[#9E9E9E] max-w-xs mb-6 leading-relaxed">
-          Pemindai HP ini belum diotentikasi ke terminal kasir. Buka menu
-          <strong className="text-white"> &quot;Hubungkan HP&quot; </strong>
-          pada layar kasir TokoKu lalu pindai QR Code yang tampil.
-        </p>
-        <div className="p-3.5 bg-[#2C2C2C] border border-[#3D3D3D] rounded-xl text-[11px] text-[#AFAFAF] max-w-xs flex items-center gap-2">
-          <Lock className="w-4 h-4 text-[#E05252] shrink-0" />
-          <span>Sesi nirkabel dilindungi token 10 menit untuk mencegah injeksi barang siluman.</span>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-[#2C2C2C] text-white flex flex-col justify-between p-4 max-w-md mx-auto select-none">
@@ -516,7 +506,7 @@ function MobileScannerContent() {
               <h1 className="font-bold text-xs tracking-wider uppercase">
                 SCANNER BARCODE HP
               </h1>
-              <span title="Sesi Terotentikasi">
+              <span title="Sesi Nirkabel Permanen">
                 <ShieldCheck className="w-3.5 h-3.5 text-[#6FA084]" />
               </span>
             </div>
@@ -531,7 +521,7 @@ function MobileScannerContent() {
           {isConnected ? (
             <>
               <Wifi className="w-3 h-3 text-[#6FA084]" />
-              <span className="text-[#6FA084]">Terhubung</span>
+              <span className="text-[#6FA084]">Terhubung Kasir</span>
             </>
           ) : (
             <>
@@ -564,25 +554,24 @@ function MobileScannerContent() {
             ))}
           </div>
 
-          {/* Quick Action Controls: Torch, Macro, & Lens Switch */}
+          {/* Quick Action Controls: Makro (Selalu ada dari awal!), Torch, & Lens Switch */}
           <div className="flex items-center gap-1.5">
-            {hasMacroSupport && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={handleToggleMacro}
-                className={`h-8 px-2 border-[#3D3D3D] text-xs gap-1 rounded-lg ${
-                  isMacroMode
-                    ? "bg-[#6FA084] text-white border-[#6FA084]"
-                    : "bg-[#1A1A1A] text-white hover:bg-[#2C2C2C]"
-                }`}
-                title="Mode Makro (Jarak Sangat Dekat)"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span className="text-[10px]">Makro</span>
-              </Button>
-            )}
+            {/* Mode Makro: Langsung tersedia sejak detik pertama */}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={handleToggleMacro}
+              className={`h-8 px-2 border-[#3D3D3D] text-xs gap-1 rounded-lg transition-all ${
+                isMacroMode
+                  ? "bg-[#6FA084] text-white border-[#6FA084]"
+                  : "bg-[#1A1A1A] text-white hover:bg-[#2C2C2C]"
+              }`}
+              title="Mode Makro (Fokus Jarak Dekat & Zoom 2x)"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-[#E8A838]" />
+              <span className="text-[10px] font-bold">Makro</span>
+            </Button>
 
             {hasTorch && (
               <Button
@@ -671,13 +660,6 @@ function MobileScannerContent() {
 
         {/* Hardware Status & Focus Guidance */}
         <div className="w-full max-w-[320px] mt-2 space-y-1.5">
-          {!hasAfSupport && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#E8A838]/15 border border-[#E8A838]/30 rounded-lg text-[10px] text-[#E8A838]">
-              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-              <span>Lensa ini bertipe Fixed-Focus. Ketuk <strong>&quot;Ganti Lensa&quot;</strong> di atas untuk pindah ke lensa autofocus!</span>
-            </div>
-          )}
-
           <div className="flex items-center justify-between text-[11px] text-[#AFAFAF] px-1">
             <button
               type="button"
@@ -693,7 +675,7 @@ function MobileScannerContent() {
           </div>
 
           <p className="text-[10px] text-[#808080] leading-snug px-1">
-            💡 <strong>Tips Barcode Kecil:</strong> Jangan tempelkan HP terlalu dekat (&lt; 10 cm) agar tidak blur. Tahan pada jarak 15 cm lalu tekan tombol <strong>1.5x / 2.0x</strong>.
+            💡 <strong>Tips Barcode Kecil:</strong> Tekan tombol <strong>Makro</strong> atau <strong>Zoom 2.0x</strong> di atas agar barcode kecil langsung fokus tanpa buram.
           </p>
         </div>
       </div>
@@ -720,7 +702,7 @@ function MobileScannerContent() {
         </form>
 
         <p className="text-[11px] text-center text-[#9E9E9E]">
-          Arahkan barcode produk ke dalam kotak bidik. Data terenkripsi dikirim langsung ke kasir desktop.
+          Arahkan barcode produk ke dalam kotak bidik. Data langsung masuk ke keranjang kasir desktop.
         </p>
       </div>
     </div>

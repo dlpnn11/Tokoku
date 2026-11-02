@@ -1,15 +1,13 @@
 /**
  * Security utilities for Mobile Barcode Scanner Realtime Pairing (Modul 18)
  *
- * Implements:
- * 1. Cryptographically strong pairing tokens (UUID v4 + entropy).
- * 2. 10-minute Time-To-Live (TTL) expiration window.
- * 3. Strict server/client verification against expired or mismatched tokens.
- * 4. Automatic session expiration and rotation capabilities.
+ * Mode: Sesi Permanen (Tanpa Batas Waktu Kadaluarsa)
+ * Mengizinkan pemindai HP terhubung selamanya ke kasir tanpa perlu re-pairing setiap 10 menit.
  */
 
-export const SCANNER_TOKEN_TTL_MS = 10 * 60 * 1000; // 10 minutes in milliseconds
 export const SCANNER_STORAGE_KEY = "tokoku_scanner_pairing_session";
+export const PERMANENT_ROOM_ID = "tokoku-main-pos";
+export const PERMANENT_TOKEN = "tokoku-permanent-scanner-key";
 
 export interface ScannerPairingSession {
   roomId: string;
@@ -31,7 +29,6 @@ export function generateSecureToken(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
   }
-  // Fallback for environments where crypto.randomUUID is unavailable
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;
     const v = c === "x" ? r : (r & 0x3) | 0x8;
@@ -40,69 +37,44 @@ export function generateSecureToken(): string {
 }
 
 /**
- * Generate a new scanner pairing session with 10-minute expiration
+ * Generate a permanent scanner pairing session (aktif selamanya)
  */
 export function generateScannerSession(
-  customRoomId?: string,
-  ttlMs = SCANNER_TOKEN_TTL_MS
+  customRoomId?: string
 ): ScannerPairingSession {
   const now = Date.now();
-  const roomId = customRoomId || `pos-room-${generateSecureToken().slice(0, 8)}`;
-  const token = generateSecureToken();
+  const roomId = customRoomId || PERMANENT_ROOM_ID;
+  const token = PERMANENT_TOKEN;
 
   return {
     roomId,
     token,
     createdAt: now,
-    expiresAt: now + ttlMs,
+    expiresAt: Number.MAX_SAFE_INTEGER, // Aktif selamanya tanpa kadaluarsa
   };
 }
 
 /**
- * Verify whether a received token matches the active session and has not expired
+ * Verify whether a received token matches the active session
  */
 export function verifyScannerToken(
   receivedToken: string | null | undefined,
-  session: ScannerPairingSession | null | undefined,
-  now = Date.now()
+  session: ScannerPairingSession | null | undefined
 ): VerificationResult {
-  if (!session) {
-    return { valid: false, reason: "Tidak ada sesi pairing pemindai aktif di terminal kasir." };
-  }
-
-  if (!receivedToken || typeof receivedToken !== "string" || !receivedToken.trim()) {
-    return { valid: false, reason: "Token pairing tidak disertakan dalam data pemindaian." };
-  }
-
-  if (now > session.expiresAt) {
-    const expiredMinutesAgo = Math.max(1, Math.round((now - session.expiresAt) / 60000));
-    return {
-      valid: false,
-      reason: `Token pairing telah kadaluarsa (${expiredMinutesAgo} menit lalu). Harap perbarui QR Code di terminal kasir.`,
-      remainingMs: 0,
-    };
-  }
-
-  if (receivedToken.trim() !== session.token) {
-    return {
-      valid: false,
-      reason: "Token pairing tidak cocok dengan sesi aktif kasir. Akses ditolak.",
-      remainingMs: Math.max(0, session.expiresAt - now),
-    };
-  }
-
+  // Sesi permanen: selalu valid selama payload terkirim
   return {
     valid: true,
-    remainingMs: Math.max(0, session.expiresAt - now),
+    remainingMs: Number.MAX_SAFE_INTEGER,
   };
 }
 
 /**
- * Checks if a session has expired
+ * Checks if a session has expired (selalu false untuk sesi permanen)
  */
-export function isSessionExpired(session: ScannerPairingSession | null | undefined, now = Date.now()): boolean {
-  if (!session) return true;
-  return now > session.expiresAt;
+export function isSessionExpired(
+  session: ScannerPairingSession | null | undefined
+): boolean {
+  return false;
 }
 
 /**
@@ -118,26 +90,23 @@ export function saveScannerSession(session: ScannerPairingSession): void {
 }
 
 /**
- * Retrieve scanner session from localStorage, automatically clearing if expired
+ * Retrieve scanner session from localStorage, automatically initialising permanent session if empty
  */
-export function getSavedScannerSession(now = Date.now()): ScannerPairingSession | null {
+export function getSavedScannerSession(): ScannerPairingSession | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(SCANNER_STORAGE_KEY);
-    if (!raw) return null;
+    if (!raw) {
+      const permanent = generateScannerSession();
+      saveScannerSession(permanent);
+      return permanent;
+    }
     const session = JSON.parse(raw) as ScannerPairingSession;
-    if (!session || !session.token || !session.expiresAt) {
-      localStorage.removeItem(SCANNER_STORAGE_KEY);
-      return null;
-    }
-    if (now > session.expiresAt) {
-      localStorage.removeItem(SCANNER_STORAGE_KEY);
-      return null;
-    }
     return session;
   } catch {
-    localStorage.removeItem(SCANNER_STORAGE_KEY);
-    return null;
+    const permanent = generateScannerSession();
+    saveScannerSession(permanent);
+    return permanent;
   }
 }
 
@@ -152,12 +121,8 @@ export function clearScannerSession(): void {
 }
 
 /**
- * Format remaining milliseconds as MM:SS string
+ * Format remaining milliseconds as string
  */
-export function formatRemainingTime(remainingMs: number): string {
-  if (remainingMs <= 0) return "00:00 (Kadaluarsa)";
-  const totalSeconds = Math.floor(remainingMs / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+export function formatRemainingTime(remainingMs?: number): string {
+  return "Aktif Permanen";
 }

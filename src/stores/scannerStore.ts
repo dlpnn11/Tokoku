@@ -9,7 +9,6 @@ import {
   saveScannerSession,
   clearScannerSession,
   verifyScannerToken,
-  isSessionExpired,
 } from "@/lib/scannerSecurity";
 
 interface ScannerState {
@@ -26,7 +25,7 @@ export const useScannerStore = create<ScannerState>((set, get) => ({
 
   initSession: () => {
     const existing = getSavedScannerSession();
-    if (existing && !isSessionExpired(existing)) {
+    if (existing) {
       set({ session: existing });
       return existing;
     }
@@ -50,9 +49,7 @@ export const useScannerStore = create<ScannerState>((set, get) => ({
   },
 
   getTimeRemainingMs: () => {
-    const { session } = get();
-    if (!session) return 0;
-    return Math.max(0, session.expiresAt - Date.now());
+    return Number.MAX_SAFE_INTEGER;
   },
 
   revokeSession: () => {

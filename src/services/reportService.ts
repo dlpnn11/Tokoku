@@ -41,14 +41,7 @@ export interface FinancialReportSummary {
 }
 
 const CATEGORY_COLORS = [
-  "#6FA084", // Sage Green
-  "#E8A838", // Amber
-  "#D64545", // Crimson
-  "#3B82F6", // Blue
-  "#8B5CF6", // Purple
-  "#6B7280", // Gray
-  "#10B981", // Emerald
-  "#EC4899", // Pink
+  "#6FA084", // Sage Green TokoKu
 ];
 
 export const reportService = {

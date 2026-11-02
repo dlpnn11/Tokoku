@@ -20,44 +20,69 @@ export function CategoryBreakdown({ categories }: CategoryBreakdownProps) {
     );
   }
 
+  const getRankBadgeStyle = (rank: number) => {
+    switch (rank) {
+      case 1:
+        return "bg-[#6FA084] text-white";
+      case 2:
+        return "bg-[#6FA084]/85 text-white";
+      case 3:
+        return "bg-[#6FA084]/70 text-white";
+      default:
+        return "bg-[#F4F4F0] text-[#6B7280] border border-[#E5E5E0]";
+    }
+  };
+
   return (
     <div className="space-y-3">
-      {categories.map((cat) => (
-        <div key={cat.categoryId} className="space-y-1.5">
-          <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2">
-              <span
-                className="w-2.5 h-2.5 rounded-full shrink-0"
-                style={{ backgroundColor: cat.color }}
+      {categories.map((cat, idx) => {
+        const rank = idx + 1;
+
+        return (
+          <div key={cat.categoryId} className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                {/* Number Badge replacing rainbow bullet point */}
+                <span
+                  className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${getRankBadgeStyle(
+                    rank
+                  )}`}
+                >
+                  {rank}
+                </span>
+                <span
+                  className="font-bold text-[#1A1A1A] truncate"
+                  title={cat.categoryName}
+                >
+                  {cat.categoryName}
+                </span>
+                <span className="text-[10px] text-[#6B7280] shrink-0">
+                  ({cat.quantitySold} pcs)
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="font-mono text-xs font-black text-[#1A1A1A]">
+                  {formatRupiah(cat.totalRevenue)}
+                </span>
+                <span className="font-bold text-[10px] px-1.5 py-0.5 rounded-md bg-[#F4F8F5] border border-[#D5E5DC] text-[#6FA084]">
+                  {cat.percentage}%
+                </span>
+              </div>
+            </div>
+
+            {/* Flat Solid Bar — ZERO GRADIENTS, Solid TokoKu Sage Green */}
+            <div className="w-full h-2 bg-[#F4F4F0] rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-300 bg-[#6FA084]"
+                style={{
+                  width: `${cat.percentage}%`,
+                }}
               />
-              <span className="font-bold text-[#1A1A1A]">{cat.categoryName}</span>
-              <span className="text-[10px] text-[#6B7280]">
-                ({cat.quantitySold} pcs)
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-xs font-black text-[#1A1A1A]">
-                {formatRupiah(cat.totalRevenue)}
-              </span>
-              <span className="font-bold text-[10px] px-1.5 py-0.5 rounded-md bg-[#FAFBF9] border border-[#E5E5E0] text-[#6B7280]">
-                {cat.percentage}%
-              </span>
             </div>
           </div>
-
-          {/* Flat Solid Bar — ZERO GRADIENTS */}
-          <div className="w-full h-2 bg-[#F4F4F0] rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-300"
-              style={{
-                width: `${cat.percentage}%`,
-                backgroundColor: cat.color,
-              }}
-            />
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

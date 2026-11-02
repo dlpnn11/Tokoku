@@ -97,29 +97,18 @@ export const useAuthStore = create<AuthState>()(
       currentUser: null,
       isAuthenticated: false,
       isHydrated: false,
-      isTerminalLocked:
-        typeof window !== "undefined"
-          ? sessionStorage.getItem("tokoku_terminal_locked") === "true"
-          : false,
+      isTerminalLocked: false,
 
       setHydrated: (val: boolean) => set({ isHydrated: val }),
 
       lockTerminal: () => {
-        const { currentUser } = get();
-        set({ isTerminalLocked: true });
+        // Lock screen disabled per user request
+        set({ isTerminalLocked: false });
         if (typeof window !== "undefined") {
           try {
-            sessionStorage.setItem("tokoku_terminal_locked", "true");
-          } catch {
-            // Ignore in restricted environments
-          }
+            sessionStorage.removeItem("tokoku_terminal_locked");
+          } catch {}
         }
-        auditService.recordAuditEvent({
-          userId: currentUser?.id,
-          action: "TERMINAL_DIKUNCI",
-          entity: "auth",
-          newValues: { username: currentUser?.username, role: currentUser?.role },
-        });
       },
 
       unlockTerminal: async (password: string) => {

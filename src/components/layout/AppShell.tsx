@@ -6,9 +6,7 @@ import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { MobileDrawer } from "./MobileDrawer";
 import { ScannerPairingModal } from "@/components/pos/ScannerPairingModal";
-import { TerminalLockOverlay } from "./TerminalLockOverlay";
 import { useAuthStore } from "@/stores/authStore";
-import { useIdleTimer } from "@/hooks/useIdleTimer";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -27,23 +25,10 @@ export function AppShell({
     currentUser,
     isAuthenticated,
     isHydrated,
-    isTerminalLocked,
-    lockTerminal,
     validateSessionIntegrity,
   } = useAuthStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isScannerModalOpen, setIsScannerModalOpen] = React.useState(false);
-
-  // Cashier Terminal Idle Auto-Lockout (15 Minutes)
-  useIdleTimer({
-    timeoutMs: 15 * 60 * 1000,
-    onIdle: () => {
-      if (isAuthenticated && !isTerminalLocked) {
-        lockTerminal();
-      }
-    },
-    enabled: isAuthenticated && !isTerminalLocked,
-  });
 
   // Auth, Anti-Tampering & RBAC Enforcement
   React.useEffect(() => {
@@ -215,9 +200,6 @@ export function AppShell({
           onClose={() => setIsScannerModalOpen(false)}
         />
       </div>
-
-      {/* Cashier Terminal Idle Lockout Overlay */}
-      <TerminalLockOverlay />
     </div>
   );
 }

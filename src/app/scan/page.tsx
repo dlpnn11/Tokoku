@@ -19,6 +19,9 @@ import {
   Zap,
   SwitchCamera,
   Focus,
+  Crosshair,
+  AlertTriangle,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +45,11 @@ function MobileScannerContent() {
   const [hasTorch, setHasTorch] = React.useState(false);
   const [torchOn, setTorchOn] = React.useState(false);
   const [showFocusRing, setShowFocusRing] = React.useState(false);
+  const [focusStatus, setFocusStatus] = React.useState<string | null>(null);
+  const [hasAfSupport, setHasAfSupport] = React.useState<boolean>(true);
+  const [hasMacroSupport, setHasMacroSupport] = React.useState(false);
+  const [macroRange, setMacroRange] = React.useState<{ min?: number; max?: number } | null>(null);
+  const [isMacroMode, setIsMacroMode] = React.useState(false);
 
   const scannerRef = React.useRef<Html5Qrcode | null>(null);
   const channelRef = React.useRef<any>(null);
@@ -159,15 +167,30 @@ function MobileScannerContent() {
 
         setIsScanning(true);
 
-        // Query capabilities after camera is rendered
+        // After stream is running and permissions are granted, query actual camera capabilities & full labels
         try {
-          const caps = scannerRef.current.getRunningTrackCameraCapabilities();
-          const zoomCap = caps?.zoomFeature?.();
+          const freshDevices = await Html5Qrcode.getCameras();
+          if (freshDevices && freshDevices.length > 0) {
+            setCameras(freshDevices);
+          }
+
+          const trackCaps = scannerRef.current.getRunningTrackCapabilities();
+          const supportedFocusModes = ((trackCaps as any)?.focusMode as string[]) || [];
+          const afSupported = supportedFocusModes.length > 0;
+          setHasAfSupport(afSupported);
+
+          if ((trackCaps as any)?.focusDistance) {
+            setHasMacroSupport(true);
+            setMacroRange((trackCaps as any).focusDistance);
+          }
+
+          const zoomCap = scannerRef.current.getRunningTrackCameraCapabilities()?.zoomFeature?.();
           if (zoomCap && zoomCap.isSupported()) {
             setHasHardwareZoom(true);
             zoomCap.apply(1.0).catch(() => {});
           }
-          const torchCap = caps?.torchFeature?.();
+
+          const torchCap = scannerRef.current.getRunningTrackCameraCapabilities()?.torchFeature?.();
           if (torchCap && torchCap.isSupported()) {
             setHasTorch(true);
           }
@@ -238,7 +261,8 @@ function MobileScannerContent() {
             if (mainCam) {
               chosenCamId = mainCam.id;
             } else if (nonUltra.length > 0) {
-              chosenCamId = nonUltra[0].id;
+              // If there are multiple back cameras, pick the one with higher index if 0 is ultra
+              chosenCamId = nonUltra[nonUltra.length > 1 ? 1 : 0].id;
             } else if (backCameras.length > 0) {
               chosenCamId = backCameras[0].id;
             } else {
@@ -248,7 +272,7 @@ function MobileScannerContent() {
           setSelectedCameraId(chosenCamId);
         }
       } catch (err) {
-        console.warn("Could not list cameras:", err);
+        console.warn("Could not list cameras initially:", err);
       }
 
       if (isMounted) {
@@ -266,7 +290,7 @@ function MobileScannerContent() {
     };
   }, [hasValidToken, startScannerWithCamera]);
 
-  // Handle camera switch (e.g. toggle between lenses)
+  // Handle camera switch (e.g. toggle between physical lenses)
   const handleSwitchCamera = async () => {
     if (cameras.length <= 1) return;
     const currentIndex = cameras.findIndex((c) => c.id === selectedCameraId);
@@ -333,18 +357,95 @@ function MobileScannerContent() {
     }
   };
 
-  // Tap-to-focus trigger
+  // Hardware Autofocus Trigger: physically cycles focus modes to sweep contrast
   const handleTapToFocus = async () => {
     setShowFocusRing(true);
-    setTimeout(() => setShowFocusRing(false), 1200);
+    setFocusStatus("Mencari Titik Fokus...");
+
+    if (typeof navigator !== "undefined" && navigator.vibrate) {
+      navigator.vibrate(30);
+    }
 
     if (!scannerRef.current) return;
+
     try {
-      await scannerRef.current.applyVideoConstraints({
-        advanced: [{ focusMode: "continuous" } as any],
-      });
-    } catch {
-      // Browser might ignore continuous constraint re-apply
+      const trackCaps = scannerRef.current.getRunningTrackCapabilities();
+      const supportedFocusModes = ((trackCaps as any)?.focusMode as string[]) || [];
+
+      if (supportedFocusModes.includes("single-shot")) {
+        // Priority 1: Trigger physical single-shot AF sweep
+        await scannerRef.current.applyVideoConstraints({
+          advanced: [{ focusMode: "single-shot" } as any],
+        });
+        setFocusStatus("Fokus Terkunci");
+
+        // Restore continuous tracking after 1.4s
+        setTimeout(async () => {
+          try {
+            await scannerRef.current?.applyVideoConstraints({
+              advanced: [{ focusMode: "continuous" } as any],
+            });
+            setFocusStatus(null);
+          } catch {}
+        }, 1400);
+      } else if (
+        supportedFocusModes.includes("manual") &&
+        supportedFocusModes.includes("continuous")
+      ) {
+        // Priority 2: Cycle manual -> continuous to break static focus lock
+        await scannerRef.current.applyVideoConstraints({
+          advanced: [{ focusMode: "manual" } as any],
+        });
+        await new Promise((r) => setTimeout(r, 60));
+        await scannerRef.current.applyVideoConstraints({
+          advanced: [{ focusMode: "continuous" } as any],
+        });
+        setFocusStatus("Fokus Disesuaikan");
+        setTimeout(() => setFocusStatus(null), 1400);
+      } else {
+        // Priority 3: Re-apply continuous constraints with high sharpness
+        await scannerRef.current.applyVideoConstraints({
+          advanced: [{ focusMode: "continuous" } as any],
+        });
+        setFocusStatus(
+          hasAfSupport ? "Autofokus Diperbarui" : "Lensa Fixed-Focus (Gunakan Zoom 2x)"
+        );
+        setTimeout(() => setFocusStatus(null), 2000);
+      }
+    } catch (err) {
+      console.warn("Autofocus apply error:", err);
+      setFocusStatus("Gunakan Jarak 15 cm");
+      setTimeout(() => setFocusStatus(null), 1800);
+    } finally {
+      setTimeout(() => setShowFocusRing(false), 1200);
+    }
+  };
+
+  // Mode Makro toggle (if focusDistance is supported by hardware)
+  const handleToggleMacro = async () => {
+    if (!scannerRef.current || !hasMacroSupport || !macroRange) return;
+    const nextMacro = !isMacroMode;
+    setIsMacroMode(nextMacro);
+    try {
+      if (nextMacro) {
+        await scannerRef.current.applyVideoConstraints({
+          advanced: [
+            {
+              focusMode: "manual",
+              focusDistance: macroRange.min ?? 0.1,
+            } as any,
+          ],
+        });
+        setFocusStatus("Mode Makro Aktif (Jarak Dekat)");
+      } else {
+        await scannerRef.current.applyVideoConstraints({
+          advanced: [{ focusMode: "continuous" } as any],
+        });
+        setFocusStatus("Autofokus Normal");
+      }
+      setTimeout(() => setFocusStatus(null), 1800);
+    } catch (e) {
+      console.warn("Macro toggle error:", e);
     }
   };
 
@@ -354,6 +455,12 @@ function MobileScannerContent() {
     broadcastSku(manualSku.trim());
     setManualSku("");
   };
+
+  // Determine current active camera label
+  const activeCameraObj = cameras.find((c) => c.id === selectedCameraId);
+  const activeCameraLabel = activeCameraObj
+    ? activeCameraObj.label.slice(0, 24)
+    : "Kamera Utama (1x)";
 
   // If token is missing, reject unauthorized access
   if (!hasValidToken) {
@@ -413,8 +520,8 @@ function MobileScannerContent() {
                 <ShieldCheck className="w-3.5 h-3.5 text-[#6FA084]" />
               </span>
             </div>
-            <span className="text-[10px] text-[#9E9E9E] font-mono block">
-              Room: {roomId.slice(0, 14)} • Lensa 1x
+            <span className="text-[10px] text-[#9E9E9E] font-mono block truncate max-w-[150px]">
+              {activeCameraLabel}
             </span>
           </div>
         </div>
@@ -439,14 +546,14 @@ function MobileScannerContent() {
       <div className="relative my-3 flex-1 flex flex-col items-center justify-center">
         {/* Quick Lens & Zoom Control Bar */}
         <div className="w-full max-w-[320px] flex items-center justify-between mb-2 px-1">
-          {/* Zoom Selector (1.0x, 1.5x, 2.0x) */}
+          {/* Zoom Selector (1.0x, 1.5x, 2.0x, 2.5x) */}
           <div className="flex items-center gap-1 bg-[#1A1A1A] border border-[#3D3D3D] rounded-lg p-1">
-            {[1.0, 1.5, 2.0].map((val) => (
+            {[1.0, 1.5, 2.0, 2.5].map((val) => (
               <button
                 key={val}
                 type="button"
                 onClick={() => handleSetZoom(val)}
-                className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
+                className={`px-2 py-1 rounded text-[11px] font-bold transition-all ${
                   zoomLevel === val
                     ? "bg-[#6FA084] text-white"
                     : "text-[#9E9E9E] hover:text-white"
@@ -457,8 +564,26 @@ function MobileScannerContent() {
             ))}
           </div>
 
-          {/* Quick Action Controls: Torch & Lens Switch */}
+          {/* Quick Action Controls: Torch, Macro, & Lens Switch */}
           <div className="flex items-center gap-1.5">
+            {hasMacroSupport && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleToggleMacro}
+                className={`h-8 px-2 border-[#3D3D3D] text-xs gap-1 rounded-lg ${
+                  isMacroMode
+                    ? "bg-[#6FA084] text-white border-[#6FA084]"
+                    : "bg-[#1A1A1A] text-white hover:bg-[#2C2C2C]"
+                }`}
+                title="Mode Makro (Jarak Sangat Dekat)"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span className="text-[10px]">Makro</span>
+              </Button>
+            )}
+
             {hasTorch && (
               <Button
                 type="button"
@@ -473,7 +598,7 @@ function MobileScannerContent() {
                 title="Lampu Senter"
               >
                 <Zap className="w-3.5 h-3.5" />
-                <span className="text-[10px]">{torchOn ? "Flash ON" : "Flash"}</span>
+                <span className="text-[10px]">{torchOn ? "Flash" : "Flash"}</span>
               </Button>
             )}
 
@@ -507,7 +632,17 @@ function MobileScannerContent() {
           {/* Tap-to-focus Reticle Overlay */}
           {showFocusRing && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-16 h-16 border-2 border-[#6FA084] rounded-lg animate-ping" />
+              <div className="w-20 h-20 border-2 border-[#6FA084] rounded-xl animate-ping flex items-center justify-center">
+                <Crosshair className="w-6 h-6 text-[#6FA084]" />
+              </div>
+            </div>
+          )}
+
+          {/* Live Focus Status Toast */}
+          {focusStatus && (
+            <div className="absolute bottom-4 inset-x-4 mx-auto max-w-fit bg-black/80 backdrop-blur border border-[#6FA084] text-[#6FA084] font-bold text-[11px] px-3.5 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 z-20 animate-fade-in">
+              <Focus className="w-3.5 h-3.5 animate-spin" />
+              <span>{focusStatus}</span>
             </div>
           )}
 
@@ -534,10 +669,32 @@ function MobileScannerContent() {
           )}
         </div>
 
-        {/* Helper prompt below scanner */}
-        <div className="flex items-center gap-1.5 mt-2 text-[11px] text-[#AFAFAF]">
-          <Focus className="w-3.5 h-3.5 text-[#6FA084]" />
-          <span>Ketuk layar kamera untuk memfokuskan • Gunakan 1.5x/2x jika barcode kecil</span>
+        {/* Hardware Status & Focus Guidance */}
+        <div className="w-full max-w-[320px] mt-2 space-y-1.5">
+          {!hasAfSupport && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#E8A838]/15 border border-[#E8A838]/30 rounded-lg text-[10px] text-[#E8A838]">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+              <span>Lensa ini bertipe Fixed-Focus. Ketuk <strong>&quot;Ganti Lensa&quot;</strong> di atas untuk pindah ke lensa autofocus!</span>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between text-[11px] text-[#AFAFAF] px-1">
+            <button
+              type="button"
+              onClick={handleTapToFocus}
+              className="flex items-center gap-1 text-[#6FA084] hover:underline font-medium"
+            >
+              <Focus className="w-3.5 h-3.5" />
+              <span>Ketuk untuk Kunci Fokus</span>
+            </button>
+            <span className="text-[#8E8E8E] text-[10px]">
+              Jarak Ideal: <strong>15–20 cm</strong>
+            </span>
+          </div>
+
+          <p className="text-[10px] text-[#808080] leading-snug px-1">
+            💡 <strong>Tips Barcode Kecil:</strong> Jangan tempelkan HP terlalu dekat (&lt; 10 cm) agar tidak blur. Tahan pada jarak 15 cm lalu tekan tombol <strong>1.5x / 2.0x</strong>.
+          </p>
         </div>
       </div>
 

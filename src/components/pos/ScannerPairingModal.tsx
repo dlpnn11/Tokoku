@@ -65,11 +65,7 @@ export function ScannerPairingModal({
   };
 
   const handleLaunchCameraDirectly = () => {
-    if (scanUrl) {
-      window.location.href = scanUrl;
-    } else {
-      window.location.href = "/scan";
-    }
+    window.open("/scan", "_blank");
   };
 
   return (

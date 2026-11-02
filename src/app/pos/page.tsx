@@ -12,6 +12,7 @@ import { transactionService } from "@/services/transactionService";
 import { useCartStore, CartItem } from "@/stores/cartStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useScannerStore } from "@/stores/scannerStore";
+import { SCANNER_SYNC_CHANNEL } from "@/lib/scannerSecurity";
 import { supabase } from "@/lib/supabase";
 import { playBeep, playErrorSound, playCashChime } from "@/lib/audio";
 import { formatRupiah } from "@/lib/utils";
@@ -97,33 +98,37 @@ export default function PosPage() {
   }, [initSession]);
 
   React.useEffect(() => {
-    if (!session?.roomId) return;
-
-    const channel = supabase.channel(`pos-room-${session.roomId}`);
+    // Connect to the universal permanent sync channel
+    const channel = supabase.channel(SCANNER_SYNC_CHANNEL);
 
     channel
       .on("broadcast", { event: "BARCODE_SCANNED" }, async ({ payload }) => {
-        // Modul 18: Cryptographic Token & TTL Verification
-        const verification = verifyIncomingToken(payload?.token);
-        if (!verification.valid) {
-          playErrorSound();
-          showToast(`[Keamanan] Scan ditolak: ${verification.reason}`, "error");
-          console.warn("[Security] Unauthorized scanner broadcast rejected:", {
-            payload,
-            reason: verification.reason,
-          });
-          return;
-        }
-
+        console.log("[POS] Received barcode broadcast:", payload);
         const scannedCode = (payload?.barcode || payload?.sku || "").trim();
         if (!scannedCode) return;
 
-        // Look up product in current catalog (by physical barcode first, then by SKU) or fetch from database
+        // 1. Look up product in current catalog (by physical barcode first, then by SKU)
         let matched = products.find(
           (p) =>
             (p.barcode && p.barcode.toLowerCase() === scannedCode.toLowerCase()) ||
             p.sku.toLowerCase() === scannedCode.toLowerCase()
         );
+
+        // 2. Direct database query fallback
+        if (!matched) {
+          try {
+            const { data: dbItems } = await supabase
+              .from("products")
+              .select("*")
+              .or(`barcode.eq.${scannedCode},sku.eq.${scannedCode}`)
+              .limit(1);
+            if (dbItems && dbItems.length > 0) {
+              matched = dbItems[0] as Product;
+            }
+          } catch (e) {
+            console.error("Direct barcode query error:", e);
+          }
+        }
 
         if (!matched) {
           matched = await transactionService.getProductBySku(scannedCode);
@@ -148,15 +153,17 @@ export default function PosPage() {
           }
         } else {
           playErrorSound();
-          showToast(`Barcode / SKU "${scannedCode}" tidak terdaftar!`, "error");
+          showToast(`Barcode / SKU "${scannedCode}" tidak terdaftar di database!`, "error");
         }
       })
-      .subscribe();
+      .subscribe((status) => {
+        console.log("[POS] Realtime scanner channel status:", status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [session?.roomId, verifyIncomingToken, products, addItem]);
+  }, [products, addItem]);
 
   // 3. Handle Product Click from Left Catalog
   const handleSelectProduct = (product: Product) => {

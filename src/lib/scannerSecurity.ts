@@ -6,6 +6,7 @@
  */
 
 export const SCANNER_STORAGE_KEY = "tokoku_scanner_pairing_session";
+export const SCANNER_SYNC_CHANNEL = "tokoku-pos-scanner-channel";
 export const PERMANENT_ROOM_ID = "tokoku-main-pos";
 export const PERMANENT_TOKEN = "tokoku-permanent-scanner-key";
 

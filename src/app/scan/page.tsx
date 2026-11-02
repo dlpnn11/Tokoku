@@ -2,9 +2,10 @@
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
-import { Html5Qrcode, Html5QrcodeCameraScanConfig } from "html5-qrcode";
+import { Html5Qrcode, Html5QrcodeCameraScanConfig, Html5QrcodeSupportedFormats } from "html5-qrcode";
 import { supabase } from "@/lib/supabase";
 import { playBeep } from "@/lib/audio";
+import { SCANNER_SYNC_CHANNEL, PERMANENT_TOKEN } from "@/lib/scannerSecurity";
 import {
   Camera,
   CheckCircle2,
@@ -19,19 +20,20 @@ import {
   Focus,
   Crosshair,
   Sparkles,
+  ShoppingCart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 function MobileScannerContent() {
   const searchParams = useSearchParams();
-  // Default to permanent room and token so camera is always active without expiration
   const roomId = searchParams.get("room") || "tokoku-main-pos";
-  const token = searchParams.get("token") || "tokoku-permanent-scanner-key";
+  const token = searchParams.get("token") || PERMANENT_TOKEN;
 
   const [isScanning, setIsScanning] = React.useState(false);
   const [isConnected, setIsConnected] = React.useState(false);
   const [lastScannedSku, setLastScannedSku] = React.useState<string | null>(null);
+  const [scannedCount, setScannedCount] = React.useState<number>(0);
   const [manualSku, setManualSku] = React.useState("");
   const [cameraError, setCameraError] = React.useState<string | null>(null);
 
@@ -52,9 +54,10 @@ function MobileScannerContent() {
   const channelRef = React.useRef<any>(null);
   const lastScanTimeRef = React.useRef<number>(0);
 
-  // Setup Supabase Realtime Channel for permanent pairing
+  // Setup Supabase Realtime Channel for universal scanner synchronization
   React.useEffect(() => {
-    const channel = supabase.channel(`pos-room-${roomId}`);
+    // Both PC and HP connect to the exact same permanent channel
+    const channel = supabase.channel(SCANNER_SYNC_CHANNEL);
 
     channel.subscribe((status) => {
       if (status === "SUBSCRIBED") {
@@ -69,7 +72,7 @@ function MobileScannerContent() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [roomId]);
+  }, []);
 
   // Broadcast barcode with authentication token to desktop POS
   const broadcastSku = React.useCallback(
@@ -81,6 +84,7 @@ function MobileScannerContent() {
       }
 
       setLastScannedSku(sku);
+      setScannedCount((c) => c + 1);
 
       try {
         await channelRef.current.send({
@@ -89,7 +93,7 @@ function MobileScannerContent() {
           payload: {
             barcode: sku.trim(),
             sku: sku.trim(),
-            token: token.trim(),
+            token: PERMANENT_TOKEN,
             timestamp: Date.now(),
           },
         });
@@ -102,7 +106,7 @@ function MobileScannerContent() {
         setLastScannedSku((curr) => (curr === sku ? null : curr));
       }, 2500);
     },
-    [token]
+    []
   );
 
   // Handle zoom changes (Hardware zoom or CSS scale fallback)
@@ -133,14 +137,27 @@ function MobileScannerContent() {
     [hasHardwareZoom]
   );
 
-  // Start scanner with specific camera & autofocus constraints
+  // Start scanner with full-frame retail barcode decoding
   const startScannerWithCamera = React.useCallback(
     async (cameraIdToUse?: string | null) => {
       setCameraError(null);
 
       try {
         if (!scannerRef.current) {
+          // Explicitly prioritize retail 1D formats for maximum speed & distance accuracy
+          const formatsToSupport = [
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39,
+            Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.UPC_E,
+            Html5QrcodeSupportedFormats.QR_CODE,
+            Html5QrcodeSupportedFormats.ITF,
+          ];
+
           scannerRef.current = new Html5Qrcode("reader", {
+            formatsToSupport,
             verbose: false,
             useBarCodeDetectorIfSupported: true,
           });
@@ -156,14 +173,9 @@ function MobileScannerContent() {
         };
 
         const config: Html5QrcodeCameraScanConfig = {
-          fps: 20,
-          qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
-            // Rectangular box specifically calibrated for 1D retail barcodes (Indomie, botol, sabun)
-            const width = Math.min(Math.round(viewfinderWidth * 0.86), 300);
-            const height = Math.min(Math.round(width * 0.52), 160);
-            return { width, height };
-          },
-          aspectRatio: 1.0,
+          fps: 25,
+          // Full-frame recognition without restrictive 160px crop box
+          // This allows scanning from a comfortable distance (20-50 cm) with high precision!
           videoConstraints: {
             ...(cameraIdToUse
               ? { deviceId: { exact: cameraIdToUse } }
@@ -516,26 +528,36 @@ function MobileScannerContent() {
           </div>
         </div>
 
-        {/* Connection Indicator */}
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#2C2C2C] border border-[#3D3D3D]">
-          {isConnected ? (
-            <>
-              <Wifi className="w-3 h-3 text-[#6FA084]" />
-              <span className="text-[#6FA084]">Terhubung Kasir</span>
-            </>
-          ) : (
-            <>
-              <WifiOff className="w-3 h-3 text-[#E8A838]" />
-              <span className="text-[#E8A838]">Menghubungkan...</span>
-            </>
-          )}
+        {/* Right Header: Link to POS and Connection Indicator */}
+        <div className="flex items-center gap-2">
+          <a
+            href="/pos"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#6FA084] text-white text-[10px] font-bold hover:bg-[#58836B] transition-colors"
+            title="Buka Layar Kasir POS"
+          >
+            <ShoppingCart className="w-3 h-3" />
+            <span>Kasir</span>
+            {scannedCount > 0 && (
+              <span className="ml-0.5 px-1 py-0.2 bg-white text-[#6FA084] rounded-full text-[9px] font-black">
+                {scannedCount}
+              </span>
+            )}
+          </a>
+
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold bg-[#2C2C2C] border border-[#3D3D3D]">
+            {isConnected ? (
+              <span className="w-2 h-2 rounded-full bg-[#6FA084] animate-pulse" title="Terhubung" />
+            ) : (
+              <span className="w-2 h-2 rounded-full bg-[#E8A838]" title="Menghubungkan..." />
+            )}
+          </div>
         </div>
       </div>
 
       {/* Main Viewfinder / Camera Container */}
       <div className="relative my-3 flex-1 flex flex-col items-center justify-center">
         {/* Quick Lens & Zoom Control Bar */}
-        <div className="w-full max-w-[320px] flex items-center justify-between mb-2 px-1">
+        <div className="w-full max-w-[340px] flex items-center justify-between mb-2 px-1">
           {/* Zoom Selector (1.0x, 1.5x, 2.0x, 2.5x) */}
           <div className="flex items-center gap-1 bg-[#1A1A1A] border border-[#3D3D3D] rounded-lg p-1">
             {[1.0, 1.5, 2.0, 2.5].map((val) => (
@@ -607,16 +629,19 @@ function MobileScannerContent() {
           </div>
         </div>
 
-        {/* Viewfinder Window */}
+        {/* Viewfinder Window (Full-Frame Responsive Scanning Region) */}
         <div
           onClick={handleTapToFocus}
-          className="relative w-full max-w-[320px] aspect-square rounded-2xl overflow-hidden border-2 border-[#6FA084] shadow-2xl bg-black cursor-pointer group select-none"
+          className="relative w-full max-w-[340px] aspect-[3/4] sm:aspect-square rounded-2xl overflow-hidden border-2 border-[#6FA084] shadow-2xl bg-black cursor-pointer group select-none"
         >
           {/* HTML5 QR Code Container */}
           <div id="reader" className="w-full h-full" />
 
-          {/* Laser scanning beam line (Pure CSS animation) */}
-          <div className="absolute inset-x-6 top-1/2 -translate-y-1/2 h-0.5 bg-[#E05252] shadow-[0_0_8px_#E05252] animate-pulse pointer-events-none" />
+          {/* Generous Targeting Overlay Frame */}
+          <div className="absolute inset-x-6 top-1/4 bottom-1/4 border-2 border-dashed border-[#6FA084]/60 rounded-xl pointer-events-none flex items-center justify-center">
+            {/* Red laser scanning line */}
+            <div className="w-full h-0.5 bg-[#E05252] shadow-[0_0_10px_#E05252] animate-pulse" />
+          </div>
 
           {/* Tap-to-focus Reticle Overlay */}
           {showFocusRing && (
@@ -639,7 +664,7 @@ function MobileScannerContent() {
           {lastScannedSku && (
             <div className="absolute top-4 inset-x-4 mx-auto max-w-fit bg-[#6FA084] text-white font-bold text-xs px-4 py-2 rounded-full shadow-lg flex items-center gap-2 animate-bounce z-20">
               <CheckCircle2 className="w-4 h-4" />
-              <span>Terkirim: {lastScannedSku}</span>
+              <span>Terkirim ke Kasir: {lastScannedSku}</span>
             </div>
           )}
 
@@ -659,7 +684,7 @@ function MobileScannerContent() {
         </div>
 
         {/* Hardware Status & Focus Guidance */}
-        <div className="w-full max-w-[320px] mt-2 space-y-1.5">
+        <div className="w-full max-w-[340px] mt-2 space-y-1.5">
           <div className="flex items-center justify-between text-[11px] text-[#AFAFAF] px-1">
             <button
               type="button"
@@ -670,12 +695,12 @@ function MobileScannerContent() {
               <span>Ketuk untuk Kunci Fokus</span>
             </button>
             <span className="text-[#8E8E8E] text-[10px]">
-              Jarak Ideal: <strong>15–20 cm</strong>
+              Jarak Nyaman: <strong>20–40 cm</strong>
             </span>
           </div>
 
           <p className="text-[10px] text-[#808080] leading-snug px-1">
-            💡 <strong>Tips Barcode Kecil:</strong> Tekan tombol <strong>Makro</strong> atau <strong>Zoom 2.0x</strong> di atas agar barcode kecil langsung fokus tanpa buram.
+            💡 <strong>Full-Frame Aktif:</strong> Barcode dapat dipindai dari jarak jauh maupun dekat di seluruh area kamera. Tekan <strong>Makro</strong> untuk barcode berukuran mini.
           </p>
         </div>
       </div>
@@ -702,7 +727,7 @@ function MobileScannerContent() {
         </form>
 
         <p className="text-[11px] text-center text-[#9E9E9E]">
-          Arahkan barcode produk ke dalam kotak bidik. Data langsung masuk ke keranjang kasir desktop.
+          Setiap scan otomatis disinkronkan ke layar terminal kasir TokoKu secara instan.
         </p>
       </div>
     </div>

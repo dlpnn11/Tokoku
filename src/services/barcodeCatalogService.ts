@@ -768,3 +768,4 @@ export async function lookupBarcodeDetails(
 
   return { found: false, barcode: cleanCode };
 }
+

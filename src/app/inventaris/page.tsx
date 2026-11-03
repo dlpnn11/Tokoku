@@ -32,6 +32,7 @@ import { getSafeErrorMessage } from "@/lib/errorHandler";
 import { ProductFormModal } from "@/components/inventory/ProductFormModal";
 import { ProductDetailModal } from "@/components/inventory/ProductDetailModal";
 import { StockOpnameModal } from "@/components/inventory/StockOpnameModal";
+import { DeleteProductModal } from "@/components/inventory/DeleteProductModal";
 import { CategoryModal } from "@/components/inventory/CategoryModal";
 import { SupplierModal } from "@/components/inventory/SupplierModal";
 import { SupplierProductsModal } from "@/components/inventory/SupplierProductsModal";
@@ -83,6 +84,17 @@ export default function InventarisPage() {
 
   const [isCategoryProductsOpen, setIsCategoryProductsOpen] = React.useState(false);
   const [selectedCategoryForDetail, setSelectedCategoryForDetail] = React.useState<(Category & { product_count?: number }) | null>(null);
+
+  // Delete Product Modal State
+  const [deleteModalState, setDeleteModalState] = React.useState<{
+    isOpen: boolean;
+    product: Product | null;
+    transactionCount: number;
+  }>({
+    isOpen: false,
+    product: null,
+    transactionCount: 0,
+  });
 
   // Category & Supplier Edit States
   const [categoryToEdit, setCategoryToEdit] = React.useState<Category | null>(null);
@@ -145,35 +157,42 @@ export default function InventarisPage() {
     await loadData();
   };
 
-  const handleDeleteProduct = (id: string, name: string) => {
-    const executeDelete = async () => {
-      try {
-        await inventoryService.deleteProduct(id);
-        await loadData();
-      } catch (err: any) {
-        alert(
-          getSafeErrorMessage(err, {
-            fallbackMessage: "Gagal menghapus produk.",
-            context: "handleDeleteProduct",
-          })
-        );
-      }
-    };
+  const handleDeleteProduct = async (product: Product) => {
+    try {
+      const count = await inventoryService.checkProductHasTransactions(product.id);
+      const openModal = () => {
+        setDeleteModalState({
+          isOpen: true,
+          product,
+          transactionCount: count,
+        });
+      };
 
-    if (isCashier) {
-      setSupervisorModalState({
-        isOpen: true,
-        actionTitle: `Hapus Produk: ${name}`,
-        actionDescription: `Kasir mengajukan penghapusan produk "${name}" dari inventaris toko.`,
-        entity: "products",
-        entityId: id,
-        onApproved: executeDelete,
-      });
-    } else {
-      if (confirm(`Apakah kamu yakin ingin menghapus produk "${name}"?`)) {
-        executeDelete();
+      if (isCashier) {
+        setSupervisorModalState({
+          isOpen: true,
+          actionTitle: `Hapus Produk: ${product.name}`,
+          actionDescription: `Kasir mengajukan penghapusan produk "${product.name}" dari inventaris toko.`,
+          entity: "products",
+          entityId: product.id,
+          onApproved: openModal,
+        });
+      } else {
+        openModal();
       }
+    } catch (err: any) {
+      console.error("Gagal memeriksa transaksi produk:", err);
     }
+  };
+
+  const handleConfirmArchive = async (id: string) => {
+    await inventoryService.archiveProduct(id);
+    await loadData();
+  };
+
+  const handleConfirmDeletePermanently = async (id: string) => {
+    await inventoryService.deleteProduct(id, true);
+    await loadData();
   };
 
   // Stock Opname Handler (Requires Supervisor PIN if Cashier decreases large stock)
@@ -621,7 +640,7 @@ export default function InventarisPage() {
                                   <Edit2 className="w-4 h-4" />
                                 </button>
                                 <button
-                                  onClick={() => handleDeleteProduct(p.id, p.name)}
+                                  onClick={() => handleDeleteProduct(p)}
                                   className="p-1.5 hover:bg-[#FDEAEA] rounded text-[#6B7280] hover:text-[#D64545] transition-colors cursor-pointer"
                                   title="Hapus Produk"
                                 >
@@ -868,6 +887,21 @@ export default function InventarisPage() {
       </div>
 
       {/* ALL MODALS */}
+      <DeleteProductModal
+        isOpen={deleteModalState.isOpen}
+        onClose={() =>
+          setDeleteModalState({
+            isOpen: false,
+            product: null,
+            transactionCount: 0,
+          })
+        }
+        product={deleteModalState.product}
+        transactionCount={deleteModalState.transactionCount}
+        onConfirmArchive={handleConfirmArchive}
+        onConfirmDeletePermanently={handleConfirmDeletePermanently}
+      />
+
       <ProductFormModal
         isOpen={isProductFormOpen}
         onClose={() => setIsProductFormOpen(false)}

@@ -198,10 +198,61 @@ export const inventoryService = {
     return data as Product;
   },
 
-  // 7. Delete Product
-  async deleteProduct(id: string) {
+  // 7. Check if Product has Transaction History
+  async checkProductHasTransactions(productId: string): Promise<number> {
+    try {
+      const { count, error } = await supabase
+        .from("transaction_details")
+        .select("id", { count: "exact", head: true })
+        .eq("product_id", productId);
+      if (error) return 0;
+      return count || 0;
+    } catch {
+      return 0;
+    }
+  },
+
+  // 7B. Archive / Deactivate Product (Soft Delete)
+  async archiveProduct(id: string) {
+    const { error } = await supabase
+      .from("products")
+      .update({ is_active: false })
+      .eq("id", id);
+    if (error) {
+      throw new Error(
+        getSafeErrorMessage(error, {
+          fallbackMessage: "Gagal menonaktifkan produk.",
+          context: "archiveProduct",
+        })
+      );
+    }
+    return true;
+  },
+
+  // 7C. Delete Product (Normal or Force Cascade for Test Data)
+  async deleteProduct(id: string, forceCascade = false) {
+    if (forceCascade) {
+      // Clean up child transaction_details first to prevent foreign key violation
+      const { error: detailError } = await supabase
+        .from("transaction_details")
+        .delete()
+        .eq("product_id", id);
+      if (detailError) {
+        throw new Error(
+          getSafeErrorMessage(detailError, {
+            fallbackMessage: "Gagal membersihkan detail transaksi terkait produk.",
+            context: "deleteProduct.forceCascade.details",
+          })
+        );
+      }
+    }
+
     const { error } = await supabase.from("products").delete().eq("id", id);
     if (error) {
+      // If foreign key violation, indicate that the product has transaction history
+      if (error.code === "23503" || String(error.message).includes("violates foreign key")) {
+        return { success: false, hasTransactions: true };
+      }
       throw new Error(
         getSafeErrorMessage(error, {
           fallbackMessage: "Gagal menghapus produk.",
@@ -209,7 +260,7 @@ export const inventoryService = {
         })
       );
     }
-    return true;
+    return { success: true };
   },
 
   // 8. Create Category (Zod validated)

@@ -7,9 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Product, Category, Supplier } from "@/types/database";
 import { formatRupiah, roundPrice500 } from "@/lib/utils";
 import { CustomSelect } from "@/components/ui/select";
-import { Barcode } from "lucide-react";
+import { Barcode, Camera, Sparkles, Smartphone, CheckCircle2 } from "lucide-react";
 import { ProductInputSchema, formatZodError } from "@/lib/schemas";
 import { getSafeErrorMessage } from "@/lib/errorHandler";
+import { ProductBarcodeScannerModal } from "./ProductBarcodeScannerModal";
+import {
+  lookupBarcodeDetails,
+  BarcodeLookupResult,
+} from "@/services/barcodeCatalogService";
+import { playBeep } from "@/lib/audio";
+import { supabase } from "@/lib/supabase";
+import { SCANNER_SYNC_CHANNEL } from "@/lib/scannerSecurity";
 
 interface ProductFormModalProps {
   isOpen: boolean;
@@ -42,6 +50,93 @@ export function ProductFormModal({
   const [loading, setLoading] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState("");
 
+  // Barcode Scanning & Auto-Lookup States
+  const [isScannerModalOpen, setIsScannerModalOpen] = React.useState(false);
+  const [detectedProductInfo, setDetectedProductInfo] =
+    React.useState<BarcodeLookupResult | null>(null);
+  const [isSearchingCatalog, setIsSearchingCatalog] = React.useState(false);
+
+  // Core function to process scanned or typed barcode and query master catalog
+  const processBarcodeValue = React.useCallback(
+    async (rawCode: string, isFromScanner = false) => {
+      const cleanCode = rawCode.trim();
+      setBarcode(cleanCode);
+
+      // Auto-update SKU if empty or still on default auto-generated prefix
+      setSku((prev) => (!prev || prev.startsWith("PRD-") ? cleanCode : prev));
+
+      if (cleanCode.length >= 8) {
+        setIsSearchingCatalog(true);
+        try {
+          const result = await lookupBarcodeDetails(cleanCode);
+          if (result.found && result.name) {
+            setDetectedProductInfo(result);
+
+            // Auto-fill product name if empty or creating new product
+            setName((prev) =>
+              !prev || prev.startsWith("PRD-") || !productToEdit ? result.name! : prev
+            );
+
+            // Auto-select matched category
+            if (result.categoryName) {
+              const matchedCategory = categories.find(
+                (c) =>
+                  c.name.toLowerCase() === result.categoryName!.toLowerCase()
+              );
+              if (matchedCategory) {
+                setCategoryId(matchedCategory.id);
+              }
+            }
+
+            // Auto-select unit
+            if (result.unit) {
+              setUnit(result.unit);
+            }
+
+            // Auto-populate suggested prices for new items
+            if (!productToEdit) {
+              if (result.suggestedBuyPrice) {
+                setBuyPrice((prev) => (prev === 0 ? result.suggestedBuyPrice! : prev));
+              }
+              if (result.suggestedSellPrice) {
+                setSellPrice((prev) => (prev === 0 ? result.suggestedSellPrice! : prev));
+              }
+            }
+          } else {
+            setDetectedProductInfo(null);
+          }
+        } catch (err) {
+          console.warn("Catalog lookup error:", err);
+        } finally {
+          setIsSearchingCatalog(false);
+        }
+      } else {
+        setDetectedProductInfo(null);
+      }
+    },
+    [categories, productToEdit]
+  );
+
+  // Realtime Supabase Sync: Catch barcodes scanned on HP while this modal is open
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    const channel = supabase.channel(SCANNER_SYNC_CHANNEL);
+    channel
+      .on("broadcast", { event: "BARCODE_SCANNED" }, ({ payload }) => {
+        const code = (payload?.barcode || payload?.sku || "").trim();
+        if (code) {
+          playBeep();
+          processBarcodeValue(code, true);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isOpen, processBarcodeValue]);
+
   React.useEffect(() => {
     if (productToEdit) {
       setName(productToEdit.name || "");
@@ -55,6 +150,7 @@ export function ProductFormModal({
       setMinimumStock(Number(productToEdit.minimum_stock) || 5);
       setUnit(productToEdit.unit || "pcs");
       setIsActive(productToEdit.is_active ?? true);
+      setDetectedProductInfo(null);
     } else {
       setName("");
       // Generate unique default SKU if empty
@@ -68,6 +164,7 @@ export function ProductFormModal({
       setMinimumStock(5);
       setUnit("pcs");
       setIsActive(true);
+      setDetectedProductInfo(null);
     }
     setErrorMsg("");
   }, [productToEdit, categories, suppliers, isOpen]);
@@ -133,6 +230,38 @@ export function ProductFormModal({
           </div>
         )}
 
+        {/* Detected Product Auto-fill Notification Banner */}
+        {detectedProductInfo && (
+          <div className="p-3 bg-[#EBF3EE] border border-[#6FA084] rounded-xl flex items-start gap-2.5 text-xs text-[#2C6E49] animate-in fade-in">
+            <Sparkles className="w-4 h-4 shrink-0 text-[#6FA084] mt-0.5" />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-bold text-[#1A1A1A]">
+                  ✨ Data Produk Terdeteksi Otomatis:
+                </p>
+                <span className="text-[10px] bg-white text-[#6FA084] font-bold px-2 py-0.5 rounded-full border border-[#6FA084]/40 shrink-0">
+                  {detectedProductInfo.source === "local_catalog"
+                    ? "Katalog Resmi Indonesia (Offline)"
+                    : "Open Food Facts (Cloud)"}
+                </span>
+              </div>
+              <p className="font-bold text-sm text-[#1A1A1A] mt-0.5">
+                {detectedProductInfo.name}
+              </p>
+              <p className="text-[11px] text-[#4B5563] mt-0.5">
+                Kategori: <b className="text-[#1A1A1A]">{detectedProductInfo.categoryName}</b> • Satuan:{" "}
+                <b className="text-[#1A1A1A]">{detectedProductInfo.unit}</b>
+                {detectedProductInfo.suggestedSellPrice
+                  ? ` • Rekomendasi Jual: Rp ${detectedProductInfo.suggestedSellPrice.toLocaleString("id-ID")}`
+                  : ""}
+              </p>
+              <p className="text-[10px] text-[#6B7280] mt-1 italic">
+                *Nama dan kategori di atas telah diisi otomatis. Anda dapat mengubah harga, stok, atau nama jika diinginkan.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Nama Produk */}
         <div>
           <label className="text-xs font-bold text-[#1A1A1A] block mb-1">
@@ -169,17 +298,39 @@ export function ProductFormModal({
                 <Barcode className="w-3.5 h-3.5 text-[#6FA084]" />
                 Nomor Barcode Fisik
               </label>
-              <span className="text-[10px] font-semibold text-[#6B7280] bg-[#F4F4F0] px-2 py-0.5 rounded-md">
-                Opsional
-              </span>
+              <button
+                type="button"
+                onClick={() => setIsScannerModalOpen(true)}
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-[#6FA084] hover:text-[#58836B] hover:underline cursor-pointer bg-[#EBF3EE] px-2 py-0.5 rounded-md transition-colors"
+                title="Buka kamera laptop atau HP untuk scan barcode otomatis"
+              >
+                <Camera className="w-3 h-3" />
+                Scan Barcode
+              </button>
             </div>
-            <Input
-              placeholder="Contoh: 8999999500245 (scan/ketik)"
-              value={barcode}
-              onChange={(e) => setBarcode(e.target.value)}
-            />
-            <p className="text-[10px] text-[#6B7280] mt-0.5">
-              Scan barcode kemasan fisik untuk scanner kasir. Kosongkan jika tidak ada.
+            <div className="relative">
+              <Input
+                placeholder="Contoh: 8999999500245 (scan/ketik)"
+                value={barcode}
+                onChange={(e) => processBarcodeValue(e.target.value)}
+                className="pr-10 font-mono text-xs"
+              />
+              <button
+                type="button"
+                onClick={() => setIsScannerModalOpen(true)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#6FA084] hover:text-[#58836B] p-1 cursor-pointer"
+                title="Pindai barcode via kamera"
+              >
+                <Camera className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-[10px] text-[#6B7280] mt-0.5 flex items-center justify-between">
+              <span>Bisa scan via kamera laptop atau scanner HP.</span>
+              {isSearchingCatalog && (
+                <span className="text-[#6FA084] font-semibold animate-pulse">
+                  Mencari katalog...
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -360,6 +511,13 @@ export function ProductFormModal({
           </Button>
         </div>
       </form>
+
+      {/* Embedded Barcode Camera Scanner Modal */}
+      <ProductBarcodeScannerModal
+        isOpen={isScannerModalOpen}
+        onClose={() => setIsScannerModalOpen(false)}
+        onScan={(code) => processBarcodeValue(code, true)}
+      />
     </Modal>
   );
 }

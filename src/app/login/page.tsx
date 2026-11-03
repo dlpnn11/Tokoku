@@ -26,7 +26,7 @@ import { User as UserType } from "@/types/database";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, verify2FALogin, isAuthenticated, currentUser } = useAuthStore();
+  const { login, verify2FALogin, isAuthenticated, currentUser, logout } = useAuthStore();
 
   const [username, setUsername] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -49,15 +49,21 @@ function LoginForm() {
   const [lockCountdown, setLockCountdown] = React.useState(0);
   const [remainingAttempts, setRemainingAttempts] = React.useState<number | null>(null);
 
-  // Check for tamper security alert
+  // Check for logout or tamper security alert
   React.useEffect(() => {
+    const isLogout = searchParams.get("action") === "logout" || searchParams.has("logout");
+    if (isLogout) {
+      logout();
+    }
+
     const isParamTamper = searchParams.get("security_alert") === "tampering_detected";
     const isStorageTamper = hasTamperAlert();
     if (isParamTamper || isStorageTamper) {
       setTamperDetected(true);
       clearTamperAlert();
+      logout();
     }
-  }, [searchParams]);
+  }, [searchParams, logout]);
 
   // Synchronize rate limit status when username changes
   React.useEffect(() => {
@@ -107,8 +113,15 @@ function LoginForm() {
     return () => clearInterval(timer);
   }, [isLockedOut, lockCountdown, username]);
 
-  // If already authenticated, redirect to appropriate page
+  // If already authenticated, redirect to appropriate page (unless explicitly logging out)
   React.useEffect(() => {
+    const isLogout =
+      searchParams.get("action") === "logout" ||
+      searchParams.has("logout") ||
+      searchParams.has("security_alert");
+
+    if (isLogout) return;
+
     if (isAuthenticated && currentUser) {
       if (currentUser.role === "pemilik") {
         router.push("/dashboard");
@@ -116,7 +129,7 @@ function LoginForm() {
         router.push("/pos");
       }
     }
-  }, [isAuthenticated, currentUser, router]);
+  }, [isAuthenticated, currentUser, router, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

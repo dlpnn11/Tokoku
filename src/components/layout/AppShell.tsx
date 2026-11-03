@@ -26,16 +26,74 @@ export function AppShell({
     isAuthenticated,
     isHydrated,
     validateSessionIntegrity,
+    syncWithServerSession,
   } = useAuthStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isScannerModalOpen, setIsScannerModalOpen] = React.useState(false);
+  const [isCheckingSession, setIsCheckingSession] = React.useState(false);
 
-  // Auth, Anti-Tampering & RBAC Enforcement
+  // Automatic Server Session Recovery & Hydration Safety Guard
   React.useEffect(() => {
-    if (!isAuthenticated || !currentUser) {
-      router.replace("/login");
-      return;
-    }
+    let isMounted = true;
+
+    // Safety timeout: Ensure hydration is never stuck
+    const hydrationTimer = setTimeout(() => {
+      if (!useAuthStore.getState().isHydrated) {
+        useAuthStore.getState().setHydrated(true);
+      }
+    }, 600);
+
+    const checkAndSyncSession = async () => {
+      const state = useAuthStore.getState();
+
+      // If already authenticated with active user in state, continue directly
+      if (state.isAuthenticated && state.currentUser) {
+        return;
+      }
+
+      // If client state lacks user, recover session from server httpOnly cookie
+      setIsCheckingSession(true);
+      try {
+        const synced = await syncWithServerSession();
+        if (!isMounted) return;
+
+        if (synced) {
+          setIsCheckingSession(false);
+          return;
+        }
+      } catch (err) {
+        console.warn("Session sync fallback error:", err);
+      }
+
+      if (!isMounted) return;
+      setIsCheckingSession(false);
+
+      // If server confirmed unauthenticated or recovery failed, redirect cleanly to login
+      router.replace("/login?action=logout");
+    };
+
+    checkAndSyncSession();
+
+    // Absolute fallback safety: never hang on loading spinner longer than 2.5 seconds
+    const hangSafetyTimer = setTimeout(() => {
+      if (isMounted) {
+        const current = useAuthStore.getState();
+        if (!current.isAuthenticated || !current.currentUser) {
+          router.replace("/login?action=logout");
+        }
+      }
+    }, 2500);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(hydrationTimer);
+      clearTimeout(hangSafetyTimer);
+    };
+  }, [router, syncWithServerSession]);
+
+  // RBAC & Session Integrity Enforcement (runs once user is confirmed authenticated)
+  React.useEffect(() => {
+    if (!isAuthenticated || !currentUser) return;
 
     const ownerOnlyRoutes = [
       "/dashboard",
@@ -147,8 +205,8 @@ export function AppShell({
     };
   }, [isMobileMenuOpen, isScannerModalOpen]);
 
-  // Prevent ghost rendering of protected layout while unauthenticated or hydrating
-  if (!isHydrated || !isAuthenticated || !currentUser) {
+  // Prevent ghost rendering of protected layout while unauthenticated, hydrating, or syncing session
+  if (!isHydrated || !isAuthenticated || !currentUser || isCheckingSession) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-[#F4F4F0] select-none">
         <div className="flex flex-col items-center gap-3">

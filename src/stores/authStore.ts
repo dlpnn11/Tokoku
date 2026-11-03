@@ -53,6 +53,7 @@ interface AuthState {
   switchRole: (role: UserRole) => void;
   setUser: (user: User) => void;
   validateSessionIntegrity: () => Promise<boolean>;
+  syncWithServerSession: () => Promise<boolean>;
 }
 
 export const DEFAULT_PEMILIK: User = {
@@ -431,9 +432,9 @@ export const useAuthStore = create<AuthState>()(
         // 1. Verify localStorage integrity signature directly
         const raw = localStorage.getItem(SESSION_STORAGE_KEY);
         if (!raw) {
-          handleTamperDetected("missing_storage_during_validation");
-          get().logout();
-          return false;
+          // If storage is momentarily unpopulated or cleared during tab transitions,
+          // do not trigger false tamper alerts. Simply maintain current state.
+          return true;
         }
 
         const verification = await verifyStorageData(raw);
@@ -469,6 +470,31 @@ export const useAuthStore = create<AuthState>()(
 
         return true;
       },
+
+      /**
+       * Rehydrates client state from authoritative server httpOnly session cookie
+       * if localStorage was empty, desynced, or in a fresh tab.
+       */
+      syncWithServerSession: async (): Promise<boolean> => {
+        if (typeof window === "undefined") return false;
+        try {
+          const res = await fetch("/api/auth/session", { cache: "no-store" });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.authenticated && data.user) {
+              set({
+                currentUser: data.user,
+                isAuthenticated: true,
+                isHydrated: true,
+              });
+              return true;
+            }
+          }
+        } catch {
+          // Offline network fallback
+        }
+        return false;
+      },
     }),
     {
       name: SESSION_STORAGE_KEY,
@@ -476,6 +502,8 @@ export const useAuthStore = create<AuthState>()(
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.setHydrated(true);
+        } else {
+          useAuthStore.getState().setHydrated(true);
         }
       },
     }

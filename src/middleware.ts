@@ -81,10 +81,12 @@ export async function middleware(req: NextRequest) {
 
   // 3. Handle Login Page (/login)
   if (pathname === "/login") {
-    // If explicit logout action requested, purge session cookie and allow login page access
+    // If explicit logout action or security alert requested, purge session cookie and allow login page access
     if (
       req.nextUrl.searchParams.get("action") === "logout" ||
-      req.nextUrl.searchParams.has("logout")
+      req.nextUrl.searchParams.has("logout") ||
+      req.nextUrl.searchParams.has("security_alert") ||
+      req.nextUrl.searchParams.has("reauth")
     ) {
       const res = NextResponse.next();
       res.cookies.delete(SESSION_COOKIE_NAME);

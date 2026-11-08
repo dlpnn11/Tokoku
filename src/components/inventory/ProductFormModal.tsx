@@ -55,6 +55,7 @@ export function ProductFormModal({
   const [detectedProductInfo, setDetectedProductInfo] =
     React.useState<BarcodeLookupResult | null>(null);
   const [isSearchingCatalog, setIsSearchingCatalog] = React.useState(false);
+  const [notFoundBarcode, setNotFoundBarcode] = React.useState<string | null>(null);
 
   // Core function to process scanned or typed barcode and query master catalog
   const processBarcodeValue = React.useCallback(
@@ -62,15 +63,17 @@ export function ProductFormModal({
       const cleanCode = rawCode.trim();
       setBarcode(cleanCode);
 
-      // Auto-update SKU if empty or still on default auto-generated prefix
-      setSku((prev) => (!prev || prev.startsWith("PRD-") ? cleanCode : prev));
+      // Note: SKU is an internal store identifier and is NEVER overwritten by the barcode number.
 
       if (cleanCode.length >= 8) {
         setIsSearchingCatalog(true);
+        setNotFoundBarcode(null);
+        setDetectedProductInfo(null);
         try {
           const result = await lookupBarcodeDetails(cleanCode);
           if (result.found && result.name) {
             setDetectedProductInfo(result);
+            setNotFoundBarcode(null);
 
             // Auto-fill product name if empty or creating new product
             setName((prev) =>
@@ -104,14 +107,19 @@ export function ProductFormModal({
             }
           } else {
             setDetectedProductInfo(null);
+            setNotFoundBarcode(cleanCode);
           }
         } catch (err) {
           console.warn("Catalog lookup error:", err);
+          setDetectedProductInfo(null);
+          setNotFoundBarcode(cleanCode);
         } finally {
           setIsSearchingCatalog(false);
         }
       } else {
         setDetectedProductInfo(null);
+        setNotFoundBarcode(null);
+        setIsSearchingCatalog(false);
       }
     },
     [categories, productToEdit]
@@ -157,6 +165,8 @@ export function ProductFormModal({
         setUnit(productToEdit.unit || "pcs");
         setIsActive(productToEdit.is_active ?? true);
         setDetectedProductInfo(null);
+        setNotFoundBarcode(null);
+        setIsSearchingCatalog(false);
       } else {
         setName("");
         // Generate unique default SKU if empty
@@ -171,6 +181,8 @@ export function ProductFormModal({
         setUnit("pcs");
         setIsActive(true);
         setDetectedProductInfo(null);
+        setNotFoundBarcode(null);
+        setIsSearchingCatalog(false);
       }
       setErrorMsg("");
     });
@@ -237,8 +249,18 @@ export function ProductFormModal({
           </div>
         )}
 
+        {/* Searching Indicator Banner */}
+        {isSearchingCatalog && (
+          <div className="p-3 bg-[#EBF3EE] border border-[#6FA084] rounded-xl flex items-center gap-2.5 text-xs text-[#2C6E49] animate-pulse">
+            <Sparkles className="w-4 h-4 shrink-0 text-[#6FA084]" />
+            <p className="font-semibold text-[#1A1A1A]">
+              Mencari data produk di database &amp; katalog...
+            </p>
+          </div>
+        )}
+
         {/* Detected Product Auto-fill Notification Banner */}
-        {detectedProductInfo && (
+        {!isSearchingCatalog && detectedProductInfo && (
           <div className="p-3 bg-[#EBF3EE] border border-[#6FA084] rounded-xl flex items-start gap-2.5 text-xs text-[#2C6E49] animate-in fade-in">
             <Sparkles className="w-4 h-4 shrink-0 text-[#6FA084] mt-0.5" />
             <div className="min-w-0 flex-1">
@@ -249,6 +271,10 @@ export function ProductFormModal({
                 <span className="text-[10px] bg-white text-[#6FA084] font-bold px-2 py-0.5 rounded-full border border-[#6FA084]/40 shrink-0">
                   {detectedProductInfo.source === "local_catalog"
                     ? "Katalog Resmi Indonesia (Offline)"
+                    : detectedProductInfo.source === "database"
+                    ? "Database TokoKu"
+                    : detectedProductInfo.source === "open_beauty_facts"
+                    ? "Open Beauty Facts (Cloud)"
                     : "Open Food Facts (Cloud)"}
                 </span>
               </div>
@@ -264,6 +290,21 @@ export function ProductFormModal({
               </p>
               <p className="text-[10px] text-[#6B7280] mt-1 italic">
                 *Nama dan kategori di atas telah diisi otomatis. Anda dapat mengubah harga, stok, atau nama jika diinginkan.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Not Found in Catalog Notification Banner */}
+        {!isSearchingCatalog && !detectedProductInfo && notFoundBarcode && (
+          <div className="p-3 bg-[#F4F4F0] border border-[#D1D5DB] rounded-xl flex items-start gap-2.5 text-xs text-[#4B5563] animate-in fade-in">
+            <Barcode className="w-4 h-4 shrink-0 text-[#6B7280] mt-0.5" />
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-[#1A1A1A]">
+                Barcode <span className="font-mono font-bold text-[#2C2C2C]">{notFoundBarcode}</span> berhasil dipindai.
+              </p>
+              <p className="text-[11px] text-[#6B7280] mt-0.5">
+                Produk belum terdaftar di katalog publik — silakan isi Nama Produk di bawah.
               </p>
             </div>
           </div>

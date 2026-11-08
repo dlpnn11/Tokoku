@@ -86,6 +86,14 @@ async function runTestSuite() {
     assert(typeof res.suggestedSellPrice === "number" && res.suggestedSellPrice > res.suggestedBuyPrice, `Barcode ${item.code} has valid sell price with positive margin`);
   }
 
+  // 1.1 UPC-A 12 vs 13 Digit Zero-Padding Resilience Test
+  console.log("\n[Test 1.1] UPC-A (12-digit) & EAN-13 (13-digit Zero-Padded) Dual Lookup");
+  const upcRes12 = await lookupBarcodeDetails("089686010019");
+  assert(upcRes12.found === true && upcRes12.name === "Indomie Mi Goreng Spesial 85g", "12-digit UPC matches Indomie Mi Goreng");
+
+  const upcRes13 = await lookupBarcodeDetails("0089686010019");
+  assert(upcRes13.found === true && upcRes13.name === "Indomie Mi Goreng Spesial 85g", "13-digit zero-padded EAN matches Indomie Mi Goreng");
+
   // 2. NORMALIZATION & SANITIZATION TESTS
   console.log("\n[Test 2] Barcode Normalization & Formats");
   assert(normalizeBarcode("  8886008101053  ") === "8886008101053", "Trims leading and trailing whitespace");
@@ -147,6 +155,19 @@ async function runTestSuite() {
     "ProductFormModal.tsx renders loading searching catalog banner"
   );
 
+  // Ensure race-condition guard exists
+  assert(modalContent.includes("latestLookupCodeRef"), "ProductFormModal.tsx implements race-condition guard (latestLookupCodeRef)");
+
+  // Ensure debounce timer exists
+  assert(modalContent.includes("debounceTimerRef"), "ProductFormModal.tsx implements debounce timer for typing");
+
+  // Ensure Enter key prevention on barcode input to protect against USB barcode gun auto-submits
+  assert(modalContent.includes('e.key === "Enter"'), "ProductFormModal.tsx intercepts Enter key on barcode input");
+
+  // Ensure Edit mode apply button exists
+  assert(modalContent.includes("applyDetectedInfo"), "ProductFormModal.tsx includes applyDetectedInfo handler");
+  assert(modalContent.includes("Terapkan ke Form"), "ProductFormModal.tsx renders 'Terapkan ke Form' button for Edit mode");
+
   // Ensure zero gradients rule is respected in ProductFormModal
   const hasGradientInModal = /\bbg-gradient-|\bfrom-[a-z0-9#]+-/.test(modalContent);
   assert(!hasGradientInModal, "ProductFormModal.tsx has ZERO gradients (100% solid flat colors)");
@@ -160,6 +181,8 @@ async function runTestSuite() {
   assert(routeContent.includes("world.openfoodfacts.org"), "API route includes Open Food Facts fallback");
   assert(routeContent.includes("world.openbeautyfacts.org"), "API route includes Open Beauty Facts fallback");
   assert(routeContent.includes("supabase"), "API route includes Supabase store DB lookup");
+  assert(routeContent.includes("sku.eq"), "API route checks both barcode and sku columns in store database");
+  assert(routeContent.includes("p.brands"), "API route includes brand prefix logic from Open Food/Beauty Facts");
   assert(routeContent.includes("TokoKu-POS/1.0"), "API route uses official User-Agent header");
 
   console.log("\n==========================================================");

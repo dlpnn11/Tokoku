@@ -1267,7 +1267,17 @@ export async function lookupBarcodeDetails(
   }
 
   // 1. Instant 0ms Local Master Catalog Match
-  const localMatch = LOCAL_INDONESIAN_BARCODE_CATALOG[cleanCode];
+  let localMatch = LOCAL_INDONESIAN_BARCODE_CATALOG[cleanCode];
+
+  // UPC-A (12-digit) and zero-padded EAN-13 (13-digit) alias matching
+  if (!localMatch) {
+    if (cleanCode.length === 13 && cleanCode.startsWith("0")) {
+      localMatch = LOCAL_INDONESIAN_BARCODE_CATALOG[cleanCode.slice(1)];
+    } else if (cleanCode.length === 12) {
+      localMatch = LOCAL_INDONESIAN_BARCODE_CATALOG["0" + cleanCode];
+    }
+  }
+
   if (localMatch) {
     return {
       found: true,

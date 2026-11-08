@@ -26,10 +26,17 @@ export async function GET(req: NextRequest) {
 
     // 1. Check store's Supabase products table first
     try {
+      const orFilters = [`barcode.eq.${cleanCode}`, `sku.eq.${cleanCode}`];
+      if (cleanCode.length === 13 && cleanCode.startsWith("0")) {
+        orFilters.push(`barcode.eq.${cleanCode.slice(1)}`, `sku.eq.${cleanCode.slice(1)}`);
+      } else if (cleanCode.length === 12) {
+        orFilters.push(`barcode.eq.0${cleanCode}`, `sku.eq.0${cleanCode}`);
+      }
+
       const { data: existingProduct, error } = await supabase
         .from("products")
         .select("name, buy_price, sell_price, unit, category:categories(name)")
-        .eq("barcode", cleanCode)
+        .or(orFilters.join(","))
         .limit(1)
         .maybeSingle();
 
@@ -86,7 +93,7 @@ export async function GET(req: NextRequest) {
         const json = await offRes.json();
         if (json.status === 1 && json.product) {
           const p = json.product;
-          const detectedName =
+          let detectedName =
             p.product_name_id ||
             p.product_name ||
             p.product_name_en ||
@@ -94,6 +101,16 @@ export async function GET(req: NextRequest) {
             "";
 
           if (detectedName) {
+            if (p.brands && typeof p.brands === "string") {
+              const firstBrand = p.brands.split(",")[0].trim();
+              if (
+                firstBrand &&
+                !detectedName.toLowerCase().includes(firstBrand.toLowerCase())
+              ) {
+                detectedName = `${firstBrand} ${detectedName}`;
+              }
+            }
+
             const rawCat = `${p.categories || ""} ${p.compared_to_category || ""} ${detectedName}`;
             return NextResponse.json({
               found: true,
@@ -118,7 +135,7 @@ export async function GET(req: NextRequest) {
         const json = await obfRes.json();
         if (json.status === 1 && json.product) {
           const p = json.product;
-          const detectedName =
+          let detectedName =
             p.product_name_id ||
             p.product_name ||
             p.product_name_en ||
@@ -126,6 +143,16 @@ export async function GET(req: NextRequest) {
             "";
 
           if (detectedName) {
+            if (p.brands && typeof p.brands === "string") {
+              const firstBrand = p.brands.split(",")[0].trim();
+              if (
+                firstBrand &&
+                !detectedName.toLowerCase().includes(firstBrand.toLowerCase())
+              ) {
+                detectedName = `${firstBrand} ${detectedName}`;
+              }
+            }
+
             const rawCat = `${p.categories || ""} ${p.compared_to_category || ""} ${detectedName}`;
             const categoryName = inferCategoryFromKeywords(rawCat);
             return NextResponse.json({

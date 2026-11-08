@@ -13,6 +13,7 @@ import { getSafeErrorMessage } from "@/lib/errorHandler";
 import { ProductBarcodeScannerModal } from "./ProductBarcodeScannerModal";
 import {
   lookupBarcodeDetails,
+  normalizeBarcode,
   BarcodeLookupResult,
 } from "@/services/barcodeCatalogService";
 import { playBeep } from "@/lib/audio";
@@ -57,13 +58,43 @@ export function ProductFormModal({
   const [isSearchingCatalog, setIsSearchingCatalog] = React.useState(false);
   const [notFoundBarcode, setNotFoundBarcode] = React.useState<string | null>(null);
 
-  // Core function to process scanned or typed barcode and query master catalog
-  const processBarcodeValue = React.useCallback(
-    async (rawCode: string) => {
-      const cleanCode = rawCode.trim();
-      setBarcode(cleanCode);
+  // Concurrency guard & Debounce timer for physical scanning vs typing
+  const latestLookupCodeRef = React.useRef<string>("");
+  const debounceTimerRef = React.useRef<NodeJS.Timeout | null>(null);
 
-      // Note: SKU is an internal store identifier and is NEVER overwritten by the barcode number.
+  // Clean up timers on unmount
+  React.useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Resilient category matcher (exact match, substring, or token matching)
+  const matchAndSelectCategory = React.useCallback(
+    (categoryName?: string) => {
+      if (!categoryName || !categories.length) return;
+      const target = categoryName.toLowerCase().trim();
+      const matched =
+        categories.find((c) => c.name.toLowerCase().trim() === target) ||
+        categories.find((c) => {
+          const cn = c.name.toLowerCase();
+          if (cn.includes(target) || target.includes(cn)) return true;
+          const tokens = target.split(/[\s/&,.-]+/).filter((t) => t.length > 2);
+          return tokens.some((t) => cn.includes(t));
+        });
+      if (matched) {
+        setCategoryId(matched.id);
+      }
+    },
+    [categories]
+  );
+
+  // Core function to execute catalog lookup with race-condition guard
+  const executeCatalogLookup = React.useCallback(
+    async (cleanCode: string) => {
+      latestLookupCodeRef.current = cleanCode;
 
       if (cleanCode.length >= 8) {
         setIsSearchingCatalog(true);
@@ -71,6 +102,11 @@ export function ProductFormModal({
         setDetectedProductInfo(null);
         try {
           const result = await lookupBarcodeDetails(cleanCode);
+          // Drop stale results if user typed or scanned another code while waiting
+          if (latestLookupCodeRef.current !== cleanCode) {
+            return;
+          }
+
           if (result.found && result.name) {
             setDetectedProductInfo(result);
             setNotFoundBarcode(null);
@@ -82,13 +118,7 @@ export function ProductFormModal({
 
             // Auto-select matched category
             if (result.categoryName) {
-              const matchedCategory = categories.find(
-                (c) =>
-                  c.name.toLowerCase() === result.categoryName!.toLowerCase()
-              );
-              if (matchedCategory) {
-                setCategoryId(matchedCategory.id);
-              }
+              matchAndSelectCategory(result.categoryName);
             }
 
             // Auto-select unit
@@ -110,11 +140,14 @@ export function ProductFormModal({
             setNotFoundBarcode(cleanCode);
           }
         } catch (err) {
+          if (latestLookupCodeRef.current !== cleanCode) return;
           console.warn("Catalog lookup error:", err);
           setDetectedProductInfo(null);
           setNotFoundBarcode(cleanCode);
         } finally {
-          setIsSearchingCatalog(false);
+          if (latestLookupCodeRef.current === cleanCode) {
+            setIsSearchingCatalog(false);
+          }
         }
       } else {
         setDetectedProductInfo(null);
@@ -122,8 +155,55 @@ export function ProductFormModal({
         setIsSearchingCatalog(false);
       }
     },
-    [categories, productToEdit]
+    [productToEdit, matchAndSelectCategory]
   );
+
+  // Process scanned or typed barcode:
+  // - immediate=true: camera scan, HP scan sync, Enter key (0ms delay)
+  // - immediate=false: typing character by character (debounced 280ms to avoid flooding network)
+  const processBarcodeValue = React.useCallback(
+    (rawCode: string, immediate = false) => {
+      const cleanCode = normalizeBarcode(rawCode);
+      setBarcode(cleanCode);
+      latestLookupCodeRef.current = cleanCode;
+
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+
+      // Note: SKU is an internal store identifier and is NEVER overwritten by the barcode number.
+
+      if (immediate || cleanCode.length < 8) {
+        executeCatalogLookup(cleanCode);
+      } else {
+        debounceTimerRef.current = setTimeout(() => {
+          executeCatalogLookup(cleanCode);
+        }, 280);
+      }
+    },
+    [executeCatalogLookup]
+  );
+
+  // Manually apply detected catalog details to form fields (useful in Edit mode)
+  const applyDetectedInfo = React.useCallback(() => {
+    if (!detectedProductInfo) return;
+    if (detectedProductInfo.name) {
+      setName(detectedProductInfo.name);
+    }
+    if (detectedProductInfo.categoryName) {
+      matchAndSelectCategory(detectedProductInfo.categoryName);
+    }
+    if (detectedProductInfo.unit) {
+      setUnit(detectedProductInfo.unit);
+    }
+    if (detectedProductInfo.suggestedBuyPrice && buyPrice === 0) {
+      setBuyPrice(detectedProductInfo.suggestedBuyPrice);
+    }
+    if (detectedProductInfo.suggestedSellPrice && sellPrice === 0) {
+      setSellPrice(detectedProductInfo.suggestedSellPrice);
+    }
+  }, [detectedProductInfo, matchAndSelectCategory, buyPrice, sellPrice]);
 
   const processBarcodeValueRef = React.useRef(processBarcodeValue);
   React.useEffect(() => {
@@ -140,7 +220,7 @@ export function ProductFormModal({
         const code = (payload?.barcode || payload?.sku || "").trim();
         if (code) {
           playBeep();
-          processBarcodeValueRef.current(code);
+          processBarcodeValueRef.current(code, true);
         }
       })
       .subscribe();
@@ -170,7 +250,7 @@ export function ProductFormModal({
       } else {
         setName("");
         // Generate unique default SKU if empty
-        setSku(`PRD-${Math.floor(100 + Math.random() * 900)}`);
+        setSku(`PRD-${Math.floor(1000 + Math.random() * 9000)}`);
         setBarcode("");
         setCategoryId(categories[0]?.id || "");
         setSupplierId(suppliers[0]?.id || "");
@@ -288,9 +368,24 @@ export function ProductFormModal({
                   ? ` • Rekomendasi Jual: Rp ${detectedProductInfo.suggestedSellPrice.toLocaleString("id-ID")}`
                   : ""}
               </p>
-              <p className="text-[10px] text-[#6B7280] mt-1 italic">
-                *Nama dan kategori di atas telah diisi otomatis. Anda dapat mengubah harga, stok, atau nama jika diinginkan.
-              </p>
+              {productToEdit ? (
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-[#6FA084]/25">
+                  <p className="text-[10px] text-[#2C6E49] italic">
+                    *Barcode terdeteksi di katalog. Klik &quot;Terapkan ke Form&quot; untuk mengisi nama &amp; detail.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={applyDetectedInfo}
+                    className="px-2.5 py-1 bg-[#6FA084] hover:bg-[#58836B] text-white text-[11px] font-bold rounded-lg transition-colors cursor-pointer shrink-0"
+                  >
+                    Terapkan ke Form
+                  </button>
+                </div>
+              ) : (
+                <p className="text-[10px] text-[#6B7280] mt-1 italic">
+                  *Nama dan kategori di atas telah diisi otomatis. Anda dapat mengubah harga, stok, atau nama jika diinginkan.
+                </p>
+              )}
             </div>
           </div>
         )}
@@ -360,7 +455,13 @@ export function ProductFormModal({
               <Input
                 placeholder="Contoh: 8999999500245 (scan/ketik)"
                 value={barcode}
-                onChange={(e) => processBarcodeValue(e.target.value)}
+                onChange={(e) => processBarcodeValue(e.target.value, false)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    processBarcodeValue(barcode, true);
+                  }
+                }}
                 className="pr-10 font-mono text-xs"
               />
               <button
@@ -564,7 +665,7 @@ export function ProductFormModal({
       <ProductBarcodeScannerModal
         isOpen={isScannerModalOpen}
         onClose={() => setIsScannerModalOpen(false)}
-        onScan={(code) => processBarcodeValue(code)}
+        onScan={(code) => processBarcodeValue(code, true)}
       />
     </Modal>
   );

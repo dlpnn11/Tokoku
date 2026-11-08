@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Product, Category, Supplier } from "@/types/database";
 import { formatRupiah, roundPrice500 } from "@/lib/utils";
 import { CustomSelect } from "@/components/ui/select";
-import { Barcode, Camera, Sparkles, Smartphone, CheckCircle2 } from "lucide-react";
-import { ProductInputSchema, formatZodError } from "@/lib/schemas";
+import { Barcode, Camera, Sparkles } from "lucide-react";
+import { ProductInputSchema, ProductInput, formatZodError } from "@/lib/schemas";
 import { getSafeErrorMessage } from "@/lib/errorHandler";
 import { ProductBarcodeScannerModal } from "./ProductBarcodeScannerModal";
 import {
@@ -22,7 +22,7 @@ import { SCANNER_SYNC_CHANNEL } from "@/lib/scannerSecurity";
 interface ProductFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (productData: any) => Promise<void>;
+  onSubmit: (productData: ProductInput) => Promise<void>;
   productToEdit?: Product | null;
   categories: Category[];
   suppliers: Supplier[];
@@ -58,7 +58,7 @@ export function ProductFormModal({
 
   // Core function to process scanned or typed barcode and query master catalog
   const processBarcodeValue = React.useCallback(
-    async (rawCode: string, isFromScanner = false) => {
+    async (rawCode: string) => {
       const cleanCode = rawCode.trim();
       setBarcode(cleanCode);
 
@@ -117,9 +117,14 @@ export function ProductFormModal({
     [categories, productToEdit]
   );
 
-  // Realtime Supabase Sync: Catch barcodes scanned on HP while this modal is open
+  const processBarcodeValueRef = React.useRef(processBarcodeValue);
   React.useEffect(() => {
-    if (!isOpen) return;
+    processBarcodeValueRef.current = processBarcodeValue;
+  }, [processBarcodeValue]);
+
+  // Realtime Supabase Sync: Catch barcodes scanned on HP while this form is open without scanner modal
+  React.useEffect(() => {
+    if (!isOpen || isScannerModalOpen) return;
 
     const channel = supabase.channel(SCANNER_SYNC_CHANNEL);
     channel
@@ -127,7 +132,7 @@ export function ProductFormModal({
         const code = (payload?.barcode || payload?.sku || "").trim();
         if (code) {
           playBeep();
-          processBarcodeValue(code, true);
+          processBarcodeValueRef.current(code);
         }
       })
       .subscribe();
@@ -135,38 +140,40 @@ export function ProductFormModal({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isOpen, processBarcodeValue]);
+  }, [isOpen, isScannerModalOpen]);
 
   React.useEffect(() => {
-    if (productToEdit) {
-      setName(productToEdit.name || "");
-      setSku(productToEdit.sku || "");
-      setBarcode(productToEdit.barcode || "");
-      setCategoryId(productToEdit.category_id || "");
-      setSupplierId(productToEdit.supplier_id || "");
-      setBuyPrice(Number(productToEdit.buy_price) || 0);
-      setSellPrice(Number(productToEdit.sell_price) || 0);
-      setCurrentStock(Number(productToEdit.current_stock) || 0);
-      setMinimumStock(Number(productToEdit.minimum_stock) || 5);
-      setUnit(productToEdit.unit || "pcs");
-      setIsActive(productToEdit.is_active ?? true);
-      setDetectedProductInfo(null);
-    } else {
-      setName("");
-      // Generate unique default SKU if empty
-      setSku(`PRD-${Math.floor(100 + Math.random() * 900)}`);
-      setBarcode("");
-      setCategoryId(categories[0]?.id || "");
-      setSupplierId(suppliers[0]?.id || "");
-      setBuyPrice(0);
-      setSellPrice(0);
-      setCurrentStock(10);
-      setMinimumStock(5);
-      setUnit("pcs");
-      setIsActive(true);
-      setDetectedProductInfo(null);
-    }
-    setErrorMsg("");
+    queueMicrotask(() => {
+      if (productToEdit) {
+        setName(productToEdit.name || "");
+        setSku(productToEdit.sku || "");
+        setBarcode(productToEdit.barcode || "");
+        setCategoryId(productToEdit.category_id || "");
+        setSupplierId(productToEdit.supplier_id || "");
+        setBuyPrice(Number(productToEdit.buy_price) || 0);
+        setSellPrice(Number(productToEdit.sell_price) || 0);
+        setCurrentStock(Number(productToEdit.current_stock) || 0);
+        setMinimumStock(Number(productToEdit.minimum_stock) || 5);
+        setUnit(productToEdit.unit || "pcs");
+        setIsActive(productToEdit.is_active ?? true);
+        setDetectedProductInfo(null);
+      } else {
+        setName("");
+        // Generate unique default SKU if empty
+        setSku(`PRD-${Math.floor(100 + Math.random() * 900)}`);
+        setBarcode("");
+        setCategoryId(categories[0]?.id || "");
+        setSupplierId(suppliers[0]?.id || "");
+        setBuyPrice(0);
+        setSellPrice(0);
+        setCurrentStock(10);
+        setMinimumStock(5);
+        setUnit("pcs");
+        setIsActive(true);
+        setDetectedProductInfo(null);
+      }
+      setErrorMsg("");
+    });
   }, [productToEdit, categories, suppliers, isOpen]);
 
   // Live calculation of margin
@@ -203,7 +210,7 @@ export function ProductFormModal({
     try {
       await onSubmit(validation.data);
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setErrorMsg(
         getSafeErrorMessage(err, {
           fallbackMessage: "Gagal menyimpan data produk.",
@@ -302,7 +309,7 @@ export function ProductFormModal({
                 type="button"
                 onClick={() => setIsScannerModalOpen(true)}
                 className="inline-flex items-center gap-1 text-[11px] font-bold text-[#6FA084] hover:text-[#58836B] hover:underline cursor-pointer bg-[#EBF3EE] px-2 py-0.5 rounded-md transition-colors"
-                title="Buka kamera laptop atau HP untuk scan barcode otomatis"
+                title="Buka kamera atau HP untuk scan barcode otomatis"
               >
                 <Camera className="w-3 h-3" />
                 Scan Barcode
@@ -325,7 +332,7 @@ export function ProductFormModal({
               </button>
             </div>
             <p className="text-[10px] text-[#6B7280] mt-0.5 flex items-center justify-between">
-              <span>Bisa scan via kamera laptop atau scanner HP.</span>
+              <span>Bisa scan via kamera langsung atau scanner HP.</span>
               {isSearchingCatalog && (
                 <span className="text-[#6FA084] font-semibold animate-pulse">
                   Mencari katalog...
@@ -516,7 +523,7 @@ export function ProductFormModal({
       <ProductBarcodeScannerModal
         isOpen={isScannerModalOpen}
         onClose={() => setIsScannerModalOpen(false)}
-        onScan={(code) => processBarcodeValue(code, true)}
+        onScan={(code) => processBarcodeValue(code)}
       />
     </Modal>
   );

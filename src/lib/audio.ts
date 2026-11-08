@@ -6,7 +6,8 @@ function getAudioContext(): AudioContext | null {
   if (typeof window === "undefined") return null;
   if (!audioCtx) {
     const AudioContextClass =
-      window.AudioContext || (window as any).webkitAudioContext;
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (AudioContextClass) {
       audioCtx = new AudioContextClass();
     }
@@ -18,12 +19,31 @@ function getAudioContext(): AudioContext | null {
 }
 
 /**
+ * Unlocks the Web Audio API context during a direct user gesture (e.g. click/tap),
+ * ensuring subsequent barcode scan beeps can play without mobile browser autoplay restrictions.
+ */
+export function unlockAudio() {
+  try {
+    const ctx = getAudioContext();
+    if (ctx && ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
+  } catch (err) {
+    console.warn("Could not unlock audio context:", err);
+  }
+}
+
+/**
  * 800Hz clear crisp beep for successful barcode scan
  */
 export function playBeep() {
   try {
     const ctx = getAudioContext();
     if (!ctx) return;
+
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
 
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();

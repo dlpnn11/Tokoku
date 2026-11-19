@@ -2,7 +2,11 @@
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
-import { Html5Qrcode, Html5QrcodeCameraScanConfig, Html5QrcodeSupportedFormats } from "html5-qrcode";
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
+import {
+  selectBestRear1xCamera,
+  startScannerWithRearPriority,
+} from "@/lib/cameraSelection";
 import { supabase } from "@/lib/supabase";
 import { playBeep } from "@/lib/audio";
 import { SCANNER_SYNC_CHANNEL, PERMANENT_TOKEN } from "@/lib/scannerSecurity";
@@ -24,6 +28,11 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+interface ExtendedTrackCapabilities extends MediaTrackCapabilities {
+  focusMode?: string[];
+  focusDistance?: { min?: number; max?: number };
+}
 
 function MobileScannerContent() {
   const searchParams = useSearchParams();
@@ -51,8 +60,9 @@ function MobileScannerContent() {
   const [isMacroMode, setIsMacroMode] = React.useState(false);
 
   const scannerRef = React.useRef<Html5Qrcode | null>(null);
-  const channelRef = React.useRef<any>(null);
+  const channelRef = React.useRef<ReturnType<typeof supabase.channel> | null>(null);
   const lastScanTimeRef = React.useRef<number>(0);
+  const isUnmountedRef = React.useRef<boolean>(false);
 
   // Setup Supabase Realtime Channel for universal scanner synchronization
   React.useEffect(() => {
@@ -137,10 +147,13 @@ function MobileScannerContent() {
     [hasHardwareZoom]
   );
 
-  // Start scanner with full-frame retail barcode decoding
+  // Start scanner with full-frame retail barcode decoding on rear 1.0x camera
   const startScannerWithCamera = React.useCallback(
-    async (cameraIdToUse?: string | null) => {
+    async (cameraIdToUse?: string | null, isExplicitSelection = false) => {
       setCameraError(null);
+      setZoomLevel(1.0);
+      setIsMacroMode(false);
+      setTorchOn(false);
 
       try {
         if (!scannerRef.current) {
@@ -172,66 +185,56 @@ function MobileScannerContent() {
           }
         };
 
-        const config: Html5QrcodeCameraScanConfig = {
-          fps: 25,
-          // Full-frame recognition without restrictive 160px crop box
-          // This allows scanning from a comfortable distance (20-50 cm) with high precision!
-          videoConstraints: {
-            ...(cameraIdToUse
-              ? { deviceId: { exact: cameraIdToUse } }
-              : { facingMode: { ideal: "environment" } }),
-            width: { ideal: 1920, min: 1280 },
-            height: { ideal: 1080, min: 720 },
-            advanced: [{ focusMode: "continuous" } as any],
-          },
-        };
+        const startResult = await startScannerWithRearPriority({
+          scanner: scannerRef.current,
+          containerId: "reader",
+          cameraIdToUse,
+          preferRear1x: !isExplicitSelection,
+          onSuccess: qrCodeSuccessCallback,
+          isAborted: () => isUnmountedRef.current,
+        });
 
-        const cameraArg = cameraIdToUse
-          ? cameraIdToUse
-          : { facingMode: "environment" };
-
-        await scannerRef.current.start(
-          cameraArg,
-          config,
-          qrCodeSuccessCallback,
-          undefined
-        );
+        if (isUnmountedRef.current || !startResult) {
+          if (scannerRef.current?.isScanning) {
+            await scannerRef.current.stop().catch(() => {});
+          }
+          return;
+        }
 
         setIsScanning(true);
+        if (startResult.cameras.length > 0) {
+          setCameras(startResult.cameras);
+        }
+        setSelectedCameraId(startResult.activeCameraId);
 
-        // After stream is running, query actual camera capabilities & full labels
+        // After stream is running, query actual camera capabilities
         try {
-          const freshDevices = await Html5Qrcode.getCameras();
-          if (freshDevices && freshDevices.length > 0) {
-            setCameras(freshDevices);
-          }
-
-          const trackCaps = scannerRef.current.getRunningTrackCapabilities();
-          const supportedFocusModes = ((trackCaps as any)?.focusMode as string[]) || [];
+          const trackCaps = scannerRef.current.getRunningTrackCapabilities() as
+            | ExtendedTrackCapabilities
+            | undefined;
+          const supportedFocusModes = trackCaps?.focusMode || [];
           const afSupported = supportedFocusModes.length > 0;
           setHasAfSupport(afSupported);
 
-          if ((trackCaps as any)?.focusDistance) {
-            setMacroRange((trackCaps as any).focusDistance);
+          if (trackCaps?.focusDistance) {
+            setMacroRange(trackCaps.focusDistance);
           }
 
           const zoomCap = scannerRef.current.getRunningTrackCameraCapabilities()?.zoomFeature?.();
-          if (zoomCap && zoomCap.isSupported()) {
-            setHasHardwareZoom(true);
-            zoomCap.apply(1.0).catch(() => {});
-          }
+          setHasHardwareZoom(Boolean(zoomCap && zoomCap.isSupported()));
 
           const torchCap = scannerRef.current.getRunningTrackCameraCapabilities()?.torchFeature?.();
-          if (torchCap && torchCap.isSupported()) {
-            setHasTorch(true);
-          }
+          setHasTorch(Boolean(torchCap && torchCap.isSupported()));
         } catch (capErr) {
           console.warn("Could not query camera track capabilities:", capErr);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
+        if (isUnmountedRef.current) return;
         console.error("Camera start error:", err);
         setCameraError(
-          err.message || "Gagal mengakses kamera. Pastikan izin kamera aktif."
+          err instanceof Error
+            ? err.message
+            : "Gagal mengakses kamera. Pastikan izin kamera aktif."
         );
         setIsScanning(false);
       }
@@ -239,87 +242,39 @@ function MobileScannerContent() {
     [broadcastSku]
   );
 
-  // Initialize camera enumeration and smart 1x selection
+  // Initialize camera enumeration (always defaulting to Rear 1.0x)
   React.useEffect(() => {
-    let isMounted = true;
+    isUnmountedRef.current = false;
     const initialize = async () => {
       let chosenCamId: string | null = null;
       try {
         const devices = await Html5Qrcode.getCameras();
-        if (devices && devices.length > 0 && isMounted) {
+        if (devices && devices.length > 0 && !isUnmountedRef.current) {
           setCameras(devices);
-
-          const savedId =
-            typeof window !== "undefined"
-              ? localStorage.getItem("tokoku_preferred_camera_id")
-              : null;
-
-          if (savedId && devices.some((d) => d.id === savedId)) {
-            chosenCamId = savedId;
-          } else {
-            // Filter back-facing cameras
-            const backCameras = devices.filter((d) => {
-              const l = d.label.toLowerCase();
-              return (
-                l.includes("back") ||
-                l.includes("rear") ||
-                l.includes("belakang") ||
-                l.includes("environment") ||
-                (!l.includes("front") && !l.includes("user") && !l.includes("depan"))
-              );
-            });
-
-            // Filter out ultra-wide (0.5x), macro, depth
-            const nonUltra = backCameras.filter((d) => {
-              const l = d.label.toLowerCase();
-              return (
-                !l.includes("ultra") &&
-                !l.includes("0.5") &&
-                !l.includes("macro") &&
-                !l.includes("depth") &&
-                !l.includes("wide-angle")
-              );
-            });
-
-            // Look for explicit 1x, main, or primary camera
-            const mainCam = nonUltra.find((d) => {
-              const l = d.label.toLowerCase();
-              return l.includes("main") || l.includes("primary") || l.includes("1x");
-            });
-
-            if (mainCam) {
-              chosenCamId = mainCam.id;
-            } else if (nonUltra.length > 0) {
-              // Prefer index 1 on phones where index 0 is ultra-wide
-              chosenCamId = nonUltra[nonUltra.length > 1 ? 1 : 0].id;
-            } else if (backCameras.length > 0) {
-              chosenCamId = backCameras[backCameras.length > 1 ? 1 : 0].id;
-            } else {
-              chosenCamId = devices[0].id;
-            }
-          }
+          const bestRear1x = selectBestRear1xCamera(devices);
+          chosenCamId = bestRear1x?.id ?? null;
           setSelectedCameraId(chosenCamId);
         }
       } catch (err) {
         console.warn("Could not list cameras initially:", err);
       }
 
-      if (isMounted) {
-        startScannerWithCamera(chosenCamId);
+      if (!isUnmountedRef.current) {
+        startScannerWithCamera(chosenCamId, false);
       }
     };
 
     initialize();
 
     return () => {
-      isMounted = false;
-      if (scannerRef.current) {
+      isUnmountedRef.current = true;
+      if (scannerRef.current?.isScanning) {
         scannerRef.current.stop().catch(() => {});
       }
     };
   }, [startScannerWithCamera]);
 
-  // Handle camera switch (e.g. toggle between physical lenses)
+  // Handle camera switch (session-only; next load resets to Rear 1.0x)
   const handleSwitchCamera = async () => {
     if (cameras.length <= 1) return;
     const currentIndex = cameras.findIndex((c) => c.id === selectedCameraId);
@@ -327,9 +282,6 @@ function MobileScannerContent() {
     const nextCamera = cameras[nextIndex];
 
     setSelectedCameraId(nextCamera.id);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("tokoku_preferred_camera_id", nextCamera.id);
-    }
 
     try {
       if (scannerRef.current && isScanning) {
@@ -341,7 +293,9 @@ function MobileScannerContent() {
     }
 
     setTimeout(() => {
-      startScannerWithCamera(nextCamera.id);
+      if (!isUnmountedRef.current) {
+        startScannerWithCamera(nextCamera.id, true);
+      }
     }, 200);
   };
 
@@ -370,21 +324,23 @@ function MobileScannerContent() {
     if (nextMacro) {
       let appliedHardware = false;
       try {
-        const trackCaps = scannerRef.current?.getRunningTrackCapabilities();
-        if ((trackCaps as any)?.focusDistance) {
-          const minDistance = (trackCaps as any).focusDistance.min ?? 0.1;
+        const trackCaps = scannerRef.current?.getRunningTrackCapabilities() as
+          | ExtendedTrackCapabilities
+          | undefined;
+        if (trackCaps?.focusDistance) {
+          const minDistance = trackCaps.focusDistance.min ?? 0.1;
           await scannerRef.current?.applyVideoConstraints({
             advanced: [
               {
                 focusMode: "manual",
                 focusDistance: minDistance,
-              } as any,
+              } as unknown as MediaTrackConstraintSet,
             ],
           });
           appliedHardware = true;
         } else {
           await scannerRef.current?.applyVideoConstraints({
-            advanced: [{ focusMode: "continuous" } as any],
+            advanced: [{ focusMode: "continuous" } as unknown as MediaTrackConstraintSet],
           });
         }
       } catch (e) {
@@ -400,7 +356,7 @@ function MobileScannerContent() {
       // Revert to normal continuous focus and 1.0x
       try {
         await scannerRef.current?.applyVideoConstraints({
-          advanced: [{ focusMode: "continuous" } as any],
+          advanced: [{ focusMode: "continuous" } as unknown as MediaTrackConstraintSet],
         });
       } catch {}
       await handleSetZoom(1.0);
@@ -422,13 +378,15 @@ function MobileScannerContent() {
     if (!scannerRef.current) return;
 
     try {
-      const trackCaps = scannerRef.current.getRunningTrackCapabilities();
-      const supportedFocusModes = ((trackCaps as any)?.focusMode as string[]) || [];
+      const trackCaps = scannerRef.current.getRunningTrackCapabilities() as
+        | ExtendedTrackCapabilities
+        | undefined;
+      const supportedFocusModes = trackCaps?.focusMode || [];
 
       if (supportedFocusModes.includes("single-shot")) {
         // Priority 1: Trigger physical single-shot AF sweep
         await scannerRef.current.applyVideoConstraints({
-          advanced: [{ focusMode: "single-shot" } as any],
+          advanced: [{ focusMode: "single-shot" } as unknown as MediaTrackConstraintSet],
         });
         setFocusStatus("Fokus Terkunci");
 
@@ -436,7 +394,7 @@ function MobileScannerContent() {
         setTimeout(async () => {
           try {
             await scannerRef.current?.applyVideoConstraints({
-              advanced: [{ focusMode: "continuous" } as any],
+              advanced: [{ focusMode: "continuous" } as unknown as MediaTrackConstraintSet],
             });
             setFocusStatus(null);
           } catch {}
@@ -447,18 +405,18 @@ function MobileScannerContent() {
       ) {
         // Priority 2: Cycle manual -> continuous to break static focus lock
         await scannerRef.current.applyVideoConstraints({
-          advanced: [{ focusMode: "manual" } as any],
+          advanced: [{ focusMode: "manual" } as unknown as MediaTrackConstraintSet],
         });
         await new Promise((r) => setTimeout(r, 60));
         await scannerRef.current.applyVideoConstraints({
-          advanced: [{ focusMode: "continuous" } as any],
+          advanced: [{ focusMode: "continuous" } as unknown as MediaTrackConstraintSet],
         });
         setFocusStatus("Fokus Disesuaikan");
         setTimeout(() => setFocusStatus(null), 1400);
       } else {
         // Priority 3: Re-apply continuous constraints with high sharpness
         await scannerRef.current.applyVideoConstraints({
-          advanced: [{ focusMode: "continuous" } as any],
+          advanced: [{ focusMode: "continuous" } as unknown as MediaTrackConstraintSet],
         });
         setFocusStatus("Autofokus Diperbarui");
         setTimeout(() => setFocusStatus(null), 1800);

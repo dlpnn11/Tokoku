@@ -18,9 +18,12 @@ import {
 } from "lucide-react";
 import {
   Html5Qrcode,
-  Html5QrcodeCameraScanConfig,
   Html5QrcodeSupportedFormats,
 } from "html5-qrcode";
+import {
+  selectBestRear1xCamera,
+  startScannerWithRearPriority,
+} from "@/lib/cameraSelection";
 import { playBeep, unlockAudio } from "@/lib/audio";
 import { supabase } from "@/lib/supabase";
 import { SCANNER_SYNC_CHANNEL } from "@/lib/scannerSecurity";
@@ -124,6 +127,7 @@ export function ProductBarcodeScannerModal({
     setCameraActive(false);
     setIsStarting(false);
     isStartingRef.current = false;
+    setSelectedCameraId(null);
     setTorchOn(false);
     setIsMacroMode(false);
     setZoomLevel(1.0);
@@ -294,15 +298,17 @@ export function ProductBarcodeScannerModal({
     [hasHardwareZoom, isMacroMode, readerId]
   );
 
-  // Start scanner with retail barcode decoding formats and full-frame camera
+  // Start scanner with retail barcode decoding formats and full-frame rear 1.0x camera
   const startScannerWithCamera = React.useCallback(
-    async (cameraIdToUse?: string | null) => {
+    async (cameraIdToUse?: string | null, isExplicitSelection = false) => {
       if (isStartingRef.current || (scannerRef.current && scannerRef.current.isScanning)) return;
       if (typeof document !== "undefined" && !document.getElementById(readerId)) return;
       isStartingRef.current = true;
       shouldStopRef.current = false;
       setIsStarting(true);
       setCameraError(null);
+      setZoomLevel(1.0);
+      setIsMacroMode(false);
 
       try {
         if (!scannerRef.current) {
@@ -332,72 +338,16 @@ export function ProductBarcodeScannerModal({
           }
         };
 
-        const config: Html5QrcodeCameraScanConfig = {
-          fps: 25,
-          videoConstraints: {
-            ...(cameraIdToUse
-              ? { deviceId: { exact: cameraIdToUse } }
-              : { facingMode: { ideal: "environment" } }),
-            width: { ideal: 1920, min: 1280 },
-            height: { ideal: 1080, min: 720 },
-            advanced: [{ focusMode: "continuous" } as unknown as MediaTrackConstraintSet],
-          },
-        };
+        const startResult = await startScannerWithRearPriority({
+          scanner: scannerRef.current,
+          containerId: readerId,
+          cameraIdToUse,
+          preferRear1x: !isExplicitSelection,
+          onSuccess: qrCodeSuccessCallback,
+          isAborted: () => shouldStopRef.current,
+        });
 
-        const cameraArg = cameraIdToUse
-          ? cameraIdToUse
-          : { facingMode: "environment" };
-
-        try {
-          await scannerRef.current.start(
-            cameraArg,
-            config,
-            qrCodeSuccessCallback,
-            undefined
-          );
-        } catch (firstErr: unknown) {
-          console.warn("First start attempt failed, attempting fallback:", firstErr);
-          if (shouldStopRef.current) return;
-
-          const fallbackConfig: Html5QrcodeCameraScanConfig = {
-            fps: 25,
-            videoConstraints: {
-              ...(cameraIdToUse ? { deviceId: { exact: cameraIdToUse } } : {}),
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
-            },
-          };
-          try {
-            await scannerRef.current.start(
-              cameraArg,
-              fallbackConfig,
-              qrCodeSuccessCallback,
-              undefined
-            );
-          } catch (secondErr: unknown) {
-            console.warn("Second start attempt failed, attempting basic fallback:", secondErr);
-            if (shouldStopRef.current) return;
-            const basicConfig: Html5QrcodeCameraScanConfig = { fps: 20 };
-            try {
-              await scannerRef.current.start(
-                { facingMode: "environment" },
-                basicConfig,
-                qrCodeSuccessCallback,
-                undefined
-              );
-            } catch {
-              if (shouldStopRef.current) return;
-              await scannerRef.current.start(
-                { facingMode: "user" },
-                basicConfig,
-                qrCodeSuccessCallback,
-                undefined
-              );
-            }
-          }
-        }
-
-        if (shouldStopRef.current) {
+        if (shouldStopRef.current || !startResult) {
           try {
             if (scannerRef.current.isScanning) {
               await scannerRef.current.stop();
@@ -414,24 +364,15 @@ export function ProductBarcodeScannerModal({
         }
 
         setCameraActive(true);
+        if (startResult.cameras.length > 0) {
+          setCameras(startResult.cameras);
+        }
+        setSelectedCameraId(startResult.activeCameraId);
 
-        // Query camera track capabilities & enumerate fresh devices
+        // Query camera track capabilities (zoom & torch)
         try {
-          const freshDevices = await Html5Qrcode.getCameras();
-          if (freshDevices && freshDevices.length > 0) {
-            setCameras(freshDevices);
-            if (!cameraIdToUse) {
-              setSelectedCameraId(freshDevices[0].id);
-            }
-          }
-
           const zoomCap = scannerRef.current.getRunningTrackCameraCapabilities()?.zoomFeature?.();
-          if (zoomCap && zoomCap.isSupported()) {
-            setHasHardwareZoom(true);
-            zoomCap.apply(1.0).catch(() => {});
-          } else {
-            setHasHardwareZoom(false);
-          }
+          setHasHardwareZoom(Boolean(zoomCap && zoomCap.isSupported()));
 
           const torchCap = scannerRef.current.getRunningTrackCameraCapabilities()?.torchFeature?.();
           if (torchCap && torchCap.isSupported()) {
@@ -460,7 +401,7 @@ export function ProductBarcodeScannerModal({
     [handleBarcodeCapture, readerId]
   );
 
-  // Initialize camera enumeration and handle complete cleanup in effect return
+  // Initialize camera enumeration (always defaulting to Rear 1.0x) and cleanup on close
   React.useEffect(() => {
     if (!isOpen) return;
 
@@ -469,54 +410,8 @@ export function ProductBarcodeScannerModal({
       .then((devices) => {
         if (devices && devices.length > 0 && isMounted) {
           setCameras(devices);
-
-          const savedId =
-            typeof window !== "undefined"
-              ? localStorage.getItem("tokoku_preferred_camera_id")
-              : null;
-
-          let chosenCamId: string | null = null;
-          if (savedId && devices.some((d) => d.id === savedId)) {
-            chosenCamId = savedId;
-          } else {
-            const backCameras = devices.filter((d) => {
-              const l = d.label.toLowerCase();
-              return (
-                l.includes("back") ||
-                l.includes("rear") ||
-                l.includes("belakang") ||
-                l.includes("environment") ||
-                (!l.includes("front") && !l.includes("user") && !l.includes("depan"))
-              );
-            });
-
-            const nonUltra = backCameras.filter((d) => {
-              const l = d.label.toLowerCase();
-              return (
-                !l.includes("ultra") &&
-                !l.includes("0.5") &&
-                !l.includes("macro") &&
-                !l.includes("depth") &&
-                !l.includes("wide-angle")
-              );
-            });
-
-            const mainCam = nonUltra.find((d) => {
-              const l = d.label.toLowerCase();
-              return l.includes("main") || l.includes("primary") || l.includes("1x");
-            });
-
-            if (mainCam) {
-              chosenCamId = mainCam.id;
-            } else if (nonUltra.length > 0) {
-              chosenCamId = nonUltra[nonUltra.length > 1 ? 1 : 0].id;
-            } else if (backCameras.length > 0) {
-              chosenCamId = backCameras[backCameras.length > 1 ? 1 : 0].id;
-            } else {
-              chosenCamId = devices[0].id;
-            }
-          }
-          setSelectedCameraId(chosenCamId);
+          const bestRear1x = selectBestRear1xCamera(devices);
+          setSelectedCameraId(bestRear1x?.id ?? null);
         }
       })
       .catch((err: unknown) => {
@@ -529,7 +424,7 @@ export function ProductBarcodeScannerModal({
     };
   }, [isOpen, stopCamera]);
 
-  // Handle switching physical cameras or lenses
+  // Handle switching physical cameras or lenses (session-only; next open resets to Rear 1.0x)
   const handleSwitchCamera = React.useCallback(async () => {
     unlockAudio();
     if (cameras.length <= 1 || isStartingRef.current) return;
@@ -538,9 +433,6 @@ export function ProductBarcodeScannerModal({
     const nextCamera = cameras[nextIndex];
 
     setSelectedCameraId(nextCamera.id);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("tokoku_preferred_camera_id", nextCamera.id);
-    }
 
     try {
       if (scannerRef.current && scannerRef.current.isScanning) {
@@ -554,7 +446,7 @@ export function ProductBarcodeScannerModal({
     await new Promise((r) => setTimeout(r, 150));
     if (shouldStopRef.current) return;
 
-    await startScannerWithCamera(nextCamera.id);
+    await startScannerWithCamera(nextCamera.id, true);
   }, [cameras, selectedCameraId, startScannerWithCamera]);
 
   // Handle flashlight/torch toggle

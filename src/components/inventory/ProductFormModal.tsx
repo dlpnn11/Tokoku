@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Button } from "@/components/ui/button";
 import { Product, Category, Supplier } from "@/types/database";
 import { formatRupiah, roundPrice500 } from "@/lib/utils";
@@ -37,6 +38,10 @@ export function ProductFormModal({
   categories,
   suppliers,
 }: ProductFormModalProps) {
+  const buyPriceInputId = React.useId();
+  const sellPriceInputId = React.useId();
+  const sellPriceMarginId = React.useId();
+
   const [name, setName] = React.useState("");
   const [sku, setSku] = React.useState("");
   const [barcode, setBarcode] = React.useState("");
@@ -545,46 +550,53 @@ export function ProductFormModal({
         {/* Harga Beli & Harga Jual */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-bold text-[#1A1A1A] block mb-1">
-              Harga Beli (Modal / HPP) <span className="text-[#D64545]">*</span>
+            <label
+              htmlFor={buyPriceInputId}
+              className="text-xs font-bold text-[#1A1A1A] block mb-1"
+            >
+              Harga Beli (Modal / HPP) <span className="text-[#D64545]" aria-hidden="true">*</span>
             </label>
-            <Input
-              type="number"
-              min="0"
+            <CurrencyInput
+              id={buyPriceInputId}
+              name="buy_price"
               value={buyPrice}
-              onChange={(e) => setBuyPrice(Number(e.target.value))}
-              required
+              onValueChange={setBuyPrice}
+              aria-required="true"
             />
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-bold text-[#1A1A1A]">
-                Harga Jual (Kasir) <span className="text-[#D64545]">*</span>
+              <label
+                htmlFor={sellPriceInputId}
+                className="text-xs font-bold text-[#1A1A1A]"
+              >
+                Harga Jual (Kasir) <span className="text-[#D64545]" aria-hidden="true">*</span>
               </label>
               {sellPrice > 0 && sellPrice % 500 !== 0 && (
                 <button
                   type="button"
                   onClick={() => setSellPrice(roundPrice500(sellPrice))}
-                  className="text-[10px] font-bold text-[#6FA084] hover:text-[#58836B] underline"
+                  className="text-[10px] font-bold text-[#6FA084] hover:text-[#58836B] underline cursor-pointer"
                 >
                   Bulatkan: {formatRupiah(roundPrice500(sellPrice))}
                 </button>
               )}
             </div>
-            <Input
-              type="number"
-              step="500"
-              min="0"
+            <CurrencyInput
+              id={sellPriceInputId}
+              name="sell_price"
               value={sellPrice}
-              onChange={(e) => setSellPrice(Number(e.target.value))}
+              onValueChange={setSellPrice}
               onBlur={() => {
                 if (sellPrice > 0) setSellPrice(roundPrice500(sellPrice));
               }}
-              required
+              aria-required="true"
+              aria-describedby={sellPrice > 0 ? sellPriceMarginId : undefined}
             />
             {sellPrice > 0 && (
               <p
+                id={sellPriceMarginId}
                 className={`text-[11px] mt-1 font-semibold ${
                   marginAmount >= 0 ? "text-[#6FA084]" : "text-[#D64545]"
                 }`}
